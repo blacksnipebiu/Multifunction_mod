@@ -382,7 +382,7 @@ namespace Multfunction_mod
         [HarmonyPatch(typeof(Mecha), "UseWarper")]
         class EnoughWarperPatch
         {
-            static void Postfix(ref bool __result)
+            public static void Postfix(ref bool __result)
             {
                 if (noneedwarp.Value)
                 {
@@ -420,7 +420,7 @@ namespace Multfunction_mod
                 {
                     __result.name = "星系量子传输站";
                 }
-                else if (autochangestationname.Value && __result.isStellar)
+                else if (autochangestationname.Value)
                 {
                     __result.name = Localization.language != Language.zhCN ? "Station_miner" : "星球矿机";
                 }
@@ -457,16 +457,12 @@ namespace Multfunction_mod
         {
             public static void Postfix(ref int __result, PowerSystem __instance)
             {
-                if (__instance.genPool[__result].fuelMask == 4)
+                if (InfineteStarPower.Value && __instance.genPool[__result].fuelMask == 4)
                 {
-                    if (InfineteStarPower.Value)
-                    {
-                        __instance.genPool[__result].fuelId = 1803;
-                        __instance.genPool[__result].fuelCount = 100;
-                        __instance.genPool[__result].fuelEnergy = long.MaxValue;
-                        __instance.genPool[__result].genEnergyPerTick = 1000000000000;
-                    }
-
+                    __instance.genPool[__result].fuelId = 1803;
+                    __instance.genPool[__result].fuelCount = 100;
+                    __instance.genPool[__result].fuelEnergy = long.MaxValue;
+                    __instance.genPool[__result].genEnergyPerTick = 1000000000000;
                 }
             }
         }
@@ -508,7 +504,7 @@ namespace Multfunction_mod
         {
             public static bool Prefix(ref bool __result)
             {
-                if (pastebuildanyway)
+                if (PasteBuildAnyWay)
                 {
                     __result = true;
                     return false;
@@ -522,7 +518,7 @@ namespace Multfunction_mod
         {
             public static bool Prefix(ref bool __result)
             {
-                if (pastebuildanyway)
+                if (PasteBuildAnyWay)
                 {
                     __result = true;
                     return false;
@@ -625,18 +621,14 @@ namespace Multfunction_mod
         {
             public static void Prefix(PowerSystem __instance, ref int entityId, ref float conn, ref float cover)
             {
-                if (LDB.items.Select(__instance.factory.entityPool[entityId].protoId).ID == 2210)
+                if (PlanetPower_bool.Value && LDB.items.Select(__instance.factory.entityPool[entityId].protoId).ID == 2210)
                 {
-                    if (PlanetPower_bool.Value)
+                    cover = GameMain.localPlanet.realRadius * 4;
+                    if (farconnectdistance)
                     {
-                        cover = GameMain.localPlanet.realRadius * 4;
-                        if (farconnectdistance)
-                        {
-                            conn = GameMain.localPlanet.realRadius * 1.5f;
-                            farconnectdistance = false;
-                        }
+                        conn = GameMain.localPlanet.realRadius * 1.5f;
+                        farconnectdistance = false;
                     }
-
                 }
             }
             public static void Postfix(ref int __result, PowerSystem __instance)
@@ -727,7 +719,7 @@ namespace Multfunction_mod
         {
             public static bool Prefix(BuildTool_Click __instance,ref bool __result)
             {
-                if (pastebuildanyway)
+                if (PasteBuildAnyWay)
                 {
                     for (int i = 0; i < __instance.buildPreviews.Count; i++)
                     {
@@ -789,45 +781,21 @@ namespace Multfunction_mod
             public static bool Prefix(ProductionStatistics __instance)
             {
                 if (!GameMain.instance.running || !FinallyInit) return true;
-                if (curStationMinertime - lastStationMinertime > 1 && stationmineropen.Value && GameMain.galaxy != null)
+                if (GameMain.galaxy != null && addStatQueue.Count > 0)
                 {
-                    lastStationMinertime = curStationMinertime;
-                    for (int index = 0; index < productmaxindex * 5; ++index)
+                    int[] temp = addStatQueue.Dequeue();
+                    int factoryIndex = temp[0];
+                    int itemId = temp[1];
+                    int itemNum = temp[2];
+                    bool produce = temp[3] == 1;
+                    if (produce)
                     {
-                        int pdfa = 0;
-                        if (product[index, 1] > 0)
-                        {
-                            if (GameMain.galaxy.PlanetById(product[index, 2]) == null || GameMain.galaxy.PlanetById(product[index, 2]).factory == null) return true;
-                            pdfa = GameMain.galaxy.PlanetById(product[index, 2]).factory.index;
-                            __instance.factoryStatPool[pdfa].productRegister[product[index, 0]] += product[index, 1];
-                            product[index, 1] = 0;
-                        }
-                        if (pdfa > 0)
-                        {
-                            int consumeindex = index / 5;
-                            if (consume[consumeindex, 1] > 0)
-                            {
-                                __instance.factoryStatPool[pdfa].consumeRegister[consume[consumeindex, 0]] += consume[consumeindex, 1];
-                                consume[consumeindex, 1] = 0;
-                            }
-                        }
-
+                        __instance.factoryStatPool[factoryIndex].productRegister[itemId] += itemNum;
                     }
-                }
-                if ((Liangzicomsumestat || (stationtrashopen.Value && stationtrashtime + 1 < Time.time)) && GameMain.galaxy != null)
-                {
-                    stationtrashtime = Time.time;
-                    foreach (KeyValuePair<int, Dictionary<int, int>> wap1 in consumeLiangzi)
+                    else
                     {
-                        if (wap1.Value == null) continue;
-                        int pdfa = GameMain.galaxy.PlanetById(wap1.Key).factory.index;
-                        foreach (KeyValuePair<int, int> wap2 in wap1.Value)
-                        {
-                            __instance.factoryStatPool[pdfa].consumeRegister[wap2.Key] += wap2.Value;
-                        }
+                        __instance.factoryStatPool[factoryIndex].consumeRegister[itemId] += itemNum;
                     }
-                    consumeLiangzi = new Dictionary<int, Dictionary<int, int>>();
-                    Liangzicomsumestat = false;
                 }
 
                 return true;
@@ -898,7 +866,7 @@ namespace Multfunction_mod
             public static bool Prefix(int index, ref int level, PlanetRawData __instance)
             {
                 if (!restorewater) return true;
-                int num1 = (int)__instance.modData[index >> 1] >> ((index & 1) << 2) & 3;
+                int num1 = __instance.modData[index >> 1] >> ((index & 1) << 2) & 3;
                 level = -4 - num1;
                 return true;
 
@@ -919,11 +887,11 @@ namespace Multfunction_mod
                 float realRadius = __instance.planet.realRadius;
                 Vector3[] vertices = data.vertices;
                 ushort[] heightData = data.heightData;
-                float num1 = Mathf.Min(9f, Mathf.Abs((float)(((double)heightData[data.QueryIndex(center)] - (double)__instance.planet.realRadius * 100.0 + 20.0) * 0.00999999977648258 * 2.0)));
+                float num1 = Mathf.Min(9f, Mathf.Abs((float)((heightData[data.QueryIndex(center)] - (double)__instance.planet.realRadius * 100.0 + 20.0) * 0.00999999977648258 * 2.0)));
                 fade0 += num1;
                 float num2 = radius + fade0;
                 float num3 = num2 * num2;
-                float num4 = (float)((double)realRadius * 3.14159274101257 / ((double)__instance.planet.precision * 2.0));
+                float num4 = (float)((double)realRadius * 3.14159274101257 / (__instance.planet.precision * 2.0));
                 int num5 = Mathf.CeilToInt((float)((double)num2 * 1.41400003433228 / (double)num4 * 1.5 + 0.5));
                 Vector3[] vector3Array = new Vector3[9]
                 {
@@ -951,7 +919,7 @@ namespace Multfunction_mod
                             for (int index2 = -num5; index2 <= num5; ++index2)
                             {
                                 int index3 = num9 + index2;
-                                if ((long)(uint)index3 < (long)dataLength)
+                                if ((uint)index3 < dataLength)
                                 {
                                     Vector3 vector3_1;
                                     vector3_1.x = vertices[index3].x * realRadius;
@@ -1053,7 +1021,7 @@ namespace Multfunction_mod
                             {
                                 for (int i = 0; i < techProto.itemArray.Length; i++)
                                 {
-                                    addcomsumeitemtototal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
+                                    AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
                                 }
                                 GameMain.history.UnlockTechFunction(techProto.UnlockFunctions[0], techProto.UnlockValues[0], level);
                             }
@@ -1063,7 +1031,7 @@ namespace Multfunction_mod
                         {
                             for (int i = 0; i < techProto.itemArray.Length; i++)
                             {
-                                addcomsumeitemtototal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
+                                AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
                             }
                             GameMain.history.UnlockTech(techProto.ID);
                         }
@@ -1090,13 +1058,6 @@ namespace Multfunction_mod
                 int beltid = __instance.factory.entityPool[entityId].beltId;
                 if (!Beltsignal.ContainsKey(factoryIndex))
                     Beltsignal.Add(factoryIndex, new Dictionary<int, int>());
-                if (!stationslots.ContainsKey(factoryIndex) || !stationslots[factoryIndex].Contains(beltid))
-                {
-                    if (!Beltsignal[factoryIndex].ContainsKey(beltid))
-                        Beltsignal[factoryIndex].Add(beltid, signalId);
-                    else
-                        Beltsignal[factoryIndex][beltid] = signalId;
-                }
                 if (Beltsignalnumberoutput.ContainsKey(factoryIndex) && Beltsignalnumberoutput[factoryIndex].ContainsKey(beltid) && signalId != 601)
                 {
                     Beltsignalnumberoutput[factoryIndex].Remove(beltid);
