@@ -16,7 +16,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.2.18";
+        public const string VERSION = "2.2.19";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
         public Light SunLight;
@@ -141,10 +141,10 @@ namespace Multfunction_mod
         public static ConfigEntry<float> textcolorg;
         public static ConfigEntry<float> textcolorb;
         public static ConfigEntry<float> mytexturea;
-        public static ConfigEntry<float> xl_SimpleUI_1_width;
-        public static ConfigEntry<float> xl_SimpleUI_1_height;
-        public static ConfigEntry<float> xl_SimpleUI_1_x_config;
-        public static ConfigEntry<float> xl_SimpleUI_1_y_config;
+        public static ConfigEntry<float> MainWindow_width;
+        public static ConfigEntry<float> MainWindow_height;
+        public static ConfigEntry<float> MainWindow_x_config;
+        public static ConfigEntry<float> MainWindow_y_config;
         public static ConfigEntry<float> starquamaxpowerpertick;
         public static ConfigEntry<float> planetquamaxpowerpertick;
         public static ConfigEntry<string> watertypePlanet;
@@ -222,95 +222,101 @@ namespace Multfunction_mod
             MainWindow_y_move = 390;
             tempx1 = MainWindow_x;
             tempy1 = MainWindow_y;
-            Quantumtransport_bool = Config.Bind("量子传输站", "Quantumtransport_bool", false);
-            Quantumtransportbuild_bool = Config.Bind("星球级材料供应", "Quantumtransportbuild_bool", true);
-            Quantumtransportstation_bool = Config.Bind("星球级物流站材料供应", "Quantumtransportstation_bool", true);
-            Quantumtransportminer_bool = Config.Bind("星球级矿机材料供应", "Quantumtransportminer_bool", true);
-            Quantumtransportsilo_bool = Config.Bind("星球级发射井弹射器材料供应", "Quantumtransportsilo_bool", true);
-            Quantumtransportlab_bool = Config.Bind("星球级研究站材料供应", "Quantumtransportlab_bool", true);
-            Quantumtransportpower_bool = Config.Bind("星球级电力设备材料供应", "Quantumtransportpower_bool", true);
-            Quantumtransportassemble_bool = Config.Bind("星球级组装机材料供应", "Quantumtransportassemble_bool", true);
-            Quantumtransportstarwarp_bool = Config.Bind("星系级翘曲全面供应", "Quantumtransportstarwarp_bool", false);
-            Quantumtransportpdwarp_bool = Config.Bind("星球级翘曲全面供应", "Quantumtransportpdwarp_bool", false);
-            scale = Config.Bind("大小适配", "scale", 16);
+
+            //初始化配置
+            {
+                Quantumtransport_bool = Config.Bind("量子传输站", "Quantumtransport_bool", false);
+                Quantumtransportbuild_bool = Config.Bind("星球级材料供应", "Quantumtransportbuild_bool", true);
+                Quantumtransportstation_bool = Config.Bind("星球级物流站材料供应", "Quantumtransportstation_bool", true);
+                Quantumtransportminer_bool = Config.Bind("星球级矿机材料供应", "Quantumtransportminer_bool", true);
+                Quantumtransportsilo_bool = Config.Bind("星球级发射井弹射器材料供应", "Quantumtransportsilo_bool", true);
+                Quantumtransportlab_bool = Config.Bind("星球级研究站材料供应", "Quantumtransportlab_bool", true);
+                Quantumtransportpower_bool = Config.Bind("星球级电力设备材料供应", "Quantumtransportpower_bool", true);
+                Quantumtransportassemble_bool = Config.Bind("星球级组装机材料供应", "Quantumtransportassemble_bool", true);
+                Quantumtransportstarwarp_bool = Config.Bind("星系级翘曲全面供应", "Quantumtransportstarwarp_bool", false);
+                Quantumtransportpdwarp_bool = Config.Bind("星球级翘曲全面供应", "Quantumtransportpdwarp_bool", false);
+                scale = Config.Bind("大小适配", "scale", 16);
 
 
-            ArchitectMode = Config.Bind("建筑师模式", "ArchitectMode", false);
-            Quantumenergy = Config.Bind("量子耗能", "Quantumenergy", 1000000);
-            StationfullCount_bool = Config.Bind("星球无限供货机", "StationfullCount_bool", false);
-            InfineteStarPower = Config.Bind("人造卫星无限能源", "InfineteStarPower", false);
-            Infinitestoragetank = Config.Bind("无限储液站", "Infinitestoragetank", false);
-            Tankcontentall = Config.Bind("储液站任意存", "Tankcontentall", false);
-            allhandcraft = Config.Bind("全部手搓", "allhandcraft", false);
-            quickproduce = Config.Bind("快速生产", "quickproduce", false);
-            noneedwarp = Config.Bind("无翘曲器曲速", "noneedwarp", false);
-            watertypePlanet = Config.Bind("星球海洋类型", "watertypePlanet", "");
+                ArchitectMode = Config.Bind("建筑师模式", "ArchitectMode", false);
+                Quantumenergy = Config.Bind("量子耗能", "Quantumenergy", 1000000);
+                StationfullCount_bool = Config.Bind("星球无限供货机", "StationfullCount_bool", false);
+                InfineteStarPower = Config.Bind("人造卫星无限能源", "InfineteStarPower", false);
+                Infinitestoragetank = Config.Bind("无限储液站", "Infinitestoragetank", false);
+                Tankcontentall = Config.Bind("储液站任意存", "Tankcontentall", false);
+                allhandcraft = Config.Bind("全部手搓", "allhandcraft", false);
+                quickproduce = Config.Bind("快速生产", "quickproduce", false);
+                noneedwarp = Config.Bind("无翘曲器曲速", "noneedwarp", false);
+                watertypePlanet = Config.Bind("星球海洋类型", "watertypePlanet", "");
 
-            Mechalogneed = Config.Bind("机甲物流需求情况", "Mechalogneed", "");
-            changeveinsposx = Config.Bind("切割矿脉数量", "changeveinsposx", 3);
-            veinlines = Config.Bind("矿物行数", "veinlines", 3);
-            changexveinspos = Config.Bind("切割矿脉", "changexveinspos", false);
-            NotTidyVein = Config.Bind("矿堆不整理", "NotTidyVein", false);
-            StationMaxproliferator = Config.Bind("物流站无限增产点数", "StationMaxproliferator", false);
-            BeltSignalFunction = Config.Bind("传送带信号功能", "BeltSignalFunction", false);
-            Mechalogistics_bool = Config.Bind("机甲物流", "Mechalogistics_bool", false);
-            MechalogisticsPlanet_bool = Config.Bind("机甲物流专用星", "MechalogisticsPlanet_bool", false);
-            MechalogStationprovide_bool = Config.Bind("需求使用物流站", "MechalogStationprovide_bool", false);
-            MechalogStationrecycle_bool = Config.Bind("回收使用物流站", "MechalogStationrecycle_bool", false);
-            MechalogStorageprovide_bool = Config.Bind("需求使用储物仓", "MechalogStorageprovide_bool", false);
-            MechalogStoragerecycle_bool = Config.Bind("回收使用储物仓", "MechalogStoragerecycle_bool", false);
-            Infinitething = Config.Bind("无限物品", "Infinitething", false);
-            Infiniteplayerpower = Config.Bind("无限机甲能量", "Infiniteplayerpower", false);
-            deleteveinbool = Config.Bind("删除矿物", "deleteveinbool", false);
-            StationMiner = Config.Bind("星球矿机", "stationmineropen", false);
-            StationTrash = Config.Bind("星球垃圾箱", "stationtrashopen", false);
-            autochangestationname = Config.Bind("自动改名", "autochangestationname", false);
-            changeveinposbool = Config.Bind("改变单矿位置", "changeveinposbool", false);
-            changeveingroupposbool = Config.Bind("改变矿堆位置", "changeveingroupposbool", false);
-            getallVein_bool = Config.Bind("获取所有矿", "getallVein_bool", false);
-            Buildingnoconsume = Config.Bind("全设备不耗电", "Buildingnoconsume", false);
-            Stationfullenergy = Config.Bind("物流站永久满电", "Stationfullenergy", false);
+                Mechalogneed = Config.Bind("机甲物流需求情况", "Mechalogneed", "");
+                changeveinsposx = Config.Bind("切割矿脉数量", "changeveinsposx", 3);
+                veinlines = Config.Bind("矿物行数", "veinlines", 3);
+                changexveinspos = Config.Bind("切割矿脉", "changexveinspos", false);
+                NotTidyVein = Config.Bind("矿堆不整理", "NotTidyVein", false);
+                StationMaxproliferator = Config.Bind("物流站无限增产点数", "StationMaxproliferator", false);
+                BeltSignalFunction = Config.Bind("传送带信号功能", "BeltSignalFunction", false);
+                Mechalogistics_bool = Config.Bind("机甲物流", "Mechalogistics_bool", false);
+                MechalogisticsPlanet_bool = Config.Bind("机甲物流专用星", "MechalogisticsPlanet_bool", false);
+                MechalogStationprovide_bool = Config.Bind("需求使用物流站", "MechalogStationprovide_bool", false);
+                MechalogStationrecycle_bool = Config.Bind("回收使用物流站", "MechalogStationrecycle_bool", false);
+                MechalogStorageprovide_bool = Config.Bind("需求使用储物仓", "MechalogStorageprovide_bool", false);
+                MechalogStoragerecycle_bool = Config.Bind("回收使用储物仓", "MechalogStoragerecycle_bool", false);
+                Infinitething = Config.Bind("无限物品", "Infinitething", false);
+                Infiniteplayerpower = Config.Bind("无限机甲能量", "Infiniteplayerpower", false);
+                deleteveinbool = Config.Bind("删除矿物", "deleteveinbool", false);
+                StationMiner = Config.Bind("星球矿机", "stationmineropen", false);
+                StationTrash = Config.Bind("星球垃圾箱", "stationtrashopen", false);
+                autochangestationname = Config.Bind("自动改名", "autochangestationname", false);
+                changeveinposbool = Config.Bind("改变单矿位置", "changeveinposbool", false);
+                changeveingroupposbool = Config.Bind("改变矿堆位置", "changeveingroupposbool", false);
+                getallVein_bool = Config.Bind("获取所有矿", "getallVein_bool", false);
+                Buildingnoconsume = Config.Bind("全设备不耗电", "Buildingnoconsume", false);
+                Stationfullenergy = Config.Bind("物流站永久满电", "Stationfullenergy", false);
 
-            build_gascol_noequator = Config.Bind("采集器无视赤道", "build_gascol_noequator", false);
-            lockpackage_bool = Config.Bind("锁定背包", "lockpackage_bool", false);
-            noneedtrashsand = Config.Bind("不需要垃圾沙土", "noneedtrashsand", false);
-            dismantle_but_nobuild = Config.Bind("拆除不添加至背包", "dismantle_but_nobuild", false);
-            ItemList_bool = Config.Bind("物品列表", "ItemList_bool", false);
-            sunlight_bool = Config.Bind("日光灯", "sunlight_bool", false);
-            DroneNoenergy_bool = Config.Bind("小飞机不耗能", "DroneNoenergy_bool", false);
-            Station_infiniteWarp_bool = Config.Bind("星际运输站无限曲速", "Station_infiniteWarp_bool", false);
-            BuildNotime_bool = Config.Bind("建筑秒完成", "BuildNotime_bool", false);
-            PlanetPower_bool = Config.Bind("星球电网", "PlanetPower_bool", false);
-            Station_miner_noconsume_bool = Config.Bind("星球矿机无消耗", "Station_miner_noconsume_bool", false);
-            build_tooclose_bool = Config.Bind("强行近距离建造物流站", "build_tooclose_bool", false);
-            blueprintpastenoneed_bool = Config.Bind("蓝图建造无需材料", "blueprintpastenoneed_bool", false);
-            quickabsorbsolar = Config.Bind("跳过太阳帆吸收阶段", "quickabsorbsolar", false);
-            cancelsolarbullet = Config.Bind("跳过太阳帆子弹阶段", "cancelsolarbullet", false);
-            alwaysemission = Config.Bind("全球打帆", "alwaysemission", false);
-            StationStoExtra = Config.Bind("运输站额外储量", "StationStoExtra", 0);
-            StackMultiple = Config.Bind("堆叠倍数", "StackMultiple", 1);
-            Stationminenumber = Config.Bind("星球矿机速率", "Stationminenumber", 1);
-            MULTIPELSMELT = Config.Bind("冶炼倍数", "mutiplesmelt", 1);
-            Buildmaxlen = Config.Bind("建筑数量最大值", "Buildmaxlen", 15);
-            starquamaxpowerpertick = Config.Bind("实时修改星球量子充电功率", "starquamaxpowerpertick", 60f);
-            planetquamaxpowerpertick = Config.Bind("实时修改星系量子充电功率", "planetquamaxpowerpertick", 60f);
-            QuantumStarstationmax = Config.Bind("星系量子存储有上限", "QuantumStarstationmax", false);
-            mytexturer = Config.Bind("窗口材质r", "mytexturer", 0f);
-            mytextureg = Config.Bind("窗口材质g", "mytextureg", 0f);
-            mytextureb = Config.Bind("窗口材质b", "mytextureb", 0f);
-            textcolorr = Config.Bind("字体颜色r", "textcolorr", 1f);
-            textcolorg = Config.Bind("字体颜色g", "textcolorg", 1f);
-            textcolorb = Config.Bind("字体颜色b", "textcolorb", 1f);
-            mytexturea = Config.Bind("窗口材质a", "mytexturea", 1f);
+                build_gascol_noequator = Config.Bind("采集器无视赤道", "build_gascol_noequator", false);
+                lockpackage_bool = Config.Bind("锁定背包", "lockpackage_bool", false);
+                noneedtrashsand = Config.Bind("不需要垃圾沙土", "noneedtrashsand", false);
+                dismantle_but_nobuild = Config.Bind("拆除不添加至背包", "dismantle_but_nobuild", false);
+                ItemList_bool = Config.Bind("物品列表", "ItemList_bool", false);
+                sunlight_bool = Config.Bind("日光灯", "sunlight_bool", false);
+                DroneNoenergy_bool = Config.Bind("小飞机不耗能", "DroneNoenergy_bool", false);
+                Station_infiniteWarp_bool = Config.Bind("星际运输站无限曲速", "Station_infiniteWarp_bool", false);
+                BuildNotime_bool = Config.Bind("建筑秒完成", "BuildNotime_bool", false);
+                PlanetPower_bool = Config.Bind("星球电网", "PlanetPower_bool", false);
+                Station_miner_noconsume_bool = Config.Bind("星球矿机无消耗", "Station_miner_noconsume_bool", false);
+                build_tooclose_bool = Config.Bind("强行近距离建造物流站", "build_tooclose_bool", false);
+                blueprintpastenoneed_bool = Config.Bind("蓝图建造无需材料", "blueprintpastenoneed_bool", false);
+                quickabsorbsolar = Config.Bind("跳过太阳帆吸收阶段", "quickabsorbsolar", false);
+                cancelsolarbullet = Config.Bind("跳过太阳帆子弹阶段", "cancelsolarbullet", false);
+                alwaysemission = Config.Bind("全球打帆", "alwaysemission", false);
+                StationStoExtra = Config.Bind("运输站额外储量", "StationStoExtra", 0);
+                StackMultiple = Config.Bind("堆叠倍数", "StackMultiple", 1);
+                Stationminenumber = Config.Bind("星球矿机速率", "Stationminenumber", 1);
+                MULTIPELSMELT = Config.Bind("冶炼倍数", "mutiplesmelt", 1);
+                Buildmaxlen = Config.Bind("建筑数量最大值", "Buildmaxlen", 15);
+                starquamaxpowerpertick = Config.Bind("实时修改星球量子充电功率", "starquamaxpowerpertick", 60f);
+                planetquamaxpowerpertick = Config.Bind("实时修改星系量子充电功率", "planetquamaxpowerpertick", 60f);
+                QuantumStarstationmax = Config.Bind("星系量子存储有上限", "QuantumStarstationmax", false);
+                mytexturer = Config.Bind("窗口材质r", "mytexturer", 0f);
+                mytextureg = Config.Bind("窗口材质g", "mytextureg", 0f);
+                mytextureb = Config.Bind("窗口材质b", "mytextureb", 0f);
+                textcolorr = Config.Bind("字体颜色r", "textcolorr", 1f);
+                textcolorg = Config.Bind("字体颜色g", "textcolorg", 1f);
+                textcolorb = Config.Bind("字体颜色b", "textcolorb", 1f);
+                mytexturea = Config.Bind("窗口材质a", "mytexturea", 1f);
 
-            xl_SimpleUI_1_x_config = Config.Bind("第一窗口x", "xl_SimpleUI_1_x_config", 448.0f);
-            xl_SimpleUI_1_y_config = Config.Bind("第一窗口y", "xl_SimpleUI_1_y_config", 199.0f);
-            xl_SimpleUI_1_width = Config.Bind("第一窗口宽度", "xl_SimpleUI_1_x_config", 1400.0f);
-            xl_SimpleUI_1_height = Config.Bind("第一窗口高度", "xl_SimpleUI_1_y_config", 1000.0f);
-            CloseUIpanel = Config.Bind("关闭面板", "CloseUIpanel", false);
+                MainWindow_x_config = Config.Bind("第一窗口x", "xl_SimpleUI_1_x_config", 448.0f);
+                MainWindow_y_config = Config.Bind("第一窗口y", "xl_SimpleUI_1_y_config", 199.0f);
+                MainWindow_width = Config.Bind("第一窗口宽度", "xl_SimpleUI_1_x_config", 1400.0f);
+                MainWindow_height = Config.Bind("第一窗口高度", "xl_SimpleUI_1_y_config", 1000.0f);
+                CloseUIpanel = Config.Bind("关闭面板", "CloseUIpanel", false);
+                WindowQuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt));
+            }
+            
 
-            MainWindow_x = xl_SimpleUI_1_x_config.Value;
-            MainWindow_y = xl_SimpleUI_1_y_config.Value;
+            MainWindow_x = MainWindow_x_config.Value;
+            MainWindow_y = MainWindow_y_config.Value;
             oillowerlimit = (int)(0.1 / VeinData.oilSpeedMultiplier);
             mytexture = new Texture2D(10, 10);
             for (int i = 0; i < mytexture.width; i++)
@@ -323,7 +329,6 @@ namespace Multfunction_mod
             mytexture.Apply();
             stackmultiple1 = StackMultiple.Value.ToString();
             multipelsmelt1 = MULTIPELSMELT.Value.ToString();
-            WindowQuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt));
             tempShowWindow = WindowQuickKey.Value;
 
             InvokeRepeating("autocleanTrash", 1, 30);
@@ -438,26 +443,26 @@ namespace Multfunction_mod
             if (DisplayingWindow)
             {
                 var rt = ui_MultiFunctionPanel.GetComponent<RectTransform>();
-                rt.sizeDelta = new Vector2(xl_SimpleUI_1_width.Value, xl_SimpleUI_1_height.Value);
-                rt.localPosition = new Vector2(-Screen.width / 2 + MainWindow_x, Screen.height / 2 - MainWindow_y - xl_SimpleUI_1_height.Value);
-                Rect windowRect1 = new Rect(MainWindow_x, MainWindow_y, xl_SimpleUI_1_width.Value, xl_SimpleUI_1_height.Value);
+                rt.sizeDelta = new Vector2(MainWindow_width.Value, MainWindow_height.Value);
+                rt.localPosition = new Vector2(-Screen.width / 2 + MainWindow_x, Screen.height / 2 - MainWindow_y - MainWindow_height.Value);
+                Rect windowRect1 = new Rect(MainWindow_x, MainWindow_y, MainWindow_width.Value, MainWindow_height.Value);
                 if (leftscaling || rightscaling || topscaling || bottomscaling) { }
                 else
                 {
-                    Move_Window(ref MainWindow_x, ref MainWindow_y, ref MainWindow_x_move, ref MainWindow_y_move, ref Window_moving, ref tempx1, ref tempy1, xl_SimpleUI_1_width.Value);
+                    Move_Window(ref MainWindow_x, ref MainWindow_y, ref MainWindow_x_move, ref MainWindow_y_move, ref Window_moving, ref tempx1, ref tempy1, MainWindow_width.Value);
                 }
-                GUI.DrawTexture(new Rect(MainWindow_x, MainWindow_y, xl_SimpleUI_1_width.Value, xl_SimpleUI_1_height.Value), mytexture);
-                Scale_Window(xl_SimpleUI_1_width.Value, xl_SimpleUI_1_height.Value, ref MainWindow_x, ref MainWindow_y);
+                GUI.DrawTexture(new Rect(MainWindow_x, MainWindow_y, MainWindow_width.Value, MainWindow_height.Value), mytexture);
+                Scale_Window(MainWindow_width.Value, MainWindow_height.Value, ref MainWindow_x, ref MainWindow_y);
                 windowRect1 = GUI.Window(20210218, windowRect1, MainWindow, "OP面板".getTranslate() + "(" + VERSION + ")" + "ps:ctrl+↑↓");
-                xl_SimpleUI_1_x_config.Value = MainWindow_x;
-                xl_SimpleUI_1_y_config.Value = MainWindow_y;
+                MainWindow_x_config.Value = MainWindow_x;
+                MainWindow_y_config.Value = MainWindow_y;
                 if (MainWindow_x < 0 || MainWindow_x > maxwidth)
                 {
-                    xl_SimpleUI_1_x_config.Value = 100;
+                    MainWindow_x_config.Value = 100;
                 }
                 if (MainWindow_y < 0 || MainWindow_y > maxheight)
                 {
-                    xl_SimpleUI_1_y_config.Value = 77;
+                    MainWindow_y_config.Value = 77;
                 }
             }
             if (ItemDisplayingWindow)
@@ -560,8 +565,8 @@ namespace Multfunction_mod
                 bottomscaling = false;
                 topscaling = false;
             }
-            xl_SimpleUI_1_width.Value = x;
-            xl_SimpleUI_1_height.Value = y;
+            MainWindow_width.Value = x;
+            MainWindow_height.Value = y;
         }
 
         /// <summary>
@@ -627,7 +632,7 @@ namespace Multfunction_mod
             style.wordWrap = true;
             style.normal.textColor = new Color(textcolorr.Value, textcolorg.Value, textcolorb.Value);
             style.fontSize = GUI.skin.toggle.fontSize;
-            GUILayout.BeginArea(new Rect(10, 20, xl_SimpleUI_1_width.Value, xl_SimpleUI_1_height.Value));
+            GUILayout.BeginArea(new Rect(10, 20, MainWindow_width.Value, MainWindow_height.Value));
 
             {
                 GUILayout.BeginArea(new Rect(0, 0, heightdis * 25, heightdis));
@@ -643,7 +648,7 @@ namespace Multfunction_mod
                 }
                 GUILayout.EndArea();
 
-                GUILayout.BeginArea(new Rect(0, heightdis, xl_SimpleUI_1_width.Value, xl_SimpleUI_1_height.Value));
+                GUILayout.BeginArea(new Rect(0, heightdis, MainWindow_width.Value, MainWindow_height.Value));
                 if (whichpannel == 1) PlayerPannel();
                 if (whichpannel == 2) BuildPannel();
                 if (whichpannel == 3) PlanetPannel();
@@ -1086,7 +1091,7 @@ namespace Multfunction_mod
         {
             bool english = Localization.language != Language.zhCN;
             int line = 0;
-            GUI.Label(new Rect(0, line++ * heightdis, xl_SimpleUI_1_width.Value, heightdis * 2), "注意事项:戴森云和戴森壳不要出现一层轨道都没有的情况(用前存档)".getTranslate());
+            GUI.Label(new Rect(0, line++ * heightdis, MainWindow_width.Value, heightdis * 2), "注意事项:戴森云和戴森壳不要出现一层轨道都没有的情况(用前存档)".getTranslate());
             if (!(GameMain.localStar == null || GameMain.data.dysonSpheres == null || GameMain.data.dysonSpheres[GameMain.localStar.index] == null))
             {
                 DysonSphere ds = GameMain.data.dysonSpheres[GameMain.localStar.index];
@@ -1096,7 +1101,7 @@ namespace Multfunction_mod
                     if (dysonSphereLayer != null)
                         layerlist.Add(dysonSphereLayer.id);
                 }
-                GUI.Label(new Rect(0, line++ * heightdis, xl_SimpleUI_1_width.Value, heightdis * 2), "点击删除下列戴森壳层级".getTranslate());
+                GUI.Label(new Rect(0, line++ * heightdis, MainWindow_width.Value, heightdis * 2), "点击删除下列戴森壳层级".getTranslate());
                 for (int i = 1; i <= 10; i++)
                 {
                     if (layerlist.Contains(i) && GUI.Button(new Rect((i - 1) * heightdis * 2, heightdis * line, heightdis * 2, heightdis * 2), i.ToString()))
@@ -1244,7 +1249,7 @@ namespace Multfunction_mod
         public void LogisticsPannel()
         {
             bool english = Localization.language != Language.zhCN;
-            GUILayout.BeginArea(new Rect(10, 10, xl_SimpleUI_1_width.Value, xl_SimpleUI_1_height.Value));
+            GUILayout.BeginArea(new Rect(10, 10, MainWindow_width.Value, MainWindow_height.Value));
             int tempwidth = 0;
             int tempheight = english ? 1 : 0;
             int tempwidthdis = english ? heightdis * 8 : heightdis * 4;
@@ -1261,7 +1266,7 @@ namespace Multfunction_mod
             MechalogStationprovide_bool.Value = GUI.Toggle(new Rect(tempwidth, tempheight * heightdis, tempwidthdis, heightdis), MechalogStationprovide_bool.Value, "需求使用物流站".getTranslate());
 
 
-            GUILayout.BeginArea(new Rect(0, 10 + (tempheight + 1) * heightdis, xl_SimpleUI_1_width.Value, xl_SimpleUI_1_height.Value));
+            GUILayout.BeginArea(new Rect(0, 10 + (tempheight + 1) * heightdis, MainWindow_width.Value, MainWindow_height.Value));
             tempwidth = 0;
             tempheight = 0;
             for (int i = 0; i < itemProtos.Count; i++)
@@ -1287,7 +1292,7 @@ namespace Multfunction_mod
                     }
                 }
                 tempwidth += heightdis * 2;
-                if (tempwidth > xl_SimpleUI_1_width.Value - 4 * heightdis)
+                if (tempwidth > MainWindow_width.Value - 4 * heightdis)
                 {
                     tempheight += 4;
                     tempwidth = 0;
@@ -2391,7 +2396,7 @@ namespace Multfunction_mod
         public void PlayerDataInit()
         {
             GameHistoryData historyData = GameMain.history;
-            if (player != null && ((player == null || GameMain.mainPlayer != player) || refreshPlayerData))
+            if (player == null || GameMain.mainPlayer != player || refreshPlayerData)
             {
                 refreshPlayerData = false;
                 player = GameMain.mainPlayer;
