@@ -2689,7 +2689,6 @@ namespace Multfunction_mod
                                     int lastIndex = sc.storage.Length != 3 ? 4 : 2;
                                     if ((Time.time - StationMinerTime) > 1)
                                     {
-                                        StationMinerTime = Time.time;
                                         for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
                                         {
                                             int itemId = sc.storage[i].itemId;
@@ -2746,6 +2745,10 @@ namespace Multfunction_mod
                         }
                     }
                 }
+            }
+            if ((Time.time - StationMinerTime) > 1)
+            {
+                StationMinerTime = Time.time;
             }
         }
 
