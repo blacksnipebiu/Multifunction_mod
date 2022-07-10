@@ -16,7 +16,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.2.19";
+        public const string VERSION = "2.3.0";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
         public Light SunLight;
