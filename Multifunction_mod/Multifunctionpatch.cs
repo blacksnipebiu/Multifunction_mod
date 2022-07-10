@@ -1058,6 +1058,7 @@ namespace Multfunction_mod
                 int beltid = __instance.factory.entityPool[entityId].beltId;
                 if (!Beltsignal.ContainsKey(factoryIndex))
                     Beltsignal.Add(factoryIndex, new Dictionary<int, int>());
+                Beltsignal[factoryIndex].Add(beltid, signalId);
                 if (Beltsignalnumberoutput.ContainsKey(factoryIndex) && Beltsignalnumberoutput[factoryIndex].ContainsKey(beltid) && signalId != 601)
                 {
                     Beltsignalnumberoutput[factoryIndex].Remove(beltid);
