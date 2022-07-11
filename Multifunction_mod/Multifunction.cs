@@ -16,12 +16,14 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.3.1";
+        public const string VERSION = "2.3.2";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
         public Light SunLight;
         public Texture2D mytexture;
         public GameObject MultiFunctionPanel;
+        public ItemProto[] itemProtos;
+        public RecipeProto[] RecipeList;
         public GUIStyle style = new GUIStyle();
         public static Player player;
         public static GameObject ui_MultiFunctionPanel;
@@ -31,8 +33,6 @@ namespace Multfunction_mod
         public static List<StationComponent> SuperStation = new List<StationComponent>();
         public static List<StationComponent> StarSuperStation = new List<StationComponent>();
         public static List<Tempsail> tempsails = new List<Tempsail>();
-        public static List<ItemProto> itemProtos = new List<ItemProto>();
-        public static List<RecipeProto> RecipeList = new List<RecipeProto>();
         public static Dictionary<int, int> tmp_levelChanges;
         public VeinData pointveindata;
         public KeyboardShortcut tempShowWindow;
@@ -55,10 +55,8 @@ namespace Multfunction_mod
         public float tempx1;
         public float tempy1;
         public float MechaLogisticsTime;
-        public float playtrashtime;
         public float startsuperstationtime;
         public float StationMinerTime;
-        public float playwithtrashtimemult = 1;
         public static float buildheight = 1;
         public float[] warpstationqua;
         public float[] warpsuperstationqua;
@@ -80,8 +78,6 @@ namespace Multfunction_mod
         public bool rightscaling;
         public bool topscaling;
         public bool bottomscaling;
-        public bool playwithtrash;
-        public bool trashplaying;
         public bool dropdownbutton;
         public bool addveinbool;
         public bool buildnotimecolddown;
@@ -211,7 +207,6 @@ namespace Multfunction_mod
         void Start()
         {
             Multifunctionpatch.patchallmethod();
-
             AssetBundle assetBundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("Multifunction_mod.multifunctionpanel"));
             MultiFunctionPanel = assetBundle.LoadAsset<GameObject>("MultiFunctionPanel");
             preparedraw();
@@ -331,7 +326,6 @@ namespace Multfunction_mod
             multipelsmelt1 = MULTIPELSMELT.Value.ToString();
             tempShowWindow = WindowQuickKey.Value;
 
-            InvokeRepeating("autocleanTrash", 1, 30);
             for (int i = 0; i < 100; i++)
             {
                 ChangeValueArray[i] = 0.0f;
@@ -359,6 +353,10 @@ namespace Multfunction_mod
             if (Input.GetKey(KeyCode.F10) && Input.GetKeyDown(KeyCode.LeftShift))
             {
                 temp = !temp;
+                for(int i = 0; i < LDB.recipes.dataArray.Length; i++)
+                {
+                    LDB.recipes.dataArray[i].Handcraft = true;
+                }
                 //GameSave.LoadCurrentGameInResource(18);
             }
             if (player != null && player.controller != null && player.controller.cmd.type == ECommand.Build && player.controller.actionBuild != null)
@@ -602,7 +600,7 @@ namespace Multfunction_mod
             GUILayout.BeginArea(new Rect(0, 0, maxwidth / 4, maxheight));
             int size = maxwidth / 40;
             int height = 0;
-            for (int i = 0; i < itemProtos.Count; i++)
+            for (int i = 0; i < itemProtos.Length; i++)
             {
                 if (i != 0 && i % 10 == 0) height++;
                 if (GUI.Button(new Rect(i % 10 * size, height * size, size, size), itemProtos[i].iconSprite.texture))
@@ -1153,19 +1151,10 @@ namespace Multfunction_mod
             bool english = Localization.language != Language.zhCN;
             GUILayout.BeginArea(new Rect(10, 10, 10 + (english ? heightdis * 12 : heightdis * 10), heightdis * 17));
             {
-                playwithtrashtimemult = (int)GUI.HorizontalSlider(new Rect(0, 5, heightdis * 5, heightdis), playwithtrashtimemult, 1, 100);
-                GUI.Label(new Rect(heightdis * 5, 0, heightdis * 7, heightdis), "丢垃圾速率".getTranslate() + ":" + (int)playwithtrashtimemult, style);
-
                 int lines = 0;
                 Rect t = new Rect(0, heightdis, english ? heightdis * 12 : heightdis * 10, heightdis);
                 GUI.Label(RectChanged(t, heightdis * lines++, 2), "以下设置需要进入存档".getTranslate(), style);
-                playwithtrash = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), playwithtrash, "丢垃圾(整活用)".getTranslate());
                 sunlight_bool.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), sunlight_bool.Value, "夜灯".getTranslate());
-                if (SandBoxMode != GUI.Toggle(RectChanged(t, heightdis * lines++, 2), SandBoxMode, "创造模式".getTranslate()))
-                {
-                    SandBoxMode = !SandBoxMode;
-                    GameMain.sandboxToolsEnabled = SandBoxMode;
-                }
                 pasteanyway = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), pasteanyway, "蓝图强制粘贴".getTranslate());
                 PasteBuildAnyWay = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), PasteBuildAnyWay, "建筑铺设无需条件".getTranslate());
                 if (closeallcollider != GUI.Toggle(RectChanged(t, heightdis * lines++, 2), closeallcollider, "关闭所有碰撞体".getTranslate()))
@@ -1173,28 +1162,57 @@ namespace Multfunction_mod
                     closeallcollider = !closeallcollider;
                     ColliderPool.instance.gameObject.SetActive(!closeallcollider);
                 }
-
-                if (!Infinitething.Value || !dismantle_but_nobuild.Value) playwithtrash = false;
-
+                allhandcraft.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), allhandcraft.Value, "全部手搓".getTranslate());
+                if (allhandcraft.Value)
+                {
+                    for (int i = 0; i < LDB.recipes.dataArray.Length; i++)
+                    {
+                        LDB.recipes.dataArray[i].Handcraft = true;
+                    }
+                }
+                quickproduce.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), quickproduce.Value, "快速生产".getTranslate());
+                if (quickproduce.Value)
+                {
+                    for (int i = 0; i < LDB.recipes.dataArray.Length; i++)
+                    {
+                        LDB.recipes.dataArray[i].TimeSpend = 1;
+                    }
+                }
                 stackmultiple1 = Regex.Replace(GUI.TextField(RectChanged(t, heightdis * lines++, 2), stackmultiple1, 10), @"[^0-9]", "");
                 if (GUI.Button(RectChanged(t, heightdis * lines++, 2), "设置堆叠倍率".getTranslate()))
                 {
                     StackMultiple.Value = int.Parse(stackmultiple1);
-                    ItemProto[] dataArray = LDB.items.dataArray;
-                    for (int j = 0; j < dataArray.Length; j++)
+                    ChangeItemstack();
+                }
+                multipelsmelt1 = Regex.Replace(GUI.TextField(RectChanged(t, heightdis * lines++, 2), multipelsmelt1, 10), @"[^0-9]", "");
+                if (GUI.Button(RectChanged(t, heightdis * lines++, 2), "设置冶炼倍数".getTranslate()))
+                {
+                    for (int i = 0; i < LDB.recipes.dataArray.Length; i++)
                     {
-                        StorageComponent.itemStackCount[dataArray[j].ID] = dataArray[j].StackSize * StackMultiple.Value;
+                        if (LDB.recipes.dataArray[i].Type == ERecipeType.Smelt)
+                        {
+                            for (int j = 0; j < LDB.recipes.dataArray[i].ItemCounts.Length; ++j)
+                                LDB.recipes.dataArray[i].ItemCounts[j] /= MULTIPELSMELT.Value;
+                            for (int j = 0; j < LDB.recipes.dataArray[i].ResultCounts.Length; ++j)
+                                LDB.recipes.dataArray[i].ResultCounts[j] /= MULTIPELSMELT.Value;
+                        }
                     }
+                    MULTIPELSMELT.Value = int.Parse(multipelsmelt1);
+                    if (MULTIPELSMELT.Value < 1)
+                    {
+                        MULTIPELSMELT.Value = 1;
+                        multipelsmelt1 = "1";
+                    }else if (MULTIPELSMELT.Value > 100)
+                    {
+                        MULTIPELSMELT.Value = 100;
+                        multipelsmelt1 = "100";
+                    }
+                    ChangeRecipe();
                 }
                 if (GUI.Button(RectChanged(t, heightdis * lines++, 2), "成就重新检测".getTranslate()))
                 {
                     GameMain.data.abnormalData.runtimeDatas = new AbnormalityRuntimeData[3000];
                 }
-                GUI.Label(RectChanged(t, heightdis * lines++, 2), "以下设置需要重启游戏".getTranslate(), style);
-                multipelsmelt1 = Regex.Replace(GUI.TextField(RectChanged(t, heightdis * lines++, 2), multipelsmelt1, 10), @"[^0-9]", "");
-                if (GUI.Button(RectChanged(t, heightdis * lines++, 2), "设置冶炼倍数".getTranslate())) MULTIPELSMELT.Value = int.Parse(multipelsmelt1);
-                allhandcraft.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), allhandcraft.Value, "全部手搓".getTranslate());
-                quickproduce.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), quickproduce.Value, "快速生产".getTranslate());
             }
             GUILayout.EndArea();
             GUILayout.BeginArea(new Rect(20 + (english ? heightdis * 12 : heightdis * 10), 10, heightdis * 10, heightdis * 15));
@@ -1269,7 +1287,7 @@ namespace Multfunction_mod
             GUILayout.BeginArea(new Rect(0, 10 + (tempheight + 1) * heightdis, MainWindow_width.Value, MainWindow_height.Value));
             tempwidth = 0;
             tempheight = 0;
-            for (int i = 0; i < itemProtos.Count; i++)
+            for (int i = 0; i < itemProtos.Length; i++)
             {
                 ItemProto ip = itemProtos[i];
                 GUIStyle style = new GUIStyle();
@@ -1817,14 +1835,16 @@ namespace Multfunction_mod
         {
             if (first && LDB.items != null && LDB.recipes != null)
             {
-                RecipeList = new List<RecipeProto>(LDB.recipes.dataArray);
-                itemProtos = new List<ItemProto>(LDB.items.dataArray);
-                mechalogistics = new int[itemProtos.Count];
-                mechalogisticsneed = new int[itemProtos.Count];
+                itemProtos = new ItemProto[LDB.items.dataArray.Length];
+                RecipeList = new RecipeProto[LDB.recipes.dataArray.Length];
+                Array.Copy(LDB.items.dataArray, itemProtos, itemProtos.Length);
+                Array.Copy(LDB.recipes.dataArray, RecipeList, RecipeList.Length);
+                mechalogistics = new int[itemProtos.Length];
+                mechalogisticsneed = new int[itemProtos.Length];
 
                 if ("".Equals(Mechalogneed.Value) || Mechalogneed.Value.Length == 0)
                 {
-                    for (int i = 0; i < itemProtos.Count; i++)
+                    for (int i = 0; i < itemProtos.Length; i++)
                     {
                         mechalogistics[i] = 0;
                         mechalogisticsneed[i] = 0;
@@ -1836,12 +1856,6 @@ namespace Multfunction_mod
                 }
                 first = false;
                 ready = true;
-                //冶炼设施倍率
-                Changesmelt();
-                //更改配方相关
-                ChangeRecipe();
-                //更改物品相关
-                ChangeItemstack();
             }
         }
 
@@ -1913,6 +1927,10 @@ namespace Multfunction_mod
                     FinallyInit = true;
                     playcancelsolarbullet = cancelsolarbullet.Value;
                     alwaysemissiontemp = alwaysemission.Value;
+                    //更改配方相关
+                    ChangeRecipe();
+                    //更改物品相关
+                    ChangeItemstack();
                 }
             }
 
@@ -1929,7 +1947,6 @@ namespace Multfunction_mod
                 if (player != null)
                 {
                     ControlVein();
-                    Playwithtrashset();
                     Sunlightset();
                     SetDronenocomsume();
                     MechaLogisticsMethod();
@@ -2283,10 +2300,10 @@ namespace Multfunction_mod
         public void Savemechalogisticsneed()
         {
             string result = "";
-            for (int i = 0; i < itemProtos.Count; i++)
+            for (int i = 0; i < itemProtos.Length; i++)
             {
                 result += mechalogistics[i] + "," + mechalogisticsneed[i];
-                result += i == itemProtos.Count - 1 ? "" : ";";
+                result += i == itemProtos.Length - 1 ? "" : ";";
             }
             Mechalogneed.Value = result;
         }
@@ -2294,9 +2311,9 @@ namespace Multfunction_mod
         public void Loadmechalogisticsneed()
         {
             string[] t1 = Mechalogneed.Value.Split(';');
-            if (t1.Length != itemProtos.Count)
+            if (t1.Length != itemProtos.Length)
             {
-                for (int i = 0; i < itemProtos.Count; i++)
+                for (int i = 0; i < itemProtos.Length; i++)
                 {
                     mechalogistics[i] = 0;
                     mechalogisticsneed[i] = 0;
@@ -2304,7 +2321,7 @@ namespace Multfunction_mod
             }
             else
             {
-                for (int i = 0; i < itemProtos.Count; i++)
+                for (int i = 0; i < itemProtos.Length; i++)
                 {
                     mechalogistics[i] = int.Parse(t1[i].Split(',')[0]);
                     mechalogisticsneed[i] = int.Parse(t1[i].Split(',')[1]);
@@ -3710,21 +3727,30 @@ namespace Multfunction_mod
             //    LDB._recipes.dataArray = temp.ToArray();
             //    LDB._recipes.OnAfterDeserialize();
             //}
-
-
-
-            //配方信息查询
-            foreach (RecipeProto rp in RecipeList)
+            bool needMulti = LDB.recipes.dataArray[0].ItemCounts[0] == 1;
+            for (int i = 0; i < LDB.recipes.dataArray.Length; i++)
             {
                 if (allhandcraft.Value)
                 {
-                    rp.Handcraft = true;
+                    LDB.recipes.dataArray[i].Handcraft = true;
                 }
 
                 if (quickproduce.Value)
                 {
-                    rp.TimeSpend = 1;
+                    LDB.recipes.dataArray[i].TimeSpend = 1;
                 }
+                if (MULTIPELSMELT.Value!=1 && needMulti && LDB.recipes.dataArray[i].Type == ERecipeType.Smelt)
+                {
+                    for (int j = 0; j < LDB.recipes.dataArray[i].ItemCounts.Length; ++j)
+                        LDB.recipes.dataArray[i].ItemCounts[j] *= MULTIPELSMELT.Value;
+                    for (int j = 0; j < LDB.recipes.dataArray[i].ResultCounts.Length; ++j)
+                        LDB.recipes.dataArray[i].ResultCounts[j] *= MULTIPELSMELT.Value;
+                }
+            }
+
+            //配方信息查询
+            foreach (RecipeProto rp in RecipeList)
+            {
                 //获取配方数据
                 {
                     //string itemstr = "";
@@ -3755,25 +3781,16 @@ namespace Multfunction_mod
             }
         }
 
-        public void Changesmelt()
-        {
-            for (int i = 0; i < RecipeList.Count; ++i)
-            {
-                if (RecipeList[i].Type == ERecipeType.Smelt)
-                {
-                    for (int j = 0; j < RecipeList[i].ItemCounts.Length; ++j)
-                        RecipeList[i].ItemCounts[j] *= MULTIPELSMELT.Value;
-                    for (int j = 0; j < RecipeList[i].ResultCounts.Length; ++j)
-                        RecipeList[i].ResultCounts[j] *= MULTIPELSMELT.Value;
-                }
-            }
-        }
-
         /// <summary>
         /// 物品相关修改
         /// </summary>
         public void ChangeItemstack()
         {
+            ItemProto[] dataArray = LDB.items.dataArray;
+            for (int j = 0; j < dataArray.Length; j++)
+            {
+                StorageComponent.itemStackCount[dataArray[j].ID] = dataArray[j].StackSize * StackMultiple.Value;
+            }
             foreach (ItemProto ip in itemProtos)
             {
                 //Debug.Log(ip.ID + " " + ip.Name);
@@ -3800,9 +3817,9 @@ namespace Multfunction_mod
         public void InfiniteAllThingInPackage()
         {
             if (!Infinitething.Value) return;
-            if (player.package.grids.Length < itemProtos.Count)
+            if (player.package.grids.Length < itemProtos.Length)
             {
-                player.package.SetSize((itemProtos.Count / 10 + 1) * 10);
+                player.package.SetSize((itemProtos.Length / 10 + 1) * 10);
             }
             StorageComponent.GRID[] grids = player.package.grids;
             int i = 0;
@@ -3815,46 +3832,6 @@ namespace Multfunction_mod
                 if (i == grids.Length) break;
             }
             player.SetSandCount(10000000);
-        }
-
-        public void play_with_trash()
-        {
-            if (player == null) return;
-            StorageComponent.GRID[] grids = player.package.grids;
-            for (int i = 0; i < 10; i++)
-            {
-                if (grids[grids.Length - 1 - i].count != 0)
-                {
-                    player.ThrowTrash(grids[grids.Length - 1 - i].itemId, 1, 0, 0);
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
-
-        public void Playwithtrashset()
-        {
-            if (playwithtrash)
-            {
-                if (!trashplaying)
-                {
-                    playtrashtime = (int)playwithtrashtimemult;
-                    InvokeRepeating("play_with_trash", 1, 1 / playwithtrashtimemult);
-                    trashplaying = true;
-                }
-                if (playtrashtime != (int)playwithtrashtimemult)
-                {
-                    CancelInvoke("play_with_trash");
-                    trashplaying = false;
-                }
-            }
-            else if (trashplaying)
-            {
-                CancelInvoke("play_with_trash");
-                trashplaying = false;
-            }
         }
 
         public void Sunlightset()
