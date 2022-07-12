@@ -16,7 +16,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.3.2";
+        public const string VERSION = "2.3.3";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
         public Light SunLight;
@@ -2701,7 +2701,7 @@ namespace Multfunction_mod
                                         }
                                     }
                                 }
-                                if (StationMiner.Value && (sc.name.Equals("Station_miner") || sc.name.Equals("星球矿机")))
+                                if (StationMiner.Value&& !sc.isVeinCollector && (sc.name.Equals("Station_miner") || sc.name.Equals("星球矿机")))
                                 {
                                     int lastIndex = sc.storage.Length != 3 ? 4 : 2;
                                     if ((Time.time - StationMinerTime) > 1)

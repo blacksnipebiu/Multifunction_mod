@@ -473,10 +473,10 @@ namespace Multfunction_mod
             {
                 if (Buildingnoconsume.Value && GameMain.localPlanet.factory.entityPool[__instance.consumerPool[__result].entityId].stationId <= 0)
                 {
-                    __instance.consumerPool[__result].requiredEnergy = 0;
-                    __instance.consumerPool[__result].idleEnergyPerTick = 0;
-                    __instance.consumerPool[__result].servedEnergy = 0;
-                    __instance.consumerPool[__result].workEnergyPerTick = 0;
+                    __instance.consumerPool[__result].requiredEnergy = -1000000;
+                    __instance.consumerPool[__result].idleEnergyPerTick = -1000000;
+                    __instance.consumerPool[__result].servedEnergy = -1000000;
+                    __instance.consumerPool[__result].workEnergyPerTick = -1000000;
                 }
             }
         }
@@ -1212,6 +1212,7 @@ namespace Multfunction_mod
                 }
             }
         }
+
         [HarmonyPatch(typeof(CargoTraffic), "RemoveBeltComponent")]
         class RemoveBeltComponentPatch
         {
