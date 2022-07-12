@@ -16,7 +16,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.3.3";
+        public const string VERSION = "2.3.4";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
         public Light SunLight;
@@ -146,6 +146,7 @@ namespace Multfunction_mod
         public static ConfigEntry<string> watertypePlanet;
         public static ConfigEntry<string> Mechalogneed;
         public static ConfigEntry<Boolean> NotTidyVein;
+        public static ConfigEntry<Boolean> InspectDisNoLimit;
         public static ConfigEntry<Boolean> changexveinspos;
         public static ConfigEntry<Boolean> StationMaxproliferator;
         public static ConfigEntry<Boolean> Mechalogistics_bool;
@@ -271,6 +272,7 @@ namespace Multfunction_mod
 
                 build_gascol_noequator = Config.Bind("采集器无视赤道", "build_gascol_noequator", false);
                 lockpackage_bool = Config.Bind("锁定背包", "lockpackage_bool", false);
+                InspectDisNoLimit = Config.Bind("操作范围不受限制", "InspectDisNoLimit", false);
                 noneedtrashsand = Config.Bind("不需要垃圾沙土", "noneedtrashsand", false);
                 dismantle_but_nobuild = Config.Bind("拆除不添加至背包", "dismantle_but_nobuild", false);
                 ItemList_bool = Config.Bind("物品列表", "ItemList_bool", false);
@@ -1149,12 +1151,22 @@ namespace Multfunction_mod
         public void OtherPannel()
         {
             bool english = Localization.language != Language.zhCN;
+            if (player == null) return;
             GUILayout.BeginArea(new Rect(10, 10, 10 + (english ? heightdis * 12 : heightdis * 10), heightdis * 17));
             {
                 int lines = 0;
                 Rect t = new Rect(0, heightdis, english ? heightdis * 12 : heightdis * 10, heightdis);
                 GUI.Label(RectChanged(t, heightdis * lines++, 2), "以下设置需要进入存档".getTranslate(), style);
                 sunlight_bool.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), sunlight_bool.Value, "夜灯".getTranslate());
+                InspectDisNoLimit.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), InspectDisNoLimit.Value, "操作范围不受限制".getTranslate());
+                if (InspectDisNoLimit.Value)
+                {
+                    player.mecha.buildArea = 400;
+                }
+                else
+                {
+                    player.mecha.buildArea = 80;
+                }
                 pasteanyway = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), pasteanyway, "蓝图强制粘贴".getTranslate());
                 PasteBuildAnyWay = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), PasteBuildAnyWay, "建筑铺设无需条件".getTranslate());
                 if (closeallcollider != GUI.Toggle(RectChanged(t, heightdis * lines++, 2), closeallcollider, "关闭所有碰撞体".getTranslate()))

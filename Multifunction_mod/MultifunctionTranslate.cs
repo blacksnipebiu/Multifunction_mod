@@ -152,6 +152,7 @@ namespace Multfunction_mod
             TranslateDict.Add("以下设置需要重启游戏", "The follow config need restart the game");
             TranslateDict.Add("设置冶炼倍数", "Set multiple smelt");
             TranslateDict.Add("设置堆叠倍率", "Set stack size");
+            TranslateDict.Add("操作范围不受限制", "Inspect no limit");
             TranslateDict.Add("全部手搓", "All item can handcraft");
             TranslateDict.Add("无材料生产", "No material produce");
             TranslateDict.Add("快速生产", "Quick produce");

@@ -466,6 +466,17 @@ namespace Multfunction_mod
                 }
             }
         }
+        [HarmonyPatch(typeof(PlayerAction_Inspect), "GetObjectSelectDistance")]
+        class GetObjectSelectDistancePatch
+        {
+            public static void Postfix(ref float __result)
+            {
+                if (InspectDisNoLimit.Value)
+                {
+                    __result = 400;
+                }
+            }
+        }
         [HarmonyPatch(typeof(PowerSystem), "NewConsumerComponent")]
         class NewConsumerComponentPatch
         {
