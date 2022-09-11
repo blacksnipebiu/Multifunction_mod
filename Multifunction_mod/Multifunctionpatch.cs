@@ -127,11 +127,52 @@ namespace Multfunction_mod
                 }
             }
         }
+        [HarmonyPatch(typeof(SiloComponent), "InternalUpdate")]
+        class SiloComponentInternalUpdatePatch
+        {
+            public static int siloNum = 0;
+            public static void Prefix(ref SiloComponent __instance)
+            {
+                try
+                {
+                    if (TempSiloRandomEmission && SiloNumber != 0 && __instance.chargeSpend != 0)
+                    {
+                        if (siloNum > 0 && siloNum % SiloNumber == 0)
+                        {
+                            TempSiloRandomEmission = false;
+                        }
+                        else
+                        {
+                            siloNum++;
+                            __instance.time = siloNum * 500000 % __instance.chargeSpend;
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
         [HarmonyPatch(typeof(EjectorComponent), "InternalUpdate")]
         class EjectorComponentPatch
         {
+            public static int ejectorNum = 0;
             public static bool Prefix(ref EjectorComponent __instance, AstroData[] astroPoses, AnimData[] animPool, ref DysonSwarm swarm, float power, int[] consumeRegister, ref uint __result)
             {
+                if (TempEjectorRandomEmission && EjectorNumber > 0 && __instance.chargeSpend>0)
+                {
+                    try
+                    {
+                        if (ejectorNum > 0 && ejectorNum % EjectorNumber == 0)
+                        {
+                            TempEjectorRandomEmission = false;
+                        }
+                        else
+                        {
+                            ejectorNum++;
+                            __instance.time = ejectorNum * 10000 % __instance.chargeSpend;
+                        }
+                    }
+                    catch { }
+                }
                 if (playcancelsolarbullet || alwaysemissiontemp)
                 {
                     if (__instance.needs == null)
@@ -242,7 +283,7 @@ namespace Multfunction_mod
                                 {
                                     if (i != __instance.planetId)
                                     {
-                                        double num6 = (double)astroPoses[i].uRadius;
+                                        double num6 = astroPoses[i].uRadius;
                                         if (num6 > 1.0)
                                         {
                                             VectorLF3 vectorLF4 = astroPoses[i].uPos - vectorLF;
@@ -315,6 +356,7 @@ namespace Multfunction_mod
                                         uBegin = vectorLF,
                                         uEnd = vectorLF2
                                     }, __instance.orbitId);
+
                                 }
                                 __instance.bulletInc -= __instance.bulletInc / __instance.bulletCount;
                                 __instance.bulletCount--;
@@ -412,20 +454,32 @@ namespace Multfunction_mod
         {
             public static void Postfix(ref StationComponent __result)
             {
-                if (autochangeQuantumstationname && Quantumtransport_bool.Value)
+                if (!__result.isCollector)
                 {
-                    __result.name = "星球量子传输站";
-                }
-                else if (autochangeQuantumStarstationname && Quantumtransport_bool.Value)
-                {
-                    __result.name = "星系量子传输站";
-                }
-                else if (autochangestationname.Value)
-                {
-                    __result.name = Localization.language != Language.zhCN ? "Station_miner" : "星球矿机";
-                }
+                    if (autochangeQuantumstationname && Quantumtransport_bool.Value)
+                    {
+                        __result.name = "星球量子传输站";
+                    }
+                    else if (autochangeQuantumStarstationname && Quantumtransport_bool.Value)
+                    {
+                        __result.name = "星系量子传输站";
+                    }
+                    else if (autochangestationname.Value)
+                    {
+                        __result.name = Localization.language != Language.zhCN ? "Station_miner" : "星球矿机";
+                    }
+                    if (Buildingnoconsume.Value)
+                    {
+                        if (__result.isVeinCollector)
+                        {
 
-
+                        }
+                        else
+                        {
+                            GameMain.localPlanet.factory.powerSystem.consumerPool[__result.pcId].idleEnergyPerTick = 1000;
+                        }
+                    }
+                }
             }
         }
         [HarmonyPatch(typeof(Player), "TryAddItemToPackage")]
@@ -477,17 +531,25 @@ namespace Multfunction_mod
                 }
             }
         }
+        [HarmonyPatch(typeof(UIAbnormalityTip), "Determine")]
+        class UIAbnormalityTipDeterminePatch
+        {
+            public static bool Prefix()
+            {
+                return !CloseUIAbnormalityTip.Value;
+            }
+        }
         [HarmonyPatch(typeof(PowerSystem), "NewConsumerComponent")]
         class NewConsumerComponentPatch
         {
             public static void Postfix(ref int __result, PowerSystem __instance)
             {
-                if (Buildingnoconsume.Value && GameMain.localPlanet.factory.entityPool[__instance.consumerPool[__result].entityId].stationId <= 0)
+                if (Buildingnoconsume.Value)
                 {
-                    __instance.consumerPool[__result].requiredEnergy = -1000000;
-                    __instance.consumerPool[__result].idleEnergyPerTick = -1000000;
-                    __instance.consumerPool[__result].servedEnergy = -1000000;
-                    __instance.consumerPool[__result].workEnergyPerTick = -1000000;
+                    __instance.consumerPool[__result].requiredEnergy = 0;
+                    __instance.consumerPool[__result].idleEnergyPerTick = 0;
+                    __instance.consumerPool[__result].servedEnergy = 0;
+                    __instance.consumerPool[__result].workEnergyPerTick = 0;
                 }
             }
         }
@@ -548,8 +610,8 @@ namespace Multfunction_mod
                 }
                 if (StationMaxproliferator.Value)
                 {
-                    for(int i = 0; i < 5&& __instance.storage[i].itemId > 0; i++)
-                             __instance.storage[i].inc = __instance.storage[i].count * 4+100;
+                    for (int i = 0; i < __instance.storage.Length && __instance.storage[i].itemId > 0; i++)
+                        __instance.storage[i].inc = __instance.storage[i].count * 4 + 100;
                 }
             }
             public static void Postfix(ref StationComponent __instance)
@@ -568,6 +630,11 @@ namespace Multfunction_mod
                 if (Stationfullenergy.Value)
                 {
                     __instance.energy = __instance.energyMax;
+                }
+                if (StationMaxproliferator.Value)
+                {
+                    for (int i = 0; i < __instance.storage.Length && __instance.storage[i].itemId > 0; i++)
+                        __instance.storage[i].inc = __instance.storage[i].count * 4 + 100;
                 }
             }
             public static void Postfix(ref StationComponent __instance)
@@ -625,7 +692,6 @@ namespace Multfunction_mod
                     fCount = int.MaxValue-200;
             }
         }
-
 
         [HarmonyPatch(typeof(PowerSystem), "NewNodeComponent")]
         class NewNodeComponentPatch
@@ -765,6 +831,26 @@ namespace Multfunction_mod
             }
         }
 
+        [HarmonyPatch(typeof(PlatformSystem), "RefreshColorsTexture")]
+        private class PlatformSystemRefreshColorsTexturePatch
+        {
+            public static bool Prefix()
+            {
+                return temp;
+            }
+        }
+        [HarmonyPatch(typeof(DysonSphere), "BeforeGameTick")]
+        private class ImportFromBlueprintPatch
+        {
+            static int num = 0;
+            public static void Postfix(DysonSphere __instance)
+            {
+                if(num++ < 10)
+                {
+                    Debug.Log(__instance.starData.dysonLumino + " "+__instance.energyGenPerNode +" "+ __instance.energyGenPerFrame);
+                }
+            }
+        }
         [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]
         private class PasteCheckBuildConditionsPatch
         {
@@ -789,23 +875,49 @@ namespace Multfunction_mod
         [HarmonyPatch(typeof(ProductionStatistics), "GameTick")]
         private class ProductionStatisticsGameTickPatch
         {
+            public static float time = 0;
             public static bool Prefix(ProductionStatistics __instance)
             {
-                if (!GameMain.instance.running || !FinallyInit) return true;
-                if (GameMain.galaxy != null && addStatQueue.Count > 0)
+                if (!GameMain.instance.running || !FinallyInit)
                 {
-                    int[] temp = addStatQueue.Dequeue();
-                    int factoryIndex = temp[0];
-                    int itemId = temp[1];
-                    int itemNum = temp[2];
-                    bool produce = temp[3] == 1;
-                    if (produce)
+                    addStatDic = new Dictionary<int, Dictionary<int, long>>();
+                    consumeStatDic = new Dictionary<int, Dictionary<int, long>>();
+                    return true;
+                }
+                if (GameMain.galaxy != null && (Time.time - time)>0.5f)
+                {
+                    time = Time.time;
+                    if (addStatDic != null)
                     {
-                        __instance.factoryStatPool[factoryIndex].productRegister[itemId] += itemNum;
+                        List<int> key1s = new List<int>(addStatDic.Keys);
+                        foreach (var key1 in key1s)
+                        {
+                            int factoryIndex = GameMain.galaxy.PlanetById(key1).factoryIndex;
+                            List<int> key2s = new List<int>(addStatDic[key1].Keys);
+                            foreach (var key2 in key2s)
+                            {
+                                if (addStatDic[key1][key2] == 0) continue;
+                                int itemNum = addStatDic[key1][key2] > int.MaxValue ? int.MaxValue : (int)addStatDic[key1][key2];
+                                __instance.factoryStatPool[factoryIndex].productRegister[key2] += itemNum;
+                                addStatDic[key1][key2] -= itemNum;
+                            }
+                        }
                     }
-                    else
+                    if (consumeStatDic != null)
                     {
-                        __instance.factoryStatPool[factoryIndex].consumeRegister[itemId] += itemNum;
+                        List<int> key1s = new List<int>(consumeStatDic.Keys);
+                        foreach (var key1 in key1s)
+                        {
+                            int factoryIndex = GameMain.galaxy.PlanetById(key1).factoryIndex;
+                            List<int> key2s = new List<int>(consumeStatDic[key1].Keys);
+                            foreach (var key2 in key2s)
+                            {
+                                if (consumeStatDic[key1][key2] == 0) continue;
+                                int itemNum = consumeStatDic[key1][key2] > int.MaxValue ? int.MaxValue : (int)consumeStatDic[key1][key2];
+                                __instance.factoryStatPool[factoryIndex].consumeRegister[key2] += itemNum;
+                                consumeStatDic[key1][key2] -= itemNum;
+                            }
+                        }
                     }
                 }
 
@@ -1625,7 +1737,7 @@ namespace Multfunction_mod
                 {
                     if (__instance == null || __instance.id != GameMain.mainPlayer.package.id) return;
                     if (itemId <= 0 || itemId >= 6007) return;
-                    if (LDB.items.Select(itemId).CanBuild && __result == 0) __result = 1;
+                    if (LDB.items.Select(itemId).CanBuild && __result == 0) __result = 100;
                 }
             }
         }

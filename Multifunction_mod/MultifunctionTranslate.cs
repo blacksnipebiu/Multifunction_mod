@@ -75,7 +75,7 @@ namespace Multfunction_mod
             TranslateDict.Add("物流站要啥有啥", "All stations infinite item");
             TranslateDict.Add("无需赤道造采集器", "Collector no equatorial condition");
             TranslateDict.Add("强行近距离建造物流站", "Station no too close condition");
-            TranslateDict.Add("星际运输站无限曲速", "Station infinite space warpers");
+            TranslateDict.Add("物流站无限翘曲", "Station infinite space warpers");
             TranslateDict.Add("人造恒星无限能源", "Artificial star infinite power");
             TranslateDict.Add("极速轨道弹射器(慎用)", "Extremely quick Ejector(Danger)");
             TranslateDict.Add("极速垂直发射井(慎用)", "Extremely quick Silo(Danger");
@@ -83,8 +83,8 @@ namespace Multfunction_mod
             TranslateDict.Add("覆盖全球", "Global coverage");
             TranslateDict.Add("超长连接", "Long connection");
             TranslateDict.Add("新建设备不耗电", "New buildings dont't require power"); 
-            TranslateDict.Add("物流站永久满电", "Station Max proliferator");
-            TranslateDict.Add("物流站无限增产", "Stations full energy");
+            TranslateDict.Add("物流站永久满电", "Stations full energy");
+            TranslateDict.Add("物流站无限增产", "Station Max proliferator");
             TranslateDict.Add("传送带信号功能", "BeltSignal Function");
             TranslateDict.Add("储液站任意存", "Anything can store in water tank");
             TranslateDict.Add("量子耗能/个", "Quantum comsume energy each");

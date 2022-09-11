@@ -2,10 +2,13 @@
 using BepInEx.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using static Multfunction_mod.Constant;
 
 namespace Multfunction_mod
@@ -16,7 +19,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.3.4";
+        public const string VERSION = "2.3.8";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
         public Light SunLight;
@@ -29,9 +32,10 @@ namespace Multfunction_mod
         public static GameObject ui_MultiFunctionPanel;
         public List<string> BPPathList = new List<string>();
         public List<string> BPFileNameList = new List<string>();
+        public static Queue<string> TimesTest = new Queue<string>();
         public List<int[]> packageitemlist = new List<int[]>();
-        public static List<StationComponent> SuperStation = new List<StationComponent>();
-        public static List<StationComponent> StarSuperStation = new List<StationComponent>();
+        public static List<int> SuperStation = new List<int>();
+        public static List<int> StarSuperStation = new List<int>();
         public static List<Tempsail> tempsails = new List<Tempsail>();
         public static Dictionary<int, int> tmp_levelChanges;
         public VeinData pointveindata;
@@ -58,8 +62,8 @@ namespace Multfunction_mod
         public float startsuperstationtime;
         public float StationMinerTime;
         public static float buildheight = 1;
-        public float[] warpstationqua;
-        public float[] warpsuperstationqua;
+        public static float[] warpstationqua;
+        public static float[] warpsuperstationqua;
         public float[] ChangeValueArray = new float[100];
         public bool firstopen = true;
         public bool firstrestorewater = true;
@@ -83,6 +87,8 @@ namespace Multfunction_mod
         public bool buildnotimecolddown;
         public bool SandBoxMode;
         public bool blueprintPasteToolActive;
+        public static int EjectorNumber;
+        public static int SiloNumber;
         public static bool first = true;
         public static bool DriftBuildings;
         public static bool Property9999999;
@@ -107,14 +113,18 @@ namespace Multfunction_mod
         public static bool autochangeQuantumstationname;
         public static bool autochangeQuantumStarstationname;
         public static bool stopUniverse;
+        public static bool TempEjectorRandomEmission;
+        public static bool TempSiloRandomEmission;
         public string stackmultiple1 = "";
         public string multipelsmelt1 = "";
         public string watertype = "";
-        public static Queue<int[]> addStatQueue = new Queue<int[]>();
+        //public static Queue<int[]> addStatQueue = new Queue<int[]>();
+        public static Dictionary<int, Dictionary<int, long>> addStatDic = new Dictionary<int, Dictionary<int, long>>();
+        public static Dictionary<int, Dictionary<int, long>> consumeStatDic = new Dictionary<int, Dictionary<int, long>>();
         public static Dictionary<int, int> watertypePlanetArray = new Dictionary<int, int>();
         public static Dictionary<int, int> OrwatertypePlanetArray = new Dictionary<int, int>();
         public static Dictionary<int, int[]> StarSuperStationItemidstore = new Dictionary<int, int[]>();
-        public static Dictionary<int, Dictionary<int, int[]>> PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, int[]>>();
+        public static Dictionary<int, Dictionary<int, List<int[]>>> PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, List<int[]>>>();
         public static Dictionary<int, Dictionary<int, int>> Beltsignal = new Dictionary<int, Dictionary<int, int>>();
         public static Dictionary<int, Dictionary<int, int>> Beltsignalnumberoutput = new Dictionary<int, Dictionary<int, int>>();
         #endregion
@@ -147,6 +157,7 @@ namespace Multfunction_mod
         public static ConfigEntry<string> Mechalogneed;
         public static ConfigEntry<Boolean> NotTidyVein;
         public static ConfigEntry<Boolean> InspectDisNoLimit;
+        public static ConfigEntry<Boolean> RandomEmission;
         public static ConfigEntry<Boolean> changexveinspos;
         public static ConfigEntry<Boolean> StationMaxproliferator;
         public static ConfigEntry<Boolean> Mechalogistics_bool;
@@ -155,12 +166,6 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> MechalogStationrecycle_bool;
         public static ConfigEntry<Boolean> MechalogStationprovide_bool;
         public static ConfigEntry<Boolean> Infinitestoragetank;
-        public static ConfigEntry<Boolean> Quantumtransportstation_bool;
-        public static ConfigEntry<Boolean> Quantumtransportminer_bool;
-        public static ConfigEntry<Boolean> Quantumtransportsilo_bool;
-        public static ConfigEntry<Boolean> Quantumtransportlab_bool;
-        public static ConfigEntry<Boolean> Quantumtransportpower_bool;
-        public static ConfigEntry<Boolean> Quantumtransportassemble_bool;
         public static ConfigEntry<Boolean> Quantumtransport_bool;
         public static ConfigEntry<Boolean> Quantumtransportbuild_bool;
         public static ConfigEntry<Boolean> Quantumtransportpdwarp_bool;
@@ -192,7 +197,6 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> Station_miner_noconsume_bool;
         public static ConfigEntry<Boolean> StationfullCount_bool;
         public static ConfigEntry<Boolean> ItemList_bool;
-        public static ConfigEntry<Boolean> QuantumStarstationmax;
         public static ConfigEntry<Boolean> getallVein_bool;
         public static ConfigEntry<Boolean> Buildingnoconsume;
         public static ConfigEntry<Boolean> Stationfullenergy;
@@ -202,7 +206,10 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> quickabsorbsolar;
         public static ConfigEntry<Boolean> cancelsolarbullet;
         public static ConfigEntry<Boolean> alwaysemission;
+        public static ConfigEntry<Boolean> StationSpray;
+        public static ConfigEntry<Boolean> StationPowerGen;
         public static ConfigEntry<Boolean> CloseUIpanel;
+        public static ConfigEntry<Boolean> CloseUIAbnormalityTip;
         #endregion
 
         void Start()
@@ -223,12 +230,6 @@ namespace Multfunction_mod
             {
                 Quantumtransport_bool = Config.Bind("量子传输站", "Quantumtransport_bool", false);
                 Quantumtransportbuild_bool = Config.Bind("星球级材料供应", "Quantumtransportbuild_bool", true);
-                Quantumtransportstation_bool = Config.Bind("星球级物流站材料供应", "Quantumtransportstation_bool", true);
-                Quantumtransportminer_bool = Config.Bind("星球级矿机材料供应", "Quantumtransportminer_bool", true);
-                Quantumtransportsilo_bool = Config.Bind("星球级发射井弹射器材料供应", "Quantumtransportsilo_bool", true);
-                Quantumtransportlab_bool = Config.Bind("星球级研究站材料供应", "Quantumtransportlab_bool", true);
-                Quantumtransportpower_bool = Config.Bind("星球级电力设备材料供应", "Quantumtransportpower_bool", true);
-                Quantumtransportassemble_bool = Config.Bind("星球级组装机材料供应", "Quantumtransportassemble_bool", true);
                 Quantumtransportstarwarp_bool = Config.Bind("星系级翘曲全面供应", "Quantumtransportstarwarp_bool", false);
                 Quantumtransportpdwarp_bool = Config.Bind("星球级翘曲全面供应", "Quantumtransportpdwarp_bool", false);
                 scale = Config.Bind("大小适配", "scale", 16);
@@ -269,7 +270,8 @@ namespace Multfunction_mod
                 getallVein_bool = Config.Bind("获取所有矿", "getallVein_bool", false);
                 Buildingnoconsume = Config.Bind("全设备不耗电", "Buildingnoconsume", false);
                 Stationfullenergy = Config.Bind("物流站永久满电", "Stationfullenergy", false);
-
+                StationSpray = Config.Bind("物流站喷涂", "StationSpray", false);
+                StationPowerGen = Config.Bind("物流站内置熔炉", "StationPowerGen", false);
                 build_gascol_noequator = Config.Bind("采集器无视赤道", "build_gascol_noequator", false);
                 lockpackage_bool = Config.Bind("锁定背包", "lockpackage_bool", false);
                 InspectDisNoLimit = Config.Bind("操作范围不受限制", "InspectDisNoLimit", false);
@@ -287,6 +289,7 @@ namespace Multfunction_mod
                 quickabsorbsolar = Config.Bind("跳过太阳帆吸收阶段", "quickabsorbsolar", false);
                 cancelsolarbullet = Config.Bind("跳过太阳帆子弹阶段", "cancelsolarbullet", false);
                 alwaysemission = Config.Bind("全球打帆", "alwaysemission", false);
+                RandomEmission = Config.Bind("随机发射", "RandomEmission", false);
                 StationStoExtra = Config.Bind("运输站额外储量", "StationStoExtra", 0);
                 StackMultiple = Config.Bind("堆叠倍数", "StackMultiple", 1);
                 Stationminenumber = Config.Bind("星球矿机速率", "Stationminenumber", 1);
@@ -294,7 +297,7 @@ namespace Multfunction_mod
                 Buildmaxlen = Config.Bind("建筑数量最大值", "Buildmaxlen", 15);
                 starquamaxpowerpertick = Config.Bind("实时修改星球量子充电功率", "starquamaxpowerpertick", 60f);
                 planetquamaxpowerpertick = Config.Bind("实时修改星系量子充电功率", "planetquamaxpowerpertick", 60f);
-                QuantumStarstationmax = Config.Bind("星系量子存储有上限", "QuantumStarstationmax", false);
+                CloseUIAbnormalityTip= Config.Bind("关闭异常提示", "CloseUIAbnormalityTip", false);
                 mytexturer = Config.Bind("窗口材质r", "mytexturer", 0f);
                 mytextureg = Config.Bind("窗口材质g", "mytextureg", 0f);
                 mytextureb = Config.Bind("窗口材质b", "mytextureb", 0f);
@@ -340,6 +343,17 @@ namespace Multfunction_mod
                 watertypePlanetArray.Add(int.Parse(t[0]), int.Parse(t[1]));
             }
             MultifunctionTranslate.regallTranslate();
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    while (Quantumtransport_bool.Value)
+                    {
+                        takeitemfromstarsuperstation();
+                        Thread.Sleep(1000);
+                    }
+                }
+            });
         }
 
         void Update()
@@ -352,13 +366,14 @@ namespace Multfunction_mod
             FirstStartGame();
             QuickKeyOpenWindow();
             AfterGameStart();
+            while (TimesTest.Count > 0)
+            {
+                UnityEngine.Debug.Log(TimesTest.Dequeue());
+            }
             if (Input.GetKey(KeyCode.F10) && Input.GetKeyDown(KeyCode.LeftShift))
             {
-                temp = !temp;
-                for(int i = 0; i < LDB.recipes.dataArray.Length; i++)
-                {
-                    LDB.recipes.dataArray[i].Handcraft = true;
-                }
+                //temp = !temp;
+                //Debug.Log(temp);
                 //GameSave.LoadCurrentGameInResource(18);
             }
             if (player != null && player.controller != null && player.controller.cmd.type == ECommand.Build && player.controller.actionBuild != null)
@@ -390,11 +405,6 @@ namespace Multfunction_mod
             else if (DriftBuildingLevel != 0)
             {
                 DriftBuildingLevel = 0;
-            }
-            if (Quantumtransport_bool.Value && Time.time - startsuperstationtime < 1)
-            {
-                startsuperstationtime = Time.time;
-                takeitemfromstarsuperstation();
             }
             if (ItemDisplayingWindow)
             {
@@ -781,8 +791,27 @@ namespace Multfunction_mod
                 GUI.Label(new Rect(10 + heightdis * 5, 0, heightdis * 8, heightdis), Buildmaxlen.Value + " " + "建筑数量最大值".getTranslate(), style);
                 StationStoExtra.Value = (int)GUI.HorizontalSlider(new Rect(0, 5 + heightdis, heightdis * 5, heightdis), StationStoExtra.Value, 0, 100);
                 GUI.Label(new Rect(10 + heightdis * 5, heightdis, heightdis * 8, heightdis), StationStoExtra.Value + " " + "运输站存储倍率".getTranslate(), style);
-                string[] tempstr = new string[19] { "实时更改全部运输站存储倍率", "无限储液站", "星球无限供货机", "物流站要啥有啥", "无需赤道造采集器", "强行近距离建造物流站", "星际运输站无限曲速", "人造恒星无限能源", "极速轨道弹射器(慎用)", "极速垂直发射井(慎用)", "星球电网(人造恒星)", "覆盖全球", "超长连接", "新建设备不耗电", "物流站永久满电", "物流站无限增产", "传送带信号功能", "储液站任意存", "建筑抬升" };
-
+                string[] tempstr = new string[] 
+                { 
+                    "实时更改全部运输站存储倍率",
+                    "储液站任意存",
+                    "无限储液站", 
+                    "星球无限供货机", 
+                    "物流站永久满电", 
+                    "物流站要啥有啥", 
+                    "物流站无限增产", 
+                    "物流站内置喷涂",
+                    "物流站内置熔炉", 
+                    "物流站无限翘曲",
+                    "无需赤道造采集器",
+                    "强行近距离建造物流站", 
+                    "人造恒星无限能源", 
+                    "星球电网(人造恒星)", 
+                    "覆盖全球", 
+                    "超长连接", 
+                    "极速轨道弹射器(慎用)", 
+                    "极速垂直发射井(慎用)" 
+                };
                 for (int i = 0; i < tempstr.Length; i++)
                 {
                     bool tempvalue = false;
@@ -790,59 +819,47 @@ namespace Multfunction_mod
                     switch (i)
                     {
                         case 0: tempvalue = RefreshStationStorage; break;
-                        case 1: tempvalue = Infinitestoragetank.Value; break;
-                        case 2: tempvalue = StationfullCount_bool.Value; break;
-                        case 3: tempvalue = StationfullCount; break;
-                        case 4: tempvalue = build_gascol_noequator.Value; break;
-                        case 5: tempvalue = build_tooclose_bool.Value; break;
-                        case 6: tempvalue = Station_infiniteWarp_bool.Value; break;
-                        case 7: tempvalue = InfineteStarPower.Value; break;
-                        case 8: tempvalue = quickEjector; break;
-                        case 9: tempvalue = quicksilo; break;
-                        case 10: tempvalue = PlanetPower_bool.Value; break;
-                        case 11: tempvalue = PlanetPower_bool.Value; break;
-                        case 12: tempvalue = farconnectdistance; break;
-                        case 13: tempvalue = Buildingnoconsume.Value; break;
-                        case 14: tempvalue = Stationfullenergy.Value; break;
-                        case 15: tempvalue = StationMaxproliferator.Value; break;
-                        case 16: tempvalue = BeltSignalFunction.Value; break;
-                        case 17: tempvalue = Tankcontentall.Value; break;
-                        case 18: tempvalue = DriftBuildings; break;
+                        case 1: tempvalue = Tankcontentall.Value; break;
+                        case 2: tempvalue = Infinitestoragetank.Value; break;
+                        case 3: tempvalue = StationfullCount_bool.Value; break;
+                        case 4: tempvalue = Stationfullenergy.Value; break;
+                        case 5: tempvalue = StationfullCount; break;
+                        case 6: tempvalue = StationMaxproliferator.Value; break;
+                        case 7: tempvalue = StationSpray.Value; break;
+                        case 8: tempvalue = StationPowerGen.Value; break;
+                        case 9: tempvalue = Station_infiniteWarp_bool.Value; break;
+                        case 10: tempvalue = build_gascol_noequator.Value; break;
+                        case 11: tempvalue = build_tooclose_bool.Value; break;
+                        case 12: tempvalue = InfineteStarPower.Value; break;
+                        case 13: tempvalue = PlanetPower_bool.Value; break;
+                        case 14: tempvalue = PlanetPower_bool.Value; break;
+                        case 15: tempvalue = farconnectdistance; break;
+                        case 16: tempvalue = quickEjector; break;
+                        case 17: tempvalue = quicksilo; break;
                     }
-                    tempvalue = GUI.Toggle(new Rect(i >= 11 && i <= 12 ? 20 : 0, heightdis * (i + 2), heightdis * 13, heightdis), tempvalue, tempstr[i].getTranslate());
+                    tempvalue = GUI.Toggle(new Rect(i >= 14 && i <= 15 ? 20 : 0, heightdis * (i + 2), heightdis * 13, heightdis), tempvalue, tempstr[i].getTranslate());
                     switch (i)
                     {
                         case 0: RefreshStationStorage = tempvalue; break;
-                        case 1: Infinitestoragetank.Value = tempvalue; break;
-                        case 2: StationfullCount_bool.Value = tempvalue; break;
-                        case 3: StationfullCount = tempvalue; break;
-                        case 4: build_gascol_noequator.Value = tempvalue; break;
-                        case 5: build_tooclose_bool.Value = tempvalue; break;
-                        case 6: Station_infiniteWarp_bool.Value = tempvalue; break;
-                        case 7: InfineteStarPower.Value = tempvalue; break;
-                        case 8: quickEjector = tempvalue; break;
-                        case 9: quicksilo = tempvalue; break;
-                        case 10: PlanetPower_bool.Value = tempvalue; break;
-                        case 11: PlanetPower_bool.Value = tempvalue; break;
-                        case 12: farconnectdistance = tempvalue; break;
-                        case 13: Buildingnoconsume.Value = tempvalue; break;
-                        case 14: Stationfullenergy.Value = tempvalue; break;
-                        case 15: StationMaxproliferator.Value = tempvalue; break;
-                        case 16:
-                            if (tempvalue != BeltSignalFunction.Value)
-                            {
-                                BeltSignalFunction.Value = tempvalue;
-                                if (tempvalue)
-                                {
-                                    InitBeltSignalDiction();
-                                }
-                            }
-                            break;
-                        case 17: Tankcontentall.Value = tempvalue; break;
-                        case 18: DriftBuildings = tempvalue; break;
+                        case 1: Tankcontentall.Value = tempvalue; break;
+                        case 2: Infinitestoragetank.Value = tempvalue; break;
+                        case 3: StationfullCount_bool.Value = tempvalue; break;
+                        case 4: Stationfullenergy.Value = tempvalue; break;
+                        case 5: StationfullCount = tempvalue; break;
+                        case 6: StationMaxproliferator.Value = tempvalue; break;
+                        case 7: StationSpray.Value = tempvalue; break;
+                        case 8: StationPowerGen.Value = tempvalue; break;
+                        case 9: Station_infiniteWarp_bool.Value = tempvalue; break;
+                        case 10: build_gascol_noequator.Value = tempvalue; break;
+                        case 11: build_tooclose_bool.Value = tempvalue; break;
+                        case 12: InfineteStarPower.Value = tempvalue; break;
+                        case 13: PlanetPower_bool.Value = tempvalue; break;
+                        case 14: PlanetPower_bool.Value = tempvalue; break;
+                        case 15: farconnectdistance = tempvalue; break;
+                        case 16: quickEjector = tempvalue; break;
+                        case 17: quicksilo = tempvalue; break;
                     }
                 }
-                GUI.Label(new Rect(0, heightdis * 21, heightdis * 13, heightdis), "抬升层数:" + DriftBuildingLevel);
                 GUILayout.EndArea();
             }
             {
@@ -861,66 +878,61 @@ namespace Multfunction_mod
                     planetquamaxpowerpertick.Value = tempplanetquamaxpowerpertick;
                     starquamaxpowerpertick.Value = tempstarquamaxpowerpertick;
                 }
-                string[] tempstr = new string[7] { "量子传输站", "星球级翘曲全面供应", "星系级翘曲全面供应", "星系量子不突破上限", "自动改名\"星球量子传输站\"", "自动改名\"星系量子传输站\"", "星球级材料供应" };
-                for (int i = 0; i < 7; i++)
+                string[] tempstr = new string[] { 
+                    "新建设备不耗电",
+                    "建筑抬升" ,
+                    "传送带信号功能", 
+                    "量子传输站", 
+                    "星球级翘曲全面供应", 
+                    "星系级翘曲全面供应",  
+                    "自动改名\"星球量子传输站\"", 
+                    "自动改名\"星系量子传输站\"" ,
+                    "星球级材料供应"
+                };
+                int lines = 3;
+                for (int i = 0; i < tempstr.Length; i++)
                 {
                     bool tempvalue = false;
 
                     switch (i)
                     {
-                        case 0: tempvalue = Quantumtransport_bool.Value; break;
-                        case 1: tempvalue = Quantumtransportpdwarp_bool.Value; break;
-                        case 2: tempvalue = Quantumtransportstarwarp_bool.Value; break;
-                        case 3: tempvalue = QuantumStarstationmax.Value; break;
-                        case 4: tempvalue = autochangeQuantumstationname; break;
-                        case 5: tempvalue = autochangeQuantumStarstationname; break;
-                        case 6: tempvalue = Quantumtransportbuild_bool.Value; break;
+                        case 0: tempvalue = Buildingnoconsume.Value; break;
+                        case 1: 
+                            tempvalue = DriftBuildings;
+                            break;
+                        case 2: tempvalue = BeltSignalFunction.Value; break;
+                        case 3: tempvalue = Quantumtransport_bool.Value; break;
+                        case 4: tempvalue = Quantumtransportpdwarp_bool.Value; break;
+                        case 5: tempvalue = Quantumtransportstarwarp_bool.Value; break;
+                        case 6: tempvalue = autochangeQuantumstationname; break;
+                        case 7: tempvalue = autochangeQuantumStarstationname; break;
+                        case 8: tempvalue = Quantumtransportbuild_bool.Value;break;
                     }
-                    tempvalue = GUI.Toggle(new Rect(0, heightdis * (i + 3), heightdis * 15, heightdis), tempvalue, tempstr[i].getTranslate());
+                    tempvalue = GUI.Toggle(new Rect(0, heightdis * lines++, heightdis * 15, heightdis), tempvalue, tempstr[i].getTranslate());
                     switch (i)
                     {
-                        case 0: Quantumtransport_bool.Value = tempvalue; break;
-                        case 1: Quantumtransportpdwarp_bool.Value = tempvalue; break;
-                        case 2: Quantumtransportstarwarp_bool.Value = tempvalue; break;
-                        case 3: QuantumStarstationmax.Value = tempvalue; break;
-                        case 4:
+                        case 0: Buildingnoconsume.Value = tempvalue; break;
+                        case 1: DriftBuildings = tempvalue; break;
+                        case 2:
+                            GUI.Label(new Rect(0, heightdis * lines++, heightdis * 15, heightdis), "抬升层数:" + DriftBuildingLevel);
+                            BeltSignalFunction.Value = tempvalue;
+                            if (tempvalue)
+                            {
+                                InitBeltSignalDiction();
+                            }
+                            break;
+                        case 3: Quantumtransport_bool.Value = tempvalue; break;
+                        case 4: Quantumtransportpdwarp_bool.Value = tempvalue; break;
+                        case 5: Quantumtransportstarwarp_bool.Value = tempvalue; break;
+                        case 6:
                             autochangeQuantumstationname = tempvalue;
                             if (tempvalue) autochangeQuantumStarstationname = false;
                             break;
-                        case 5:
+                        case 7:
                             autochangeQuantumStarstationname = tempvalue;
                             if (tempvalue) autochangeQuantumstationname = false;
                             break;
-                        case 6:
-                            Quantumtransportbuild_bool.Value = tempvalue;
-                            if (tempvalue)
-                            {
-                                string[] tempstr1 = new string[6] { "星球级物流站材料供应", "星球级矿机材料供应", "星球级发射井弹射器材料供应", "星球级研究站材料供应", "星球级电力设备材料供应", "星球级组装机材料供应" };
-                                for (int j = 1; j <= 6; j++)
-                                {
-                                    bool tempvalue1 = false;
-                                    switch (j)
-                                    {
-                                        case 1: tempvalue1 = Quantumtransportstation_bool.Value; break;
-                                        case 2: tempvalue1 = Quantumtransportminer_bool.Value; break;
-                                        case 3: tempvalue1 = Quantumtransportsilo_bool.Value; break;
-                                        case 4: tempvalue1 = Quantumtransportlab_bool.Value; break;
-                                        case 5: tempvalue1 = Quantumtransportpower_bool.Value; break;
-                                        case 6: tempvalue1 = Quantumtransportassemble_bool.Value; break;
-                                    }
-                                    tempvalue1 = GUI.Toggle(new Rect(20, heightdis * (i + j + 3), heightdis * 15, heightdis), tempvalue1, tempstr1[j - 1].getTranslate());
-                                    switch (j)
-                                    {
-                                        case 1: Quantumtransportstation_bool.Value = tempvalue1; break;
-                                        case 2: Quantumtransportminer_bool.Value = tempvalue1; break;
-                                        case 3: Quantumtransportsilo_bool.Value = tempvalue1; break;
-                                        case 4: Quantumtransportlab_bool.Value = tempvalue1; break;
-                                        case 5: Quantumtransportpower_bool.Value = tempvalue1; break;
-                                        case 6: Quantumtransportassemble_bool.Value = tempvalue1; break;
-                                    }
-                                }
-                            }
-                            break;
+                        case 8: Quantumtransportbuild_bool.Value= tempvalue = Quantumtransportbuild_bool.Value; break;
                     }
                 }
 
@@ -1145,6 +1157,11 @@ namespace Multfunction_mod
                 alwaysemission.Value = !alwaysemission.Value;
                 alwaysemissiontemp = alwaysemission.Value;
             }
+            if(RandomEmission.Value != GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), RandomEmission.Value, "间隔发射".getTranslate()))
+            {
+                RandomEmission.Value = !RandomEmission.Value;
+                RandomEmissionEjectorSilo();
+            }
 
         }
 
@@ -1158,10 +1175,11 @@ namespace Multfunction_mod
                 Rect t = new Rect(0, heightdis, english ? heightdis * 12 : heightdis * 10, heightdis);
                 GUI.Label(RectChanged(t, heightdis * lines++, 2), "以下设置需要进入存档".getTranslate(), style);
                 sunlight_bool.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), sunlight_bool.Value, "夜灯".getTranslate());
+                CloseUIAbnormalityTip.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), CloseUIAbnormalityTip.Value, "关闭异常提示".getTranslate());
                 InspectDisNoLimit.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), InspectDisNoLimit.Value, "操作范围不受限制".getTranslate());
                 if (InspectDisNoLimit.Value)
                 {
-                    player.mecha.buildArea = 400;
+                    player.mecha.buildArea = 200;
                 }
                 else
                 {
@@ -1338,24 +1356,27 @@ namespace Multfunction_mod
         public void takeitemfromstarsuperstation()
         {
             if (GameMain.data == null || GameMain.data.galacticTransport == null || GameMain.data.galacticTransport.stationPool == null) return;
-            StarSuperStation = new List<StationComponent>();
-            SuperStation = new List<StationComponent>();
+            StarSuperStation = new List<int>();
+            SuperStation = new List<int>();
             StarSuperStationItemidstore = new Dictionary<int, int[]>();
-            PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, int[]>>();
-            foreach (StationComponent sc in GameMain.data.galacticTransport.stationPool)
+            PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, List<int[]>>>();
+            for(int i=0;i< GameMain.data.galacticTransport.stationPool.Length;i++)
             {
+                StationComponent sc = GameMain.data.galacticTransport.stationPool[i];
                 if (sc == null || sc.storage == null || sc.name == null || sc.isCollector) continue;
-                if (sc.name.Equals("星系量子传输站"))
+                if (sc.name == "星系量子传输站")
                 {
-                    StarSuperStation.Add(sc);
-                    for (int i = 0; i < sc.storage.Length; i++)
+                    StarSuperStation.Add(i);
+                    for (int j = 0; j < sc.storage.Length; j++)
                     {
-                        if (sc.storage[i].itemId > 0)
+                        if (sc.storage[j].itemId > 0)
                         {
-                            if (!StarSuperStationItemidstore.ContainsKey(sc.storage[i].itemId))
-                                StarSuperStationItemidstore.Add(sc.storage[i].itemId, new int[] { StarSuperStation.Count - 1, i });
-                            if (sc.storage[i].count < 0)
-                                sc.storage[i].count = 0;
+                            if (!StarSuperStationItemidstore.ContainsKey(sc.storage[j].itemId))
+                            {
+                                StarSuperStationItemidstore.Add(sc.storage[j].itemId, new int[] { StarSuperStation.Count - 1, j });
+                            }
+                            if (sc.storage[j].count < 0)
+                                sc.storage[j].count = 0;
                         }
                     }
                     if (changequapowerpertick)
@@ -1370,9 +1391,9 @@ namespace Multfunction_mod
                         }
                     }
                 }
-                if (sc.name.Equals("星球量子传输站"))
+                if (sc.name == "星球量子传输站")
                 {
-                    SuperStation.Add(sc);
+                    SuperStation.Add(i);
                     if (changequapowerpertick)
                     {
                         try
@@ -1403,31 +1424,46 @@ namespace Multfunction_mod
 
             for (int j = 0; j < SuperStation.Count; j++)
             {
-                StationComponent sc = SuperStation[j];
+                StationComponent sc = GameMain.data.galacticTransport.stationPool[SuperStation[j]];
+                int pdID = sc.planetId;
                 for (int i = 0; i < sc.storage.Length; i++)
                 {
-                    if (sc.storage[i].itemId > 0)
+                    int itemID = sc.storage[i].itemId;
+                    if (itemID > 0)
                     {
-                        if (!PlanetSuperStationItemidstore.ContainsKey(sc.planetId))
-                            PlanetSuperStationItemidstore.Add(sc.planetId, new Dictionary<int, int[]>());
-                        if (!PlanetSuperStationItemidstore[sc.planetId].ContainsKey(sc.storage[i].itemId))
-                            PlanetSuperStationItemidstore[sc.planetId].Add(sc.storage[i].itemId, new int[] { j, i });
+                        if (!PlanetSuperStationItemidstore.ContainsKey(pdID))
+                        {
+                            PlanetSuperStationItemidstore.Add(pdID, new Dictionary<int, List<int[]>>());
+                        }
+                        if (!PlanetSuperStationItemidstore[pdID].ContainsKey(itemID))
+                        {
+                            PlanetSuperStationItemidstore[pdID].Add(itemID, new List<int[]>() { new int[] { j, i } });
+                        }
+                        else
+                        {
+                            PlanetSuperStationItemidstore[pdID][itemID].Add(new int[] { j, i });
+                        }
                         if (sc.storage[i].remoteLogic == ELogisticStorage.Demand && sc.storage[i].count < sc.storage[i].max)
                         {
                             if (sc.storage[i].max > sc.storage[i].count)
                             {
-                                int[] takeitem = doitemfromStarsuper(sc.storage[i].itemId, sc.storage[i].max - sc.storage[i].count);
+                                int[] takeitem = doitemfromStarsuper(itemID, sc.storage[i].max - sc.storage[i].count);
                                 sc.storage[i].count += takeitem[0];
                                 sc.storage[i].inc += takeitem[1];
                             }
-                            if (sc.storage[i].max < sc.storage[i].count)
+                            else if (sc.storage[i].max < sc.storage[i].count)
                             {
-                                int[] takeitem = doitemfromStarsuper(sc.storage[i].itemId, sc.storage[i].count - sc.storage[i].max, sc.storage[i].inc, false);
+                                int[] takeitem = doitemfromStarsuper(itemID, sc.storage[i].count - sc.storage[i].max, sc.storage[i].inc, false);
                                 sc.storage[i].count -= takeitem[0];
                                 sc.storage[i].inc -= takeitem[1];
                             }
                         }
-
+                        else if(sc.storage[i].remoteLogic == ELogisticStorage.Supply && sc.storage[i].count > 0)
+                        {
+                            int[] putitem=doitemfromStarsuper(itemID, sc.storage[i].count, sc.storage[i].inc, false);
+                            sc.storage[i].count -= putitem[0];
+                            sc.storage[i].inc -= putitem[1];
+                        }
                         if (sc.storage[i].count < 0)
                             sc.storage[i].count = 0;
                     }
@@ -1437,30 +1473,33 @@ namespace Multfunction_mod
             }
             for (int j = 0; j < StarSuperStation.Count; j++)
             {
-                if (Quantumtransportstarwarp_bool.Value && StarSuperStation[j].warperCount == 0)
-                    StarSuperStation[j].warperCount += doitemfromStarsuper(1210, 50, 0)[0];
-                StationComponent sc = StarSuperStation[j];
+                StationComponent sc = GameMain.data.galacticTransport.stationPool[StarSuperStation[j]];
+                if (Quantumtransportstarwarp_bool.Value && sc.warperCount == 0)
+                    sc.warperCount += doitemfromStarsuper(1210, 50, 0)[0];
             }
             if (Quantumtransportbuild_bool.Value)
                 SuperStationProvide();
 
         }
-        public void StationSupplyDemand(int pdid)
+        public void StationSupplyDemand(FactorySystem fs, int pdid)
         {
-            PlanetData pd = GameMain.galaxy.PlanetById(pdid);
-            foreach (StationComponent sc in pd.factory.transport.stationPool)
+            foreach (StationComponent sc in fs.factory.transport.stationPool)
             {
-                if (sc != null && sc.storage != null && !SuperStation.Contains(sc) && !StarSuperStation.Contains(sc) && sc.planetId == pdid)
+                if (sc == null) continue;
+                if (sc.storage != null  && sc.name != "星球量子传输站")
                 {
                     for (int i = 0; i < sc.storage.Length; i++)
                     {
-                        if (sc.storage[i].itemId > 0 && sc.storage[i].count > 0)
+                        if (sc.storage[i].itemId > 0)
                         {
-                            if (sc.storage[i].localLogic == ELogisticStorage.Supply)
+                            if (sc.storage[i].localLogic == ELogisticStorage.Supply )
                             {
-                                int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].count, pdid, sc.storage[i].inc, false);
-                                sc.storage[i].count -= takeitem[0];
-                                sc.storage[i].inc -= takeitem[1];
+                                if(sc.name != "星系量子传输站" && sc.storage[i].count > 0)
+                                {
+                                    int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].count, pdid, sc.storage[i].inc, false);
+                                    sc.storage[i].count -= takeitem[0];
+                                    sc.storage[i].inc -= takeitem[1];
+                                }
                             }
                             else if (sc.storage[i].count > sc.storage[i].max)
                             {
@@ -1477,13 +1516,14 @@ namespace Multfunction_mod
                         }
                     }
                 }
+
             }
         }
         public void MinerSupplyDemand(FactorySystem fs, int pdid)
         {
             foreach (MinerComponent mc in fs.minerPool)
             {
-                if (mc.id > 0 && mc.entityId > 0 && mc.productCount > 0 && mc.productId > 0)
+                if (mc.id > 0 && mc.entityId > 0 && mc.productCount > 20 && mc.productId > 0)
                 {
                     fs.minerPool[mc.id].productCount -= doitemfromPlanetSuper(mc.productId, mc.productCount, pdid, 0, false)[0];
                 }
@@ -1493,27 +1533,20 @@ namespace Multfunction_mod
         {
             foreach (SiloComponent sc in fs.siloPool)
             {
-                if (sc.id > 0 && sc.entityId > 0)
+                if (sc.id > 0 && sc.entityId > 0 && sc.bulletCount<=0)
                 {
-                    if (sc.bulletCount <= 1)
-                    {
-                        int[] takeitem = doitemfromPlanetSuper(1503, 20, pdid);
-                        fs.siloPool[sc.id].bulletCount = takeitem[0];
-                        fs.siloPool[sc.id].bulletInc = takeitem[1];
-                    }
-
+                    int[] takeitem = doitemfromPlanetSuper(1503, 20, pdid);
+                    fs.siloPool[sc.id].bulletCount += takeitem[0];
+                    fs.siloPool[sc.id].bulletInc += takeitem[1];
                 }
             }
             foreach (EjectorComponent ec in fs.ejectorPool)
             {
-                if (ec.id > 0 && ec.entityId > 0)
+                if (ec.id > 0 && ec.entityId > 0 && ec.bulletCount<=0)
                 {
-                    if (ec.bulletCount <= 1)
-                    {
-                        int[] takeitem = doitemfromPlanetSuper(1501, 20, pdid);
-                        fs.ejectorPool[ec.id].bulletCount = takeitem[0];
-                        fs.ejectorPool[ec.id].bulletInc = takeitem[1];
-                    }
+                    int[] takeitem = doitemfromPlanetSuper(1501, 20, pdid);
+                    fs.ejectorPool[ec.id].bulletCount += takeitem[0];
+                    fs.ejectorPool[ec.id].bulletInc += takeitem[1];
                 }
             }
         }
@@ -1552,28 +1585,25 @@ namespace Multfunction_mod
                     {
                         for (int i = 0; i < lc.matrixPoints.Length; i++)
                         {
-                            if (lc.matrixServed[i] <= 36000)
-                            {
-                                int[] takeitem = doitemfromPlanetSuper(6001 + i, 20, pdid);
-                                lc.matrixServed[i] += takeitem[0] * 3600;
-                                lc.matrixIncServed[i] += takeitem[1] * 3600;
-                            }
+
+                            if (lc.matrixServed[i] > 288000) continue;
+                            int[] takeitem = doitemfromPlanetSuper(6001 + i, 20, pdid);
+                            lc.matrixServed[i] += takeitem[0] * 3600;
+                            lc.matrixIncServed[i] += takeitem[1] * 3600;
                         }
                     }
                     if (lc.matrixMode)
                     {
                         for (int i = 0; i < lc.productCounts.Length; i++)
                         {
-                            if (lc.produced[i] > 0) lc.produced[i] -= doitemfromPlanetSuper(lc.products[i], lc.produced[i], pdid, 0, false)[0];
+                            if (lc.produced[i] > 5) lc.produced[i] -= doitemfromPlanetSuper(lc.products[i], lc.produced[i], pdid, 0, false)[0];
                         }
                         for (int i = 0; i < lc.served.Length; i++)
                         {
-                            if (lc.served[i] <= lc.requireCounts[i] * 2)
-                            {
-                                int[] takeitem = doitemfromPlanetSuper(lc.requires[i], 20, pdid);
-                                lc.served[i] += takeitem[0];
-                                lc.incServed[i] += takeitem[1];
-                            }
+                            if (lc.served[i] > 20) continue;
+                            int[] takeitem = doitemfromPlanetSuper(lc.requires[i], 20, pdid);
+                            lc.served[i] += takeitem[0];
+                            lc.incServed[i] += takeitem[1];
                         }
                         //if (condition) lc.UpdateNeedsAssemble();
                     }
@@ -1620,22 +1650,21 @@ namespace Multfunction_mod
             {
                 PlanetData pd = GameMain.galaxy.PlanetById(pdid);
                 FactorySystem fs = pd.factory.factorySystem;
-
-                if (Quantumtransportstation_bool.Value) StationSupplyDemand(pdid);
-                if (Quantumtransportminer_bool.Value) MinerSupplyDemand(fs, pdid);
-                if (Quantumtransportsilo_bool.Value) SiloComponentSupplyDemand(fs, pdid);
-                if (Quantumtransportlab_bool.Value) LabSupplyDemand(fs, pdid);
-                if (Quantumtransportpower_bool.Value) PowerSupplyDemand(fs, pdid);
-                if (Quantumtransportassemble_bool.Value) AssemblerSupplyDemand(fs, pdid);
+                StationSupplyDemand(fs, pdid);
+                MinerSupplyDemand(fs, pdid);
+                SiloComponentSupplyDemand(fs, pdid);
+                LabSupplyDemand(fs, pdid);
+                PowerSupplyDemand(fs, pdid);
+                AssemblerSupplyDemand(fs, pdid);
             }
         }
-        public int[] doitemfromStarsuper(int itemid, int itemcount, int inc = 0, bool take = true)
+        public static int[] doitemfromStarsuper(int itemid, int itemcount, int inc = 0, bool take = true)
         {
-            if (!StarSuperStationItemidstore.ContainsKey(itemid) || itemcount == 0) return new int[2] { 0, 0 };
-            long energycost = Quantumenergy.Value;
-            StationComponent sc = StarSuperStation[StarSuperStationItemidstore[itemid][0]];
+            if (!StarSuperStationItemidstore.ContainsKey(itemid) || itemcount <= 0) return new int[2] { 0, 0 };
+            StationComponent sc = GameMain.data.galacticTransport.stationPool[StarSuperStation[StarSuperStationItemidstore[itemid][0]]];
             int index = StarSuperStationItemidstore[itemid][0];
             int i = StarSuperStationItemidstore[itemid][1];
+            long energycost = Stationfullenergy.Value ? 0 : Quantumenergy.Value;
             if (energycost != 0)
             {
                 if (warpsuperstationqua[index] >= Time.time - 5)
@@ -1651,48 +1680,35 @@ namespace Multfunction_mod
                 }
             }
 
-            int count = itemcount;
+            int count = itemcount; 
             if (take)
             {
                 count = Math.Min(count, sc.storage[i].count);
-                if (sc.energy < count * energycost)
+                if (sc.energy < count * energycost && sc.energy >= 0)
+                {
                     count = Math.Min(count, (int)(sc.energy / energycost));
-                if (!Stationfullenergy.Value)
-                    sc.energy -= count * energycost;
-                if (count == 0) return new int[2] { 0, 0 };
-                int num1 = sc.storage[i].inc / sc.storage[i].count;
-                int num2 = sc.storage[i].inc - num1 * sc.storage[i].count;
+                    if (count == 0) return new int[2] { 0, 0 };
+                }
+                inc = Math.Min(count * 4, sc.storage[i].inc);
+                sc.energy -= count * energycost;
                 sc.storage[i].count -= count;
-                int num3 = num2 - sc.storage[i].count;
-                int num4 = num3 > 0 ? num1 * count + num3 : num1 * count;
-                sc.storage[i].inc -= num4;
-                inc = num4;
+                sc.storage[i].inc -= inc;
             }
             else
             {
-                int inputinc;
-                if (sc.energy < count * energycost)
+                if (sc.energy >= 0 && sc.energy < count * energycost)
                 {
-                    int p = count - Math.Min(count, (int)(sc.energy / energycost));
-                    int num1 = inc / count;
-                    int num2 = inc - num1 * count;
-                    count -= p;
-                    int num3 = num2 - count;
-                    int num4 = num3 > 0 ? num1 * p + num3 : num1 * p;
-                    inc -= num4;
-                    inputinc = num4;
+                    count = Math.Min(count, (int)(sc.energy / energycost));
+                    if (count == 0) return new int[2] { 0, 0 };
                 }
-                else
-                {
-                    inputinc = inc;
-                    inc = 0;
-                }
+                int inputinc = Math.Min(count * 4, inc);
+                inc -= inputinc;
                 if (sc.storage[i].count + count <= sc.storage[i].max)
                 {
                     sc.storage[i].count += count;
                     sc.storage[i].inc += inputinc;
                 }
-                else if (!QuantumStarstationmax.Value)
+                else if (sc.storage[i].localLogic==ELogisticStorage.None && sc.storage[i].remoteLogic==ELogisticStorage.None)
                 {
                     sc.storage[i].max = sc.storage[i].count + count;
                     sc.storage[i].count = sc.storage[i].max;
@@ -1700,130 +1716,100 @@ namespace Multfunction_mod
                 }
                 else if (sc.storage[i].count < sc.storage[i].max)
                 {
-                    count = Math.Min(count, sc.storage[i].max - sc.storage[i].count);
-                    sc.storage[i].count += count;
+                    count = sc.storage[i].max - sc.storage[i].count;
+                    sc.storage[i].count = sc.storage[i].max;
                     sc.storage[i].inc += inputinc;
                 }
                 else count = 0;
-                if (!Stationfullenergy.Value)
-                    sc.energy -= count * energycost;
+                sc.energy -= count * energycost;
             }
-            if (sc.storage[4].itemId > 0 && sc.storage[4].count > 0)
-            {
-                ItemProto ip = LDB.items.Select(sc.storage[4].itemId);
-                if (ip.HeatValue > 0 && sc.energyMax > sc.energy)
-                {
-                    int num = Math.Min(sc.storage[4].count, (int)((sc.energyMax - sc.energy) / ip.HeatValue));
-                    if (!Stationfullenergy.Value)
-                        sc.energy += num * ip.HeatValue;
-                    sc.storage[4].count -= num;
-                    AddStatInfo(sc.planetId, ip.ID, num, false);
-                }
-            }
+            StationPowerGeneration(sc);
             return new int[2] { count, StationMaxproliferator.Value ? 4 * count : inc };
         }
 
-        public int[] doitemfromPlanetSuper(int itemid, int itemcount, int planetid, int inc = 0, bool take = true)
+        public static int[] doitemfromPlanetSuper(int itemid, int itemcount, int planetid, int inc = 0, bool take = true)
         {
             if (!PlanetSuperStationItemidstore.ContainsKey(planetid) || !PlanetSuperStationItemidstore[planetid].ContainsKey(itemid) || itemcount == 0) return new int[2] { 0, 0 };
-            long energycost = Quantumenergy.Value;
-            StationComponent sc = SuperStation[PlanetSuperStationItemidstore[planetid][itemid][0]];
-            int index = PlanetSuperStationItemidstore[planetid][itemid][0];
-            int i = PlanetSuperStationItemidstore[planetid][itemid][1];
-
-            if (energycost != 0)
+            for (int i = 0; i < PlanetSuperStationItemidstore[planetid][itemid].Count; i++)
             {
-                if (warpstationqua[index] >= Time.time - 5)
-                    energycost = Quantumenergy.Value / 100;
-                else if (sc.warperCount > 0 && warpstationqua[index] + 5 < Time.time)
+                int index = PlanetSuperStationItemidstore[planetid][itemid][i][0];
+                int storageindex = PlanetSuperStationItemidstore[planetid][itemid][i][1];
+                StationComponent sc = GameMain.data.galacticTransport.stationPool[SuperStation[index]];
+                if (sc.storage[storageindex].localLogic != ELogisticStorage.None)
                 {
-                    sc.warperCount--;
-                    warpstationqua[index] = Time.time;
-                    energycost = Quantumenergy.Value / 100;
-                    AddStatInfo(sc.planetId, 1210, 1);
+                    if (take && sc.storage[storageindex].localLogic != ELogisticStorage.Supply) continue;
+                    if (!take && sc.storage[storageindex].localLogic != ELogisticStorage.Demand) continue;
                 }
-            }
-            int count = itemcount;
-            if (take)
-            {
-                if (sc.energy < count * energycost)
+                long energycost = Stationfullenergy.Value ? 0:Quantumenergy.Value;
+                if (energycost != 0)
                 {
-                    count = Math.Min(count, (int)(sc.energy / energycost));
+                    if (warpstationqua[index] >= Time.time - 5)
+                        energycost = Quantumenergy.Value / 100;
+                    else if (sc.warperCount > 0 && warpstationqua[index] + 5 < Time.time)
+                    {
+                        sc.warperCount--;
+                        warpstationqua[index] = Time.time;
+                        energycost = Quantumenergy.Value / 100;
+                        AddStatInfo(sc.planetId, 1210, 1);
+                    }
                 }
-                if (count == 0) return new int[2] { 0, 0 };
-                if (count > sc.storage[i].count)
+                int count = itemcount;
+                if (take)
                 {
-                    int download = count - sc.storage[i].count;
-                    int[] downloaded = doitemfromStarsuper(itemid, download);
-                    count = sc.storage[i].count + downloaded[0];
-                    inc = sc.storage[i].inc + downloaded[1];
-                    sc.storage[i].count = 0;
-                    sc.storage[i].inc = 0;
+                    if (sc.energy < count * energycost)
+                    {
+                        count = Math.Min(count, (int)(sc.energy / energycost));
+                    }
+                    if (count == 0) return new int[2] { 0, 0 };
+                    if (count > sc.storage[storageindex].count)
+                    {
+                        int download = count - sc.storage[storageindex].count;
+                        int[] downloaded = doitemfromStarsuper(itemid, download);
+                        count = sc.storage[storageindex].count + downloaded[0];
+                        inc = sc.storage[storageindex].inc + downloaded[1];
+                        sc.storage[storageindex].count = 0;
+                        sc.storage[storageindex].inc = 0;
+                    }
+                    else
+                    {
+                        inc = Math.Min(count * 4, sc.storage[storageindex].inc);
+                        sc.storage[storageindex].count -= count;
+                        sc.storage[storageindex].inc -= inc;
+                    }
                 }
                 else
                 {
-                    int num1 = sc.storage[i].inc / sc.storage[i].count;
-                    int num2 = sc.storage[i].inc - num1 * sc.storage[i].count;
-                    sc.storage[i].count -= count;
-                    int num3 = num2 - sc.storage[i].count;
-                    int num4 = num3 > 0 ? num1 * count + num3 : num1 * count;
-                    sc.storage[i].inc -= num4;
-                    inc = num4;
+                    int inputinc;
+                    if (sc.energy < count * energycost)
+                    {
+                        count = Math.Min(count, (int)(sc.energy / energycost));
+                        inputinc = Math.Min(count * 4, inc);
+                        inc -= inputinc;
+                    }
+                    else
+                    {
+                        inputinc = inc;
+                        inc = 0;
+                    }
+                    if (sc.storage[storageindex].count + count >= sc.storage[storageindex].max)
+                    {
+                        int upload = sc.storage[storageindex].count + count - sc.storage[storageindex].max;
+                        int[] uploaded = doitemfromStarsuper(itemid, upload, inputinc, false);
+                        count -= upload - uploaded[0];
+                        inc -= uploaded[1];
+                        sc.storage[storageindex].count = sc.storage[storageindex].max;
+                        sc.storage[storageindex].inc += uploaded[1];
+                    }
+                    else
+                    {
+                        sc.storage[storageindex].count += count;
+                        sc.storage[storageindex].inc += inputinc;
+                    }
                 }
-                if (!Stationfullenergy.Value)
-                    sc.energy -= count * energycost;
+                StationPowerGeneration(sc);
+                return new int[2] { count, StationMaxproliferator.Value ? 4 * count : inc };
             }
-            else
-            {
-                int inputinc;
-                if (sc.energy < count * energycost)
-                {
-                    int p = count - Math.Min(count, (int)(sc.energy / energycost));
-                    int num1 = inc / count;
-                    int num2 = inc - num1 * count;
-                    count -= p;
-                    int num3 = num2 - count;
-                    int num4 = num3 > 0 ? num1 * p + num3 : num1 * p;
-                    inc -= num4;
-                    inputinc = num4;
-                }
-                else
-                {
-                    inputinc = inc;
-                    inc = 0;
-                }
-                if (sc.storage[i].count + count >= sc.storage[i].max)
-                {
-                    int upload = sc.storage[i].count + count - sc.storage[i].max;
-                    int[] uploaded = doitemfromStarsuper(itemid, upload, inputinc, false);
-                    count -= upload - uploaded[0];
-                    inc -= uploaded[1];
-                    sc.storage[i].count = sc.storage[i].max;
-                    sc.storage[i].inc += uploaded[1];
-                }
-                else
-                {
-                    sc.storage[i].count += count;
-                    sc.storage[i].inc += inputinc;
-                }
-                if (!Stationfullenergy.Value)
-                    sc.energy -= count * energycost;
-            }
-            if (sc.storage[4].itemId > 0 && sc.storage[4].count > 0)
-            {
-                ItemProto ip = LDB.items.Select(sc.storage[4].itemId);
-                if (ip.HeatValue > 0 && sc.energyMax > sc.energy)
-                {
-                    int num = Math.Min(sc.storage[4].count, (int)((sc.energyMax - sc.energy) / ip.HeatValue));
-                    sc.energy += num * ip.HeatValue;
-                    sc.storage[4].count -= num;
-
-                    AddStatInfo(sc.planetId, ip.ID, num);
-                }
-            }
-            return new int[2] { count, StationMaxproliferator.Value ? 4 * count : inc };
-
-
+            return new int[2] { 0, 0 };
         }
 
         public void SetSuperStationCapacity(int newCapacity)
@@ -1883,6 +1869,8 @@ namespace Multfunction_mod
                     FinallyInit = false;
                     closeallcollider = false;
                     tempsails = new List<Tempsail>();
+                    addStatDic = new Dictionary<int, Dictionary<int, long>>();
+                    consumeStatDic = new Dictionary<int, Dictionary<int, long>>();
                     playcancelsolarbullet = false;
                     alwaysemissiontemp = false;
                 }
@@ -1892,33 +1880,11 @@ namespace Multfunction_mod
                     Beltsignal = new Dictionary<int, Dictionary<int, int>>();
                     Beltsignalnumberoutput = new Dictionary<int, Dictionary<int, int>>();
                     productmaxindex = 0;
-                    SuperStation = new List<StationComponent>();
-                    foreach (StarData sd in GameMain.galaxy.stars)
-                    {
-                        foreach (PlanetData pd in sd.planets)
-                        {
-                            if (pd.factory == null || pd.factory.factorySystem == null) continue;
-
-                            FactorySystem fs = pd.factory.factorySystem;
-                            if (pd.factory.transport != null)
-                            {
-                                foreach (StationComponent sc in fs.factory.transport.stationPool)
-                                {
-                                    if (sc != null && sc.entityId > 0 && sc.name != null && sc.name.Equals("星球量子传输站"))
-                                    {
-                                        SuperStation.Add(sc);
-                                    }
-                                    if (sc != null && sc.entityId > 0 && sc.name != null && sc.name.Equals("星系量子传输站"))
-                                    {
-                                        StarSuperStation.Add(sc);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    warpstationqua = new float[SuperStation.Count >= 200 ? SuperStation.Count + 100 : 200];
-                    warpsuperstationqua = new float[StarSuperStation.Count >= 200 ? StarSuperStation.Count + 100 : 200];
+                    SuperStation = new List<int>();
+                    StarSuperStation = new List<int>();
+                    warpstationqua = new float[200];
+                    warpsuperstationqua = new float[200];
+                    RandomEmissionEjectorSilo();
                     for (int i = 0; i < warpstationqua.Length; i++)
                         warpstationqua[i] = Time.time;
                     for (int i = 0; i < warpsuperstationqua.Length; i++)
@@ -1963,7 +1929,6 @@ namespace Multfunction_mod
                     SetDronenocomsume();
                     MechaLogisticsMethod();
                     InfiniteAllThingInPackage();
-
                     if (Infiniteplayerpower.Value)
                     {
                         player.mecha.coreEnergy = player.mecha.coreEnergyCap;
@@ -2670,11 +2635,23 @@ namespace Multfunction_mod
                     {
                         if (sc != null && sc.storage != null)
                         {
-                            if (sc.isStellar && Station_infiniteWarp_bool.Value)
-                                sc.warperCount = 50;
+                            if(!sc.isCollector && !sc.isVeinCollector)
+                            {
+                                if (StationSpray.Value)
+                                {
+                                    StationSprayInc(sc);
+                                }
+                                if (StationPowerGen.Value || (sc.name!=null && sc.name== "星球矿机"))
+                                {
+                                    StationPowerGeneration(sc,pdId);
+                                }
+                                if (sc.isStellar && Station_infiniteWarp_bool.Value)
+                                    sc.warperCount = 50;
+                            }
                             for (int i = 0; i < sc.storage.Length; i++)
                             {
-                                if (StationfullCount && sc.storage[i].itemId > 0)
+                                int itemID = sc.storage[i].itemId;
+                                if (StationfullCount && itemID > 0)
                                 {
                                     sc.storage[i].count = sc.storage[i].max;
                                 }
@@ -2703,64 +2680,61 @@ namespace Multfunction_mod
                             }
                             if (sc.name != null)
                             {
-                                if (StationfullCount_bool.Value && sc.name.Equals("星球无限供货机"))
+                                if (StationfullCount_bool.Value && sc.name== "星球无限供货机")
                                 {
                                     for (int i = 0; i < sc.storage.Length; i++)
                                     {
-                                        if (sc.storage[i].itemId > 0)
+                                        int itemID = sc.storage[i].itemId;
+                                        if (itemID > 0)
                                         {
                                             sc.storage[i].count = sc.storage[i].max;
                                         }
                                     }
                                 }
-                                if (StationMiner.Value&& !sc.isVeinCollector && (sc.name.Equals("Station_miner") || sc.name.Equals("星球矿机")))
+                                if (StationMiner.Value&& !sc.isVeinCollector && (sc.name == "Station_miner" || sc.name == "星球矿机"))
                                 {
                                     int lastIndex = sc.storage.Length != 3 ? 4 : 2;
                                     if ((Time.time - StationMinerTime) > 1)
                                     {
                                         for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
                                         {
-                                            int itemId = sc.storage[i].itemId;
-                                            if (itemId > 0 && sc.storage[i].count <= sc.storage[i].max)
+                                            int itemID = sc.storage[i].itemId;
+                                            if (itemID > 0 && sc.storage[i].count <= sc.storage[i].max)
                                             {
-                                                int veinNumbers = GetNumberOfVein(itemId, pdId);
+                                                int veinNumbers = GetNumberOfVein(itemID, pdId);
                                                 int pointminenum = veinNumbers * Stationminenumber.Value;
                                                 if (veinNumbers > 0 && pointminenum == 0) pointminenum = 1;
-                                                else if (veinNumbers == 0 && itemId != GameMain.galaxy.PlanetById(pdId).waterItemId) continue;
+                                                else if (veinNumbers == 0 && itemID != GameMain.galaxy.PlanetById(pdId).waterItemId) continue;
 
                                                 if (Stationfullenergy.Value || sc.energy - pointminenum * GameMain.history.miningSpeedScale * 5000 > 0)
                                                 {
-                                                    int minenum = StationMine(itemId, pointminenum, pdId);
-                                                    AddStatInfo(pdId, itemId, minenum, true);
-                                                    sc.AddItem(itemId, minenum, 0);
-                                                    if (!Stationfullenergy.Value)
-                                                        sc.energy -= minenum * 5000;
+                                                    int minenum = StationMine(itemID, pointminenum, pdId);
+                                                    UnityEngine.Debug.Log(pdId + " " + LDB.items.Select(itemID).name + " " +minenum);
+                                                    if(minenum > 0)
+                                                    {
+                                                        AddStatInfo(pdId, itemID, minenum);
+                                                        sc.AddItem(itemID, minenum, 0);
+                                                        if (!Stationfullenergy.Value)
+                                                            sc.energy -= minenum * 5000;
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                    if (sc.storage[lastIndex].itemId > 0 && sc.storage[lastIndex].count > 0)
-                                    {
-                                        long heatValue = LDB.items.Select(sc.storage[lastIndex].itemId).HeatValue;
-                                        if (heatValue > 0 && sc.energyMax > sc.energy + heatValue)
-                                        {
-                                            sc.energy += heatValue;
-                                            sc.storage[lastIndex].count--;
-                                            AddStatInfo(pdId, sc.storage[lastIndex].itemId, 1, false);
-                                        }
-                                    }
+                                    StationPowerGeneration(sc,pdId);
                                 }
 
-                                if (StationTrash.Value && (sc.name.Equals("垃圾站") || sc.name.Equals("Station_trash")))
+                                if (StationTrash.Value && (sc.name == "垃圾站" || sc.name == "Station_trash"))
                                 {
                                     for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
                                     {
-                                        if (sc.storage[i].itemId > 0)
+                                        int itemID = sc.storage[i].itemId;
+                                        if (itemID > 0)
                                         {
                                             int trashnum = sc.storage[i].count;
                                             if (sc.energy - trashnum * 10000 > 0)
                                             {
-                                                AddStatInfo(pdId, sc.storage[i].itemId, trashnum, false);
+                                                AddStatInfo(pdId, itemID, trashnum, false);
                                                 sc.storage[i].count -= trashnum;
                                                 if (!Stationfullenergy.Value)
                                                     sc.energy -= trashnum * 10000;
@@ -2820,11 +2794,76 @@ namespace Multfunction_mod
         /// <param name="itemId"></param>
         /// <param name="itemNum"></param>
         /// <param name="produce"></param>
-        public void AddStatInfo(int planetId, int itemId, int itemNum, bool produce = true)
+        public static void AddStatInfo(int planetId, int itemId, int itemNum, bool produce = true)
         {
-            PlanetData pd = GameMain.galaxy.PlanetById(planetId);
-            if (pd == null || pd.factory == null) return;
-            addStatQueue.Enqueue(new int[] { pd.factoryIndex, itemId, itemNum, produce ? 1 : 0 });
+            if (addStatDic == null || consumeStatDic == null) return;
+            if (produce)
+            {
+                if(planetId==0) return;
+                if (!addStatDic.ContainsKey(planetId))
+                {
+                    addStatDic.Add(planetId, new Dictionary<int, long>());
+                }
+                if (!addStatDic[planetId].ContainsKey(itemId))
+                {
+                    addStatDic[planetId].Add(itemId, itemNum);
+                }
+                else
+                {
+                    addStatDic[planetId][itemId] += itemNum;
+                }
+            }
+            else
+            {
+                if (!consumeStatDic.ContainsKey(planetId))
+                {
+                    consumeStatDic.Add(planetId, new Dictionary<int, long>());
+                }
+                if (!consumeStatDic[planetId].ContainsKey(itemId))
+                {
+                    consumeStatDic[planetId].Add(itemId, itemNum);
+                }
+                else
+                {
+                    consumeStatDic[planetId][itemId]+=itemNum;
+                }
+            }
+            
+        }
+
+        public void RandomEmissionEjectorSilo()
+        {
+            EjectorNumber = 0;
+            SiloNumber = 0;
+            if (!RandomEmission.Value)
+            {
+                return;
+            }
+            foreach (var sd in GameMain.galaxy.stars)
+            {
+                foreach (var pd in sd.planets)
+                {
+                    if (pd != null && pd.factory != null && pd.factory.factorySystem != null)
+                    {
+                        for (int l = 1; l < pd.factory.factorySystem.ejectorCursor; l++)
+                        {
+                            if (pd.factory.factorySystem.ejectorPool[l].id == l)
+                            {
+                                EjectorNumber++;
+                            }
+                        }
+                        for (int l = 1; l < pd.factory.factorySystem.siloCursor; l++)
+                        {
+                            if (pd.factory.factorySystem.siloPool[l].id == l)
+                            {
+                                SiloNumber++;
+                            }
+                        }
+                    }
+                }
+            }
+            TempEjectorRandomEmission = true;
+            TempSiloRandomEmission = true;
         }
 
 
@@ -3209,6 +3248,7 @@ namespace Multfunction_mod
                 return vein;
             }
         }
+
         public Vector3 PostionCompute(Vector3 begin, Vector3 end, Vector3 pointpos, int index, bool oil = false)
         {
             if (end.y > 193 || end.y < -193) return pointpos;
@@ -3248,7 +3288,6 @@ namespace Multfunction_mod
             }
             return pos3;
         }
-
 
         public void BuryAllvein()
         {
@@ -3882,7 +3921,6 @@ namespace Multfunction_mod
                 }
             }
         }
-
         public void SetWalkSpeed()
         {
             if (player != null && player.mecha != null)
@@ -4019,6 +4057,47 @@ namespace Multfunction_mod
             GameMain.history.stationPilerLevel = (int)ChangeValueArray[19];
         }
         #endregion
+
+        public static void StationPowerGeneration(StationComponent sc,int planetID=0)
+        {
+            if(sc == null || sc.energy >= sc.energyMax) return;
+            planetID = sc.planetId > 0 ? sc.planetId : planetID;
+            if (planetID == 0) return;
+            int lastIndex = sc.storage.Length - 1;
+            if (sc.storage[lastIndex].itemId > 0 && sc.storage[lastIndex].count > 0)
+            {
+                ItemProto ip = LDB.items.Select(sc.storage[lastIndex].itemId);
+                if (ip.HeatValue > 0 )
+                {
+                    int num = Math.Min(sc.storage[lastIndex].count, (int)((sc.energyMax - sc.energy) / ip.HeatValue));
+                    sc.energy += num * ip.HeatValue;
+                    sc.storage[lastIndex].count -= num;
+
+                    AddStatInfo(planetID, ip.ID, num);
+                }
+            }
+        }
+
+        public static void StationSprayInc(StationComponent sc)
+        {
+            for (int i = 0; i < sc.storage.Length; i++)
+            {
+                if (sc.storage[i].itemId == 1143 && sc.storage[i].count > 0 && sc.storage[i].localLogic == ELogisticStorage.Supply)
+                {
+                    for (int j = 0; j < sc.storage.Length; j++)
+                    {
+                        if (j != i && sc.storage[j].itemId > 0 && sc.storage[j].count > 0 && sc.storage[i].count > 0)
+                        {
+                            int needinc = sc.storage[j].count * 4 - sc.storage[j].inc;
+                            int needNumber = Math.Min((int)Math.Ceiling(needinc / 296.0), sc.storage[i].count);
+                            sc.storage[j].inc += sc.storage[i].count >= needNumber ? needinc : sc.storage[i].count * 296;
+                            sc.storage[i].count -= needNumber;
+                        }
+                    }
+                    return;
+                }
+            }
+        }
 
         /// <summary>
         /// 设置快捷键
