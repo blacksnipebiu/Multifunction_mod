@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using static Multfunction_mod.Constant;
+using Debug = UnityEngine.Debug;
 
 namespace Multfunction_mod
 {
@@ -19,9 +20,10 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.3.8";
+        public const string VERSION = "2.5.5";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
+        private Vector2 scrollPosition;
         public Light SunLight;
         public Texture2D mytexture;
         public GameObject MultiFunctionPanel;
@@ -51,6 +53,7 @@ namespace Multfunction_mod
         public int[] mechalogisticsneed;
         public static int DriftBuildingLevel;
         public static int productmaxindex;
+        public static int incAbility = 4;
         public float MainWindow_x;
         public float MainWindow_y;
         public float MainWindow_x_move;
@@ -87,6 +90,10 @@ namespace Multfunction_mod
         public bool buildnotimecolddown;
         public bool SandBoxMode;
         public bool blueprintPasteToolActive;
+        public bool changexveinspos;
+        public bool changeveinposbool;
+        public bool changeveingroupposbool;
+        public bool getallVein_bool;
         public static int EjectorNumber;
         public static int SiloNumber;
         public static bool first = true;
@@ -158,7 +165,6 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> NotTidyVein;
         public static ConfigEntry<Boolean> InspectDisNoLimit;
         public static ConfigEntry<Boolean> RandomEmission;
-        public static ConfigEntry<Boolean> changexveinspos;
         public static ConfigEntry<Boolean> StationMaxproliferator;
         public static ConfigEntry<Boolean> Mechalogistics_bool;
         public static ConfigEntry<Boolean> MechalogStoragerecycle_bool;
@@ -166,6 +172,9 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> MechalogStationrecycle_bool;
         public static ConfigEntry<Boolean> MechalogStationprovide_bool;
         public static ConfigEntry<Boolean> Infinitestoragetank;
+        public static ConfigEntry<Boolean> QuickHandcraft;
+        public static ConfigEntry<Boolean> QuickPlayerMine;
+        public static ConfigEntry<Boolean> TankMaxproliferator;
         public static ConfigEntry<Boolean> Quantumtransport_bool;
         public static ConfigEntry<Boolean> Quantumtransportbuild_bool;
         public static ConfigEntry<Boolean> Quantumtransportpdwarp_bool;
@@ -181,11 +190,9 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> Infinitething;
         public static ConfigEntry<Boolean> Infiniteplayerpower;
         public static ConfigEntry<Boolean> deleteveinbool;
-        public static ConfigEntry<Boolean> changeveinposbool;
         public static ConfigEntry<Boolean> MechalogisticsPlanet_bool;
         public static ConfigEntry<Boolean> StationMiner;
         public static ConfigEntry<Boolean> autochangestationname;
-        public static ConfigEntry<Boolean> changeveingroupposbool;
         public static ConfigEntry<Boolean> dismantle_but_nobuild;
         public static ConfigEntry<Boolean> build_gascol_noequator;
         public static ConfigEntry<Boolean> StationTrash;
@@ -197,7 +204,6 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> Station_miner_noconsume_bool;
         public static ConfigEntry<Boolean> StationfullCount_bool;
         public static ConfigEntry<Boolean> ItemList_bool;
-        public static ConfigEntry<Boolean> getallVein_bool;
         public static ConfigEntry<Boolean> Buildingnoconsume;
         public static ConfigEntry<Boolean> Stationfullenergy;
         public static ConfigEntry<Boolean> BeltSignalFunction;
@@ -207,9 +213,20 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> cancelsolarbullet;
         public static ConfigEntry<Boolean> alwaysemission;
         public static ConfigEntry<Boolean> StationSpray;
+        public static ConfigEntry<Boolean> Maxproliferator;
         public static ConfigEntry<Boolean> StationPowerGen;
         public static ConfigEntry<Boolean> CloseUIpanel;
         public static ConfigEntry<Boolean> CloseUIAbnormalityTip;
+        public static ConfigEntry<Boolean> QuantumtransportstationSupply;
+        public static ConfigEntry<Boolean> QuantumtransportlabSupply;
+        public static ConfigEntry<Boolean> QuantumtransportpowerSupply;
+        public static ConfigEntry<Boolean> QuantumtransportassembleSupply;
+        public static ConfigEntry<Boolean> QuantumtransportstationDemand;
+        public static ConfigEntry<Boolean> QuantumtransportminerDemand;
+        public static ConfigEntry<Boolean> QuantumtransportsiloDemand;
+        public static ConfigEntry<Boolean> QuantumtransportlabDemand;
+        public static ConfigEntry<Boolean> QuantumtransportpowerDemand;
+        public static ConfigEntry<Boolean> QuantumtransportassembleDemand;
         #endregion
 
         void Start()
@@ -225,13 +242,24 @@ namespace Multfunction_mod
             MainWindow_y_move = 390;
             tempx1 = MainWindow_x;
             tempy1 = MainWindow_y;
+            scrollPosition[0] = 0;
 
             //初始化配置
             {
                 Quantumtransport_bool = Config.Bind("量子传输站", "Quantumtransport_bool", false);
-                Quantumtransportbuild_bool = Config.Bind("星球级材料供应", "Quantumtransportbuild_bool", true);
                 Quantumtransportstarwarp_bool = Config.Bind("星系级翘曲全面供应", "Quantumtransportstarwarp_bool", false);
                 Quantumtransportpdwarp_bool = Config.Bind("星球级翘曲全面供应", "Quantumtransportpdwarp_bool", false);
+                Quantumtransportbuild_bool = Config.Bind("星球级材料供应", "Quantumtransportbuild_bool", true);
+                QuantumtransportstationSupply = Config.Bind("星球级物流站材料供应", "QuantumtransportstationSupply", true);
+                QuantumtransportlabSupply = Config.Bind("星球级研究站材料供应", "QuantumtransportlabSupply", true);
+                QuantumtransportpowerSupply = Config.Bind("星球级电力设备材料供应", "QuantumtransportpowerSupply", true);
+                QuantumtransportassembleSupply = Config.Bind("星球级组装机材料供应", "QuantumtransportassembleSupply", true);
+                QuantumtransportstationDemand = Config.Bind("星球级物流站材料拿取", "QuantumtransportstationDemand", true);
+                QuantumtransportminerDemand = Config.Bind("星球级矿机材料拿取", "QuantumtransportminerDemand", true);
+                QuantumtransportsiloDemand = Config.Bind("星球级发射井弹射器材料拿取", "QuantumtransportsiloDemand", true);
+                QuantumtransportlabDemand = Config.Bind("星球级研究站材料拿取", "QuantumtransportlabDemand", true);
+                QuantumtransportpowerDemand = Config.Bind("星球级电力设备材料拿取", "QuantumtransportpowerDemand", true);
+                QuantumtransportassembleDemand = Config.Bind("星球级组装机材料拿取", "QuantumtransportassembleDemand", true);
                 scale = Config.Bind("大小适配", "scale", 16);
 
 
@@ -240,6 +268,7 @@ namespace Multfunction_mod
                 StationfullCount_bool = Config.Bind("星球无限供货机", "StationfullCount_bool", false);
                 InfineteStarPower = Config.Bind("人造卫星无限能源", "InfineteStarPower", false);
                 Infinitestoragetank = Config.Bind("无限储液站", "Infinitestoragetank", false);
+                TankMaxproliferator = Config.Bind("储液站无限增产", "TankMaxproliferator", false);
                 Tankcontentall = Config.Bind("储液站任意存", "Tankcontentall", false);
                 allhandcraft = Config.Bind("全部手搓", "allhandcraft", false);
                 quickproduce = Config.Bind("快速生产", "quickproduce", false);
@@ -249,7 +278,6 @@ namespace Multfunction_mod
                 Mechalogneed = Config.Bind("机甲物流需求情况", "Mechalogneed", "");
                 changeveinsposx = Config.Bind("切割矿脉数量", "changeveinsposx", 3);
                 veinlines = Config.Bind("矿物行数", "veinlines", 3);
-                changexveinspos = Config.Bind("切割矿脉", "changexveinspos", false);
                 NotTidyVein = Config.Bind("矿堆不整理", "NotTidyVein", false);
                 StationMaxproliferator = Config.Bind("物流站无限增产点数", "StationMaxproliferator", false);
                 BeltSignalFunction = Config.Bind("传送带信号功能", "BeltSignalFunction", false);
@@ -265,15 +293,14 @@ namespace Multfunction_mod
                 StationMiner = Config.Bind("星球矿机", "stationmineropen", false);
                 StationTrash = Config.Bind("星球垃圾箱", "stationtrashopen", false);
                 autochangestationname = Config.Bind("自动改名", "autochangestationname", false);
-                changeveinposbool = Config.Bind("改变单矿位置", "changeveinposbool", false);
-                changeveingroupposbool = Config.Bind("改变矿堆位置", "changeveingroupposbool", false);
-                getallVein_bool = Config.Bind("获取所有矿", "getallVein_bool", false);
                 Buildingnoconsume = Config.Bind("全设备不耗电", "Buildingnoconsume", false);
                 Stationfullenergy = Config.Bind("物流站永久满电", "Stationfullenergy", false);
                 StationSpray = Config.Bind("物流站喷涂", "StationSpray", false);
-                StationPowerGen = Config.Bind("物流站内置熔炉", "StationPowerGen", false);
+                StationPowerGen = Config.Bind("物流站内置发电", "StationPowerGen", false);
                 build_gascol_noequator = Config.Bind("采集器无视赤道", "build_gascol_noequator", false);
                 lockpackage_bool = Config.Bind("锁定背包", "lockpackage_bool", false);
+                QuickHandcraft = Config.Bind("机甲制造MAX", "QuickHandcraft", false);
+                QuickPlayerMine = Config.Bind("机甲采矿Max", "QuickPlayerMine", false);
                 InspectDisNoLimit = Config.Bind("操作范围不受限制", "InspectDisNoLimit", false);
                 noneedtrashsand = Config.Bind("不需要垃圾沙土", "noneedtrashsand", false);
                 dismantle_but_nobuild = Config.Bind("拆除不添加至背包", "dismantle_but_nobuild", false);
@@ -295,6 +322,7 @@ namespace Multfunction_mod
                 Stationminenumber = Config.Bind("星球矿机速率", "Stationminenumber", 1);
                 MULTIPELSMELT = Config.Bind("冶炼倍数", "mutiplesmelt", 1);
                 Buildmaxlen = Config.Bind("建筑数量最大值", "Buildmaxlen", 15);
+                Maxproliferator = Config.Bind("增产点数上限10", "Maxproliferator", false);
                 starquamaxpowerpertick = Config.Bind("实时修改星球量子充电功率", "starquamaxpowerpertick", 60f);
                 planetquamaxpowerpertick = Config.Bind("实时修改星系量子充电功率", "planetquamaxpowerpertick", 60f);
                 CloseUIAbnormalityTip= Config.Bind("关闭异常提示", "CloseUIAbnormalityTip", false);
@@ -313,8 +341,9 @@ namespace Multfunction_mod
                 CloseUIpanel = Config.Bind("关闭面板", "CloseUIpanel", false);
                 WindowQuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt));
             }
-            
 
+
+            incAbility = Maxproliferator.Value ? 10 : 4;
             MainWindow_x = MainWindow_x_config.Value;
             MainWindow_y = MainWindow_y_config.Value;
             oillowerlimit = (int)(0.1 / VeinData.oilSpeedMultiplier);
@@ -343,15 +372,23 @@ namespace Multfunction_mod
                 watertypePlanetArray.Add(int.Parse(t[0]), int.Parse(t[1]));
             }
             MultifunctionTranslate.regallTranslate();
-            Task.Run(() =>
+            ThreadPool.QueueUserWorkItem(o =>
             {
                 while (true)
                 {
                     while (Quantumtransport_bool.Value)
                     {
-                        takeitemfromstarsuperstation();
+                        try
+                        {
+                            takeitemfromstarsuperstation();
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.Log(ex.ToString());
+                        }
                         Thread.Sleep(1000);
                     }
+                    Thread.Sleep(1000);
                 }
             });
         }
@@ -366,45 +403,13 @@ namespace Multfunction_mod
             FirstStartGame();
             QuickKeyOpenWindow();
             AfterGameStart();
-            while (TimesTest.Count > 0)
-            {
-                UnityEngine.Debug.Log(TimesTest.Dequeue());
-            }
+            //while (TimesTest.Count > 0)
+            //{
+            //    Debug.Log(TimesTest.Dequeue());
+            //}
             if (Input.GetKey(KeyCode.F10) && Input.GetKeyDown(KeyCode.LeftShift))
             {
                 //temp = !temp;
-                //Debug.Log(temp);
-                //GameSave.LoadCurrentGameInResource(18);
-            }
-            if (player != null && player.controller != null && player.controller.cmd.type == ECommand.Build && player.controller.actionBuild != null)
-            {
-                if (blueprintPasteToolActive != player.controller.actionBuild.blueprintPasteTool.active)
-                {
-                    blueprintPasteToolActive = !blueprintPasteToolActive;
-                    DriftBuildingLevel = 0;
-                }
-                if (Input.GetKeyDown(KeyCode.UpArrow))
-                {
-                    DriftBuildingLevel++;
-                    if (blueprintPasteToolActive)
-                    {
-                        player.controller.actionBuild.blueprintPasteTool.cursorValid = true;
-                        player.controller.actionBuild.blueprintPasteTool.DeterminePreviewsPrestage();
-                    }
-                }
-                if (Input.GetKeyDown(KeyCode.DownArrow))
-                {
-                    DriftBuildingLevel--;
-                    if (blueprintPasteToolActive)
-                    {
-                        player.controller.actionBuild.blueprintPasteTool.cursorValid = true;
-                        player.controller.actionBuild.blueprintPasteTool.DeterminePreviewsPrestage();
-                    }
-                }
-            }
-            else if (DriftBuildingLevel != 0)
-            {
-                DriftBuildingLevel = 0;
             }
             if (ItemDisplayingWindow)
             {
@@ -645,27 +650,28 @@ namespace Multfunction_mod
             GUILayout.BeginArea(new Rect(10, 20, MainWindow_width.Value, MainWindow_height.Value));
 
             {
-                GUILayout.BeginArea(new Rect(0, 0, heightdis * 25, heightdis));
-                {
-                    GUILayout.BeginHorizontal();
-                    if (GUILayout.Button("人物".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 1; }
-                    if (GUILayout.Button("建筑".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 2; }
-                    if (GUILayout.Button("星球".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 3; }
-                    if (GUILayout.Button("戴森球".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 4; }
-                    if (GUILayout.Button("其它功能".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 5; }
-                    if (GUILayout.Button("机甲物流".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 6; }
-                    GUILayout.EndHorizontal();
-                }
-                GUILayout.EndArea();
+                GUILayout.BeginVertical();
 
-                GUILayout.BeginArea(new Rect(0, heightdis, MainWindow_width.Value, MainWindow_height.Value));
-                if (whichpannel == 1) PlayerPannel();
-                if (whichpannel == 2) BuildPannel();
-                if (whichpannel == 3) PlanetPannel();
-                if (whichpannel == 4) DysonPannel();
-                if (whichpannel == 5) OtherPannel();
+                GUILayout.BeginHorizontal(new[] { GUILayout.Height(heightdis)});
+                if (GUILayout.Button("人物".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 1; }
+                if (GUILayout.Button("建筑".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 2; }
+                if (GUILayout.Button("星球".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 3; }
+                if (GUILayout.Button("戴森球".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 4; }
+                if (GUILayout.Button("其它功能".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 5; }
+                if (GUILayout.Button("机甲物流".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 6; }
+                GUILayout.EndHorizontal();
                 if (whichpannel == 6) LogisticsPannel();
-                GUILayout.EndArea();
+                else
+                {
+                    scrollPosition = GUILayout.BeginScrollView(scrollPosition, new[] { GUILayout.Width(MainWindow_width.Value - 20), GUILayout.Height(MainWindow_height.Value - heightdis * 2) });
+                    if (whichpannel == 1) PlayerPannel();
+                    if (whichpannel == 2) BuildPannel();
+                    if (whichpannel == 3) PlanetPannel();
+                    if (whichpannel == 4) DysonPannel();
+                    if (whichpannel == 5) OtherPannel();
+                    GUILayout.EndScrollView();
+                }
+                GUILayout.EndVertical();
             }
 
 
@@ -673,110 +679,94 @@ namespace Multfunction_mod
 
         }
 
+        /// <summary>
+        /// 玩家面板
+        /// </summary>
         public void PlayerPannel()
         {
             bool english = Localization.language != Language.zhCN;
-            GUILayout.BeginArea(new Rect(0, 10, 40 + (english ? heightdis * 31 : heightdis * 27), 20 * heightdis));
-            int tempwidth;
+            //左侧UI
+            GUILayout.BeginHorizontal();
+
+            GUILayout.BeginVertical(new[] { GUILayout.ExpandWidth(false) ,GUILayout.Width(english?18*heightdis:14*heightdis)});
+            if (player != null)
             {
-                GUILayout.BeginArea(new Rect(0, 0, 35 + (english ? heightdis * 17 : heightdis * 13), 20 * heightdis));
-                for (int i = 0; i < 20 && player != null; i++)
+                for (int i = 0; i < 20; i++)
                 {
-                    float left, right;
-                    string str;
-                    getLRstrValue(i, out left, out right, out str);
-                    float temp = GUI.HorizontalSlider(new Rect(10 + (english ? heightdis * 8 : heightdis * 4), heightdis * i + 5, heightdis * 6, heightdis), ChangeValueArray[i], left, right);
+                    GUILayout.BeginHorizontal(new[] { GUILayout.ExpandWidth(false) });
+                    getLRstrValue(i, out float left, out float right, out string str);
+
+                    float temp = GUILayout.HorizontalSlider(ChangeValueArray[i], left, right, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 6) });
                     string result = "";
-                    if (i == 11 && player.mecha != null) result += TGMKinttostring(player.mecha.reactorPowerGen, "W");
-                    else if (i == 0 || i == 16) result = string.Format("{0:N2}", temp);
+                    if (i == 8 && player.mecha != null) result += TGMKinttostring(player.mecha.reactorPowerGen, "W");
+                    else if (i == 0 || i == 15) result = string.Format("{0:N2}", temp);
                     else result = (int)temp + "";
-                    GUI.Label(new Rect(10, heightdis * i, english ? heightdis * 8 : heightdis * 4, heightdis), str.getTranslate() + ":");
-                    if (temp == ChangeValueArray[i])
+                    if (temp == ChangeValueArray[i] && i != 8)
                     {
-                        if ((i == 0 || i == 16) && !float.TryParse(Regex.Replace(GUI.TextField(new Rect(30 + (english ? heightdis * 14 : heightdis * 10), heightdis * i, heightdis * 3, heightdis), result), @"^[^0-9]+(.[^0-9]{2})?$", ""), out temp))
+                        string t = GUILayout.TextField(result, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 3) });
+                        if (i == 0 || i == 15)
+                        {
+                            if(!float.TryParse(Regex.Replace(t, @"^[^0-9]+(.[^0-9]{2})?$", ""), out temp))
+                            {
+                                temp = ChangeValueArray[i];
+                            }
+                        }
+                        else if (!float.TryParse(Regex.Replace(t, @"^[^0-9]", ""), out temp))
                         {
                             temp = ChangeValueArray[i];
-                        }
-                        else if (i != 0 && i != 11 && i != 16 && !float.TryParse(Regex.Replace(GUI.TextField(new Rect(30 + (english ? heightdis * 14 : heightdis * 10), heightdis * i, heightdis * 3, heightdis), result), @"^[^0-9]", ""), out temp))
-                        {
-                            temp = ChangeValueArray[i];
-                        }
-                        else if (i == 11)
-                        {
-                            GUI.Label(new Rect(30 + (english ? heightdis * 14 : heightdis * 10), heightdis * i, heightdis * 3, heightdis), result);
                         }
                     }
-                    if (temp < left) temp = left;
-                    if (temp > right) temp = right;
-
-                    OnChangeValue(temp, i);
+                    else if (i == 8)
+                    {
+                        GUILayout.Label(result, style, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 3) });
+                    }
+                    GUILayout.Label(str.getTranslate(), style, GUILayout.ExpandWidth(false));
+                    OnChangeValue(Math.Max(Math.Min(temp, right), left), i);
+                    GUILayout.EndHorizontal();
                 }
-                GUILayout.EndArea();
             }
-            tempwidth = english ? 40 + heightdis * 17 : 40 + heightdis * 13;
+            GUILayout.EndVertical();
+
+            GUILayout.BeginVertical();
+            GUILayoutOption[] options = new[] { GUILayout.Height(heightdis), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 7) };
             {
-                GUILayout.BeginArea(new Rect(tempwidth, 0, heightdis * 8, 23 * heightdis));
-                string[] tempstr = new string[12] { "小飞机不耗能", "无需翘曲器曲速飞行", "无限物品", "锁定背包", "无限机甲能量", "不往背包放东西", "建筑秒完成", "蓝图建造无需材料", "科技点击解锁", "物品列表(Tab)", "建筑师模式", "9999999元数据" };
+                Infinitething.Value = GUILayout.Toggle(Infinitething.Value, "无限物品".getTranslate(), options);
+                lockpackage_bool.Value = GUILayout.Toggle(lockpackage_bool.Value, "锁定背包".getTranslate(), options);
+                Property9999999 = GUILayout.Toggle(Property9999999, "无限元数据".getTranslate(), options);
+                DroneNoenergy_bool.Value = GUILayout.Toggle(DroneNoenergy_bool.Value, "小飞机不耗能".getTranslate(), options);
+                Infiniteplayerpower.Value = GUILayout.Toggle(Infiniteplayerpower.Value, "无限机甲能量".getTranslate(), options);
+                unlockpointtech = GUILayout.Toggle(unlockpointtech, "科技点击解锁".getTranslate(), options);
+                dismantle_but_nobuild.Value = GUILayout.Toggle(dismantle_but_nobuild.Value, "不往背包放东西".getTranslate(), options);
+                QuickHandcraft.Value = GUILayout.Toggle(QuickHandcraft.Value, "机甲制造MAX".getTranslate(), options);
+                QuickPlayerMine.Value = GUILayout.Toggle(QuickPlayerMine.Value, "机甲采矿MAX".getTranslate(), options);
+                ItemList_bool.Value = GUILayout.Toggle(ItemList_bool.Value, "物品列表(Tab)".getTranslate(), options); 
+                noneedwarp.Value = GUILayout.Toggle(noneedwarp.Value, "无需翘曲器曲速飞行".getTranslate(), options);
+            }
+            {
+                var tempoptions = new[] { GUILayout.ExpandWidth(false), GUILayout.Height(heightdis) };
+                if(GUILayout.Button((ChangePlayerbool ? "停止修改" : "启动修改").getTranslate(), options)) ChangePlayerbool = !ChangePlayerbool;
+                if(GUILayout.Button("清空背包".getTranslate(), options)) Clearpackage();
+                if (GUILayout.Button("初始化玩家".getTranslate(), options)) InitPlayer();
 
-                for (int i = 0; i < tempstr.Length; i++)
-                {
-                    bool tempvalue = false;
-                    switch (i)
-                    {
-                        case 0: tempvalue = DroneNoenergy_bool.Value; break;
-                        case 1: tempvalue = noneedwarp.Value; break;
-                        case 2: tempvalue = Infinitething.Value; break;
-                        case 3: tempvalue = lockpackage_bool.Value; break;
-                        case 4: tempvalue = Infiniteplayerpower.Value; break;
-                        case 5: tempvalue = dismantle_but_nobuild.Value; break;
-                        case 6: tempvalue = BuildNotime_bool.Value; break;
-                        case 7: tempvalue = blueprintpastenoneed_bool.Value; break;
-                        case 8: tempvalue = unlockpointtech; break;
-                        case 9: tempvalue = ItemList_bool.Value; break;
-                        case 10: tempvalue = ArchitectMode.Value; break;
-                        case 11: tempvalue = Property9999999; break;
-                    }
-                    tempvalue = GUI.Toggle(new Rect(0, heightdis * i, heightdis * 12, heightdis), tempvalue, tempstr[i].getTranslate());
-                    switch (i)
-                    {
-                        case 0: DroneNoenergy_bool.Value = tempvalue; break;
-                        case 1: noneedwarp.Value = tempvalue; break;
-                        case 2: Infinitething.Value = tempvalue; break;
-                        case 3: lockpackage_bool.Value = tempvalue; break;
-                        case 4: Infiniteplayerpower.Value = tempvalue; break;
-                        case 5: dismantle_but_nobuild.Value = tempvalue; break;
-                        case 6: BuildNotime_bool.Value = tempvalue; break;
-                        case 7: blueprintpastenoneed_bool.Value = tempvalue; break;
-                        case 8: unlockpointtech = tempvalue; break;
-                        case 9: ItemList_bool.Value = tempvalue; break;
-                        case 10: ArchitectMode.Value = tempvalue; break;
-                        case 11: Property9999999 = tempvalue; break;
-                    }
-                }
-                tempstr = new string[7] { ChangePlayerbool ? "停止修改" : "启动修改", "清空背包", "初始化玩家", "增加背包大小", "减少背包大小", "解锁全部科技", "回退无穷科技" };
-                for (int i = 0; i < tempstr.Length; i++)
-                {
-                    if (GUI.Button(new Rect(0, heightdis * (13 + i), english && i == 7 ? heightdis * 10 : (i == 7 ? heightdis * 7 : heightdis * 6), heightdis), tempstr[i].getTranslate()))
-                    {
-                        switch (i)
-                        {
-                            case 0: ChangePlayerbool = !ChangePlayerbool; break;
-                            case 1: Clearpackage(); break;
-                            case 2: InitPlayer(); break;
-                            case 3: Addpackagesize(); break;
-                            case 4: Reducepackagesize(); break;
-                            case 5: UnlockallTech(); break;
-                            case 6: lockTech(); break;
-                        }
-                    }
-                }
+                GUILayout.BeginHorizontal(GUILayout.Height(heightdis * 2), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 7));
+                GUILayout.Button("背包".getTranslate(), new[] { GUILayout.Height(heightdis*2)});
+                GUILayout.BeginVertical(new[] { GUILayout.ExpandWidth(false) });
+                if (GUILayout.Button("加一行".getTranslate(), tempoptions)) Operatepackagesize(1,0);
+                if (GUILayout.Button("加一列".getTranslate(), tempoptions)) Operatepackagesize(0, 1);
+                GUILayout.EndVertical();
+                GUILayout.BeginVertical(new[] { GUILayout.ExpandWidth(false) });
+                if (GUILayout.Button("减一行".getTranslate(), tempoptions)) Operatepackagesize(1, 0,false);
+                if (GUILayout.Button("减一列".getTranslate(), tempoptions)) Operatepackagesize(0, 1,false);
+                GUILayout.EndVertical();
+                GUILayout.EndHorizontal();
 
-                GUILayout.EndArea();
-
+                if (GUILayout.Button("解锁全部科技".getTranslate(), options)) UnlockallTech();
+                if (GUILayout.Button("回退无穷科技".getTranslate(), options)) lockTech();
 
             }
 
-            GUILayout.EndArea();
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
 
 
         }
@@ -784,161 +774,129 @@ namespace Multfunction_mod
         public void BuildPannel()
         {
             bool english = Localization.language != Language.zhCN;
+            GUILayout.BeginHorizontal();
             {
-                GUILayout.BeginArea(new Rect(0, 10, english ? heightdis * 13 + 10 : heightdis * 10 + 10, heightdis * 25));
+                GUILayout.BeginVertical(new[] {GUILayout.Width(english? heightdis*13:heightdis*10)});
+                GUILayoutOption[] options = new[] { GUILayout.Height(heightdis), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 10) };
 
-                Buildmaxlen.Value = (int)GUI.HorizontalSlider(new Rect(0, 5, heightdis * 5, heightdis), Buildmaxlen.Value, 15, 100);
-                GUI.Label(new Rect(10 + heightdis * 5, 0, heightdis * 8, heightdis), Buildmaxlen.Value + " " + "建筑数量最大值".getTranslate(), style);
-                StationStoExtra.Value = (int)GUI.HorizontalSlider(new Rect(0, 5 + heightdis, heightdis * 5, heightdis), StationStoExtra.Value, 0, 100);
-                GUI.Label(new Rect(10 + heightdis * 5, heightdis, heightdis * 8, heightdis), StationStoExtra.Value + " " + "运输站存储倍率".getTranslate(), style);
-                string[] tempstr = new string[] 
-                { 
-                    "实时更改全部运输站存储倍率",
-                    "储液站任意存",
-                    "无限储液站", 
-                    "星球无限供货机", 
-                    "物流站永久满电", 
-                    "物流站要啥有啥", 
-                    "物流站无限增产", 
-                    "物流站内置喷涂",
-                    "物流站内置熔炉", 
-                    "物流站无限翘曲",
-                    "无需赤道造采集器",
-                    "强行近距离建造物流站", 
-                    "人造恒星无限能源", 
-                    "星球电网(人造恒星)", 
-                    "覆盖全球", 
-                    "超长连接", 
-                    "极速轨道弹射器(慎用)", 
-                    "极速垂直发射井(慎用)" 
-                };
-                for (int i = 0; i < tempstr.Length; i++)
+                GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
+                Buildmaxlen.Value = (int)GUILayout.HorizontalSlider(Buildmaxlen.Value, 15, 100, new[] {GUILayout.Height(heightdis),GUILayout.Width(heightdis * 5), GUILayout.ExpandWidth(false) });
+                GUILayout.Label(Buildmaxlen.Value + " " + "建筑数量最大值".getTranslate(), style, GUILayout.ExpandWidth(false));
+                GUILayout.EndHorizontal();
+
+                GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
+                StationStoExtra.Value = (int)GUILayout.HorizontalSlider(StationStoExtra.Value, 15, 100, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5), GUILayout.ExpandWidth(false) });
+                GUILayout.Label(StationStoExtra.Value + " " + "运输站存储倍率".getTranslate(), style, GUILayout.ExpandWidth(false));
+                GUILayout.EndHorizontal();
+                RefreshStationStorage           = GUILayout.Toggle(RefreshStationStorage, "实时更改全部运输站存储倍率".getTranslate(), options);
+                Tankcontentall.Value            = GUILayout.Toggle(Tankcontentall.Value, "储液站任意存".getTranslate(), options);
+                Infinitestoragetank.Value       = GUILayout.Toggle(Infinitestoragetank.Value, "无限储液站".getTranslate(), options);
+                TankMaxproliferator.Value       = GUILayout.Toggle(TankMaxproliferator.Value, "储液站无限增产".getTranslate(), options);
+                StationfullCount_bool.Value     = GUILayout.Toggle(StationfullCount_bool.Value, "星球无限供货机".getTranslate(), options);
+                Stationfullenergy.Value         = GUILayout.Toggle(Stationfullenergy.Value, "物流站永久满电".getTranslate(), options);
+                StationfullCount                = GUILayout.Toggle(StationfullCount, "物流站要啥有啥".getTranslate(), options);
+                StationMaxproliferator.Value    = GUILayout.Toggle(StationMaxproliferator.Value, "物流站无限增产".getTranslate(), options);
+                StationSpray.Value              = GUILayout.Toggle(StationSpray.Value, "物流站内置喷涂".getTranslate(), options);
+                StationPowerGen.Value           = GUILayout.Toggle(StationPowerGen.Value, "物流站内置发电".getTranslate(), options);
+                Station_infiniteWarp_bool.Value = GUILayout.Toggle(Station_infiniteWarp_bool.Value, "物流站无限翘曲".getTranslate(), options);
+                build_gascol_noequator.Value    = GUILayout.Toggle(build_gascol_noequator.Value, "无需赤道造采集器".getTranslate(), options);
+                build_tooclose_bool.Value       = GUILayout.Toggle(build_tooclose_bool.Value, "强行近距离建造物流站".getTranslate(), options);
+                InfineteStarPower.Value         = GUILayout.Toggle(InfineteStarPower.Value, "人造恒星无限能源".getTranslate(), options);
+                PlanetPower_bool.Value          = GUILayout.Toggle(PlanetPower_bool.Value, "星球电网(人造恒星)".getTranslate(), options);
+                if (PlanetPower_bool.Value)
                 {
-                    bool tempvalue = false;
-
-                    switch (i)
-                    {
-                        case 0: tempvalue = RefreshStationStorage; break;
-                        case 1: tempvalue = Tankcontentall.Value; break;
-                        case 2: tempvalue = Infinitestoragetank.Value; break;
-                        case 3: tempvalue = StationfullCount_bool.Value; break;
-                        case 4: tempvalue = Stationfullenergy.Value; break;
-                        case 5: tempvalue = StationfullCount; break;
-                        case 6: tempvalue = StationMaxproliferator.Value; break;
-                        case 7: tempvalue = StationSpray.Value; break;
-                        case 8: tempvalue = StationPowerGen.Value; break;
-                        case 9: tempvalue = Station_infiniteWarp_bool.Value; break;
-                        case 10: tempvalue = build_gascol_noequator.Value; break;
-                        case 11: tempvalue = build_tooclose_bool.Value; break;
-                        case 12: tempvalue = InfineteStarPower.Value; break;
-                        case 13: tempvalue = PlanetPower_bool.Value; break;
-                        case 14: tempvalue = PlanetPower_bool.Value; break;
-                        case 15: tempvalue = farconnectdistance; break;
-                        case 16: tempvalue = quickEjector; break;
-                        case 17: tempvalue = quicksilo; break;
-                    }
-                    tempvalue = GUI.Toggle(new Rect(i >= 14 && i <= 15 ? 20 : 0, heightdis * (i + 2), heightdis * 13, heightdis), tempvalue, tempstr[i].getTranslate());
-                    switch (i)
-                    {
-                        case 0: RefreshStationStorage = tempvalue; break;
-                        case 1: Tankcontentall.Value = tempvalue; break;
-                        case 2: Infinitestoragetank.Value = tempvalue; break;
-                        case 3: StationfullCount_bool.Value = tempvalue; break;
-                        case 4: Stationfullenergy.Value = tempvalue; break;
-                        case 5: StationfullCount = tempvalue; break;
-                        case 6: StationMaxproliferator.Value = tempvalue; break;
-                        case 7: StationSpray.Value = tempvalue; break;
-                        case 8: StationPowerGen.Value = tempvalue; break;
-                        case 9: Station_infiniteWarp_bool.Value = tempvalue; break;
-                        case 10: build_gascol_noequator.Value = tempvalue; break;
-                        case 11: build_tooclose_bool.Value = tempvalue; break;
-                        case 12: InfineteStarPower.Value = tempvalue; break;
-                        case 13: PlanetPower_bool.Value = tempvalue; break;
-                        case 14: PlanetPower_bool.Value = tempvalue; break;
-                        case 15: farconnectdistance = tempvalue; break;
-                        case 16: quickEjector = tempvalue; break;
-                        case 17: quicksilo = tempvalue; break;
-                    }
+                    PlanetPower_bool.Value = GUILayout.Toggle(PlanetPower_bool.Value, "    覆盖全球".getTranslate(), options);
+                    farconnectdistance = GUILayout.Toggle(farconnectdistance, "    超长连接".getTranslate(), options);
                 }
-                GUILayout.EndArea();
+                quickEjector                    = GUILayout.Toggle(quickEjector, "极速轨道弹射器(慎用)".getTranslate(), options);
+                quicksilo                       = GUILayout.Toggle(quicksilo, "极速垂直发射井(慎用)".getTranslate(), options);
+
+                GUILayout.EndVertical();
             }
             {
-                GUILayout.BeginArea(new Rect(english ? heightdis * 13 + 10 : heightdis * 10 + 10, 10, heightdis * 21 + 10, heightdis * 20));
-                int tempplanetquamaxpowerpertick = (int)GUI.HorizontalSlider(new Rect(0, 5, heightdis * 5, heightdis), planetquamaxpowerpertick.Value, 60, 10000);
-                GUI.Label(new Rect(heightdis * 5, 0, heightdis * 15, togglesize), tempplanetquamaxpowerpertick > 1000 ? tempplanetquamaxpowerpertick / 1000 + "G" : tempplanetquamaxpowerpertick + "MW " + "星球量子充电功率".getTranslate(), style);
-                int tempstarquamaxpowerpertick = (int)GUI.HorizontalSlider(new Rect(0, 5 + heightdis, heightdis * 5, heightdis), starquamaxpowerpertick.Value, 60, 10000);
-                GUI.Label(new Rect(heightdis * 5, heightdis, heightdis * 15, togglesize), tempstarquamaxpowerpertick > 1000 ? tempstarquamaxpowerpertick / 1000 + "G" : tempstarquamaxpowerpertick + "MW " + "星系量子充电功率".getTranslate(), style);
-                Quantumenergy.Value = (int)GUI.HorizontalSlider(new Rect(0, 5 + heightdis * 2, heightdis * 5, heightdis), Quantumenergy.Value, 0, 1000000);
-                GUI.Label(new Rect(heightdis * 5, heightdis * 2, heightdis * 15, togglesize), TGMKinttostring(Quantumenergy.Value, "J") + " " + "量子耗能/个".getTranslate(), style);
-
-
-                if (tempplanetquamaxpowerpertick != planetquamaxpowerpertick.Value || tempstarquamaxpowerpertick != starquamaxpowerpertick.Value)
+                GUILayout.BeginVertical(GUILayout.ExpandWidth(false));
+                GUILayoutOption[] options = new[] { GUILayout.Height(heightdis), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 7) };
+                BuildNotime_bool.Value = GUILayout.Toggle(BuildNotime_bool.Value, "建筑秒完成".getTranslate(), options);
+                blueprintpastenoneed_bool.Value = GUILayout.Toggle(blueprintpastenoneed_bool.Value, "蓝图建造无需材料".getTranslate(), options);
+                ArchitectMode.Value = GUILayout.Toggle(ArchitectMode.Value, "建筑师模式".getTranslate(), options);
+                Buildingnoconsume.Value = GUILayout.Toggle(Buildingnoconsume.Value, "新建设备不耗电".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                DriftBuildings = GUILayout.Toggle(DriftBuildings, "建筑抬升".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                if (DriftBuildings) GUILayout.Label("抬升层数:" + DriftBuildingLevel, new[] { GUILayout.Height(heightdis) });
+                BeltSignalFunction.Value = GUILayout.Toggle(BeltSignalFunction.Value, "传送带信号功能".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                Quantumtransport_bool.Value = GUILayout.Toggle(Quantumtransport_bool.Value, "量子传输站".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                if (Quantumtransport_bool.Value)
                 {
-                    changequapowerpertick = true;
-                    planetquamaxpowerpertick.Value = tempplanetquamaxpowerpertick;
-                    starquamaxpowerpertick.Value = tempstarquamaxpowerpertick;
-                }
-                string[] tempstr = new string[] { 
-                    "新建设备不耗电",
-                    "建筑抬升" ,
-                    "传送带信号功能", 
-                    "量子传输站", 
-                    "星球级翘曲全面供应", 
-                    "星系级翘曲全面供应",  
-                    "自动改名\"星球量子传输站\"", 
-                    "自动改名\"星系量子传输站\"" ,
-                    "星球级材料供应"
-                };
-                int lines = 3;
-                for (int i = 0; i < tempstr.Length; i++)
-                {
-                    bool tempvalue = false;
+                    Quantumtransportpdwarp_bool.Value = GUILayout.Toggle(Quantumtransportpdwarp_bool.Value, "星球级翘曲全面供应".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                    Quantumtransportstarwarp_bool.Value = GUILayout.Toggle(Quantumtransportstarwarp_bool.Value, "星系级翘曲全面供应".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                    autochangeQuantumstationname = GUILayout.Toggle(autochangeQuantumstationname, "自动改名\"星球量子传输站\"".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                    autochangeQuantumStarstationname = GUILayout.Toggle(autochangeQuantumStarstationname, "自动改名\"星系量子传输站\"".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                    Quantumtransportbuild_bool.Value = GUILayout.Toggle(Quantumtransportbuild_bool.Value, "星球级材料供应".getTranslate(), new[] { GUILayout.Height(heightdis) });
 
-                    switch (i)
+                    if (Quantumtransportbuild_bool.Value)
                     {
-                        case 0: tempvalue = Buildingnoconsume.Value; break;
-                        case 1: 
-                            tempvalue = DriftBuildings;
-                            break;
-                        case 2: tempvalue = BeltSignalFunction.Value; break;
-                        case 3: tempvalue = Quantumtransport_bool.Value; break;
-                        case 4: tempvalue = Quantumtransportpdwarp_bool.Value; break;
-                        case 5: tempvalue = Quantumtransportstarwarp_bool.Value; break;
-                        case 6: tempvalue = autochangeQuantumstationname; break;
-                        case 7: tempvalue = autochangeQuantumStarstationname; break;
-                        case 8: tempvalue = Quantumtransportbuild_bool.Value;break;
+                        options = new[] { GUILayout.Height(heightdis), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 5) };
+                        GUILayout.BeginVertical();
+                        GUILayout.BeginHorizontal();
+                        QuantumtransportstationSupply.Value = GUILayout.Toggle(QuantumtransportstationSupply.Value, "物流站供应", options);
+                        QuantumtransportstationDemand.Value = GUILayout.Toggle(QuantumtransportstationDemand.Value, "物流站拿取", options);
+                        GUILayout.EndHorizontal();
+
+                        GUILayout.BeginHorizontal();
+                        QuantumtransportminerDemand.Value = GUILayout.Toggle(QuantumtransportminerDemand.Value, "矿机拿取", options);
+                        GUILayout.EndHorizontal();
+
+                        GUILayout.BeginHorizontal();
+                        QuantumtransportsiloDemand.Value = GUILayout.Toggle(QuantumtransportsiloDemand.Value, "发射井弹射器供应", options);
+                        GUILayout.EndHorizontal();
+
+                        GUILayout.BeginHorizontal();
+                        QuantumtransportlabSupply.Value = GUILayout.Toggle(QuantumtransportlabSupply.Value, "研究站供应", options);
+                        QuantumtransportlabDemand.Value = GUILayout.Toggle(QuantumtransportlabDemand.Value, "研究站拿取", options);
+                        GUILayout.EndHorizontal();
+
+                        GUILayout.BeginHorizontal();
+                        QuantumtransportpowerSupply.Value = GUILayout.Toggle(QuantumtransportpowerSupply.Value, "电力设备供应", options);
+                        QuantumtransportpowerDemand.Value = GUILayout.Toggle(QuantumtransportpowerDemand.Value, "电力设备拿取", options);
+                        GUILayout.EndHorizontal();
+
+                        GUILayout.BeginHorizontal();
+                        QuantumtransportassembleSupply.Value = GUILayout.Toggle(QuantumtransportassembleSupply.Value, "组装机供应", options);
+                        QuantumtransportassembleDemand.Value = GUILayout.Toggle(QuantumtransportassembleDemand.Value, "组装机拿取", options);
+                        GUILayout.EndHorizontal();
+
+                        GUILayout.EndVertical();
                     }
-                    tempvalue = GUI.Toggle(new Rect(0, heightdis * lines++, heightdis * 15, heightdis), tempvalue, tempstr[i].getTranslate());
-                    switch (i)
+
+                    GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
+                    int tempplanetquamaxpowerpertick = (int)GUILayout.HorizontalSlider(planetquamaxpowerpertick.Value, 60, 10000, new[] {GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
+                    GUILayout.Label(tempplanetquamaxpowerpertick > 1000 ? tempplanetquamaxpowerpertick / 1000 + "G" : tempplanetquamaxpowerpertick + "MW " + "星球量子充电功率".getTranslate(), style, GUILayout.ExpandWidth(false));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
+                    int tempstarquamaxpowerpertick = (int)GUILayout.HorizontalSlider( starquamaxpowerpertick.Value, 60, 10000, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
+                    GUILayout.Label(tempstarquamaxpowerpertick > 1000 ? tempstarquamaxpowerpertick / 1000 + "G" : tempstarquamaxpowerpertick + "MW " + "星系量子充电功率".getTranslate(), style, GUILayout.ExpandWidth(false));
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
+                    Quantumenergy.Value = (int)GUILayout.HorizontalSlider(Quantumenergy.Value, 0, 1000000, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
+                    GUILayout.Label(TGMKinttostring(Quantumenergy.Value, "J") + " " + "量子耗能/个".getTranslate(), style, GUILayout.ExpandWidth(false));
+                    GUILayout.EndHorizontal();
+
+                    if (tempplanetquamaxpowerpertick != planetquamaxpowerpertick.Value || tempstarquamaxpowerpertick != starquamaxpowerpertick.Value)
                     {
-                        case 0: Buildingnoconsume.Value = tempvalue; break;
-                        case 1: DriftBuildings = tempvalue; break;
-                        case 2:
-                            GUI.Label(new Rect(0, heightdis * lines++, heightdis * 15, heightdis), "抬升层数:" + DriftBuildingLevel);
-                            BeltSignalFunction.Value = tempvalue;
-                            if (tempvalue)
-                            {
-                                InitBeltSignalDiction();
-                            }
-                            break;
-                        case 3: Quantumtransport_bool.Value = tempvalue; break;
-                        case 4: Quantumtransportpdwarp_bool.Value = tempvalue; break;
-                        case 5: Quantumtransportstarwarp_bool.Value = tempvalue; break;
-                        case 6:
-                            autochangeQuantumstationname = tempvalue;
-                            if (tempvalue) autochangeQuantumStarstationname = false;
-                            break;
-                        case 7:
-                            autochangeQuantumStarstationname = tempvalue;
-                            if (tempvalue) autochangeQuantumstationname = false;
-                            break;
-                        case 8: Quantumtransportbuild_bool.Value= tempvalue = Quantumtransportbuild_bool.Value; break;
+                        changequapowerpertick = true;
+                        planetquamaxpowerpertick.Value = tempplanetquamaxpowerpertick;
+                        starquamaxpowerpertick.Value = tempstarquamaxpowerpertick;
                     }
                 }
 
+                GUILayout.EndVertical();
 
-                GUILayout.EndArea();
+                if (BeltSignalFunction.Value) InitBeltSignalDiction();
+                if (autochangeQuantumstationname) autochangeQuantumStarstationname = false;
+                if (autochangeQuantumStarstationname) autochangeQuantumstationname = false;
             }
+            GUILayout.EndHorizontal();
         }
 
         public void PlanetPannel()
@@ -956,11 +914,11 @@ namespace Multfunction_mod
                 {
                     case 0: tempvalue = addveinbool; break;
                     case 1: tempvalue = deleteveinbool.Value; break;
-                    case 2: tempvalue = changeveinposbool.Value; break;
-                    case 3: tempvalue = changeveingroupposbool.Value; break;
+                    case 2: tempvalue = changeveinposbool; break;
+                    case 3: tempvalue = changeveingroupposbool; break;
                     case 4: tempvalue = NotTidyVein.Value; break;
-                    case 5: tempvalue = getallVein_bool.Value; break;
-                    case 6: tempvalue = changexveinspos.Value; break;
+                    case 5: tempvalue = getallVein_bool; break;
+                    case 6: tempvalue = changexveinspos; break;
                     case 7: tempvalue = restorewater; break;
                     case 8: tempvalue = StationTrash.Value; break;
                     case 9: tempvalue = noneedtrashsand.Value; break;
@@ -975,31 +933,31 @@ namespace Multfunction_mod
                         addveinbool = tempvalue;
                         if (addveinbool)
                         {
-                            changeveinposbool.Value = false;
-                            changeveingroupposbool.Value = false;
-                            getallVein_bool.Value = false;
-                            changexveinspos.Value = false;
+                            changeveinposbool = false;
+                            changeveingroupposbool = false;
+                            getallVein_bool = false;
+                            changexveinspos = false;
                         }
                         break;
                     case 1: deleteveinbool.Value = tempvalue; break;
                     case 2:
-                        changeveinposbool.Value = tempvalue;
-                        if (changeveinposbool.Value)
+                        changeveinposbool = tempvalue;
+                        if (changeveinposbool)
                         {
                             addveinbool = false;
-                            changeveingroupposbool.Value = false;
-                            getallVein_bool.Value = false;
-                            changexveinspos.Value = false;
+                            changeveingroupposbool = false;
+                            getallVein_bool = false;
+                            changexveinspos = false;
                         }
                         break;
                     case 3:
-                        changeveingroupposbool.Value = tempvalue;
-                        if (changeveingroupposbool.Value)
+                        changeveingroupposbool = tempvalue;
+                        if (changeveingroupposbool)
                         {
                             addveinbool = false;
-                            changeveinposbool.Value = false;
-                            getallVein_bool.Value = false;
-                            changexveinspos.Value = false;
+                            changeveinposbool = false;
+                            getallVein_bool = false;
+                            changexveinspos = false;
                         }
                         break;
                     case 4:
@@ -1009,13 +967,13 @@ namespace Multfunction_mod
                         width++;
                         GUI.Label(new Rect(0, heightdis * (i + width++), english ? heightdis * 9 : heightdis * 5, heightdis), "整理为".getTranslate() + veinlines.Value + "行".getTranslate());
                         veinlines.Value = (int)GUI.HorizontalSlider(new Rect(0, heightdis * (i + width), english ? heightdis * 9 : heightdis * 5, heightdis), veinlines.Value, 1, 20);
-                        getallVein_bool.Value = tempvalue;
-                        if (getallVein_bool.Value)
+                        getallVein_bool = tempvalue;
+                        if (getallVein_bool)
                         {
                             addveinbool = false;
-                            changeveinposbool.Value = false;
-                            changeveingroupposbool.Value = false;
-                            changexveinspos.Value = false;
+                            changeveinposbool = false;
+                            changeveingroupposbool = false;
+                            changexveinspos = false;
                         }
                         break;
                     case 6:
@@ -1023,13 +981,13 @@ namespace Multfunction_mod
                         GUI.Label(new Rect(0, heightdis * (i + width++), english ? heightdis * 9 : heightdis * 5, heightdis), "切割出".getTranslate() + changeveinsposx.Value + "个".getTranslate());
                         changeveinsposx.Value = (int)GUI.HorizontalSlider(new Rect(0, heightdis * (i + width), english ? heightdis * 9 : heightdis * 5, heightdis), changeveinsposx.Value, 2, 72);
 
-                        changexveinspos.Value = tempvalue;
-                        if (changexveinspos.Value)
+                        changexveinspos = tempvalue;
+                        if (changexveinspos)
                         {
                             addveinbool = false;
-                            changeveinposbool.Value = false;
-                            changeveingroupposbool.Value = false;
-                            getallVein_bool.Value = false;
+                            changeveinposbool = false;
+                            changeveingroupposbool = false;
+                            getallVein_bool = false;
                         }
 
                         break;
@@ -1172,7 +1130,7 @@ namespace Multfunction_mod
             GUILayout.BeginArea(new Rect(10, 10, 10 + (english ? heightdis * 12 : heightdis * 10), heightdis * 17));
             {
                 int lines = 0;
-                Rect t = new Rect(0, heightdis, english ? heightdis * 12 : heightdis * 10, heightdis);
+                Rect t = new Rect(0, 0, english ? heightdis * 12 : heightdis * 10, heightdis);
                 GUI.Label(RectChanged(t, heightdis * lines++, 2), "以下设置需要进入存档".getTranslate(), style);
                 sunlight_bool.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), sunlight_bool.Value, "夜灯".getTranslate());
                 CloseUIAbnormalityTip.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), CloseUIAbnormalityTip.Value, "关闭异常提示".getTranslate());
@@ -1185,6 +1143,8 @@ namespace Multfunction_mod
                 {
                     player.mecha.buildArea = 80;
                 }
+                Maxproliferator.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), Maxproliferator.Value, "增产点数上限10".getTranslate());
+                incAbility = Maxproliferator.Value?10:4;
                 pasteanyway = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), pasteanyway, "蓝图强制粘贴".getTranslate());
                 PasteBuildAnyWay = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), PasteBuildAnyWay, "建筑铺设无需条件".getTranslate());
                 if (closeallcollider != GUI.Toggle(RectChanged(t, heightdis * lines++, 2), closeallcollider, "关闭所有碰撞体".getTranslate()))
@@ -1243,6 +1203,10 @@ namespace Multfunction_mod
                 {
                     GameMain.data.abnormalData.runtimeDatas = new AbnormalityRuntimeData[3000];
                 }
+                if (GUI.Button(RectChanged(t, heightdis * lines++, 2), "取消所有勾选".getTranslate()))
+                {
+                    CancelAllToggle();
+                }
             }
             GUILayout.EndArea();
             GUILayout.BeginArea(new Rect(20 + (english ? heightdis * 12 : heightdis * 10), 10, heightdis * 10, heightdis * 15));
@@ -1296,58 +1260,49 @@ namespace Multfunction_mod
 
         public void LogisticsPannel()
         {
-            bool english = Localization.language != Language.zhCN;
-            GUILayout.BeginArea(new Rect(10, 10, MainWindow_width.Value, MainWindow_height.Value));
-            int tempwidth = 0;
-            int tempheight = english ? 1 : 0;
-            int tempwidthdis = english ? heightdis * 8 : heightdis * 4;
-            Mechalogistics_bool.Value = GUI.Toggle(new Rect(0, 0, tempwidthdis, heightdis), Mechalogistics_bool.Value, "机甲物流(beta)".getTranslate());
-            tempwidth += tempwidthdis;
-            MechalogisticsPlanet_bool.Value = GUI.Toggle(new Rect(tempwidth, 0, tempwidthdis, heightdis), MechalogisticsPlanet_bool.Value, "机甲物流专用星".getTranslate());
-            tempwidth = english ? 0 : 2 * tempwidthdis;
-            MechalogStoragerecycle_bool.Value = GUI.Toggle(new Rect(tempwidth, tempheight * heightdis, tempwidthdis, heightdis), MechalogStoragerecycle_bool.Value, "回收使用储物仓".getTranslate());
-            tempwidth += tempwidthdis;
-            MechalogStorageprovide_bool.Value = GUI.Toggle(new Rect(tempwidth, tempheight * heightdis, tempwidthdis, heightdis), MechalogStorageprovide_bool.Value, "需求使用储物仓".getTranslate());
-            tempwidth += tempwidthdis;
-            MechalogStationrecycle_bool.Value = GUI.Toggle(new Rect(tempwidth, tempheight * heightdis, tempwidthdis, heightdis), MechalogStationrecycle_bool.Value, "回收使用物流站".getTranslate());
-            tempwidth += tempwidthdis;
-            MechalogStationprovide_bool.Value = GUI.Toggle(new Rect(tempwidth, tempheight * heightdis, tempwidthdis, heightdis), MechalogStationprovide_bool.Value, "需求使用物流站".getTranslate());
+            GUILayout.BeginVertical();
+            GUILayout.BeginHorizontal();
+            GUILayoutOption[] options = new[] { GUILayout.Height(heightdis) };
+            Mechalogistics_bool.Value = GUILayout.Toggle(Mechalogistics_bool.Value, "机甲物流".getTranslate(), options);
+            MechalogisticsPlanet_bool.Value = GUILayout.Toggle(MechalogisticsPlanet_bool.Value, "机甲物流专用星".getTranslate(), options);
+            MechalogStoragerecycle_bool.Value = GUILayout.Toggle(MechalogStoragerecycle_bool.Value, "回收使用储物仓".getTranslate(), options);
+            MechalogStorageprovide_bool.Value = GUILayout.Toggle(MechalogStorageprovide_bool.Value, "需求使用储物仓".getTranslate(), options);
+            MechalogStationrecycle_bool.Value = GUILayout.Toggle(MechalogStationrecycle_bool.Value, "回收使用物流站".getTranslate(), options);
+            MechalogStationprovide_bool.Value = GUILayout.Toggle(MechalogStationprovide_bool.Value, "需求使用物流站".getTranslate(), options);
 
-
-            GUILayout.BeginArea(new Rect(0, 10 + (tempheight + 1) * heightdis, MainWindow_width.Value, MainWindow_height.Value));
-            tempwidth = 0;
-            tempheight = 0;
-            for (int i = 0; i < itemProtos.Length; i++)
+            GUILayout.EndHorizontal();
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition, new[] { GUILayout.Width(MainWindow_width.Value - 20), GUILayout.Height(MainWindow_height.Value - heightdis * 3) });
+            int colnum = Math.Max((int)(MainWindow_width.Value - heightdis) / heightdis / 2 - 1, 1);
+            int rownum = itemProtos.Length / colnum;
+            rownum = itemProtos.Length % colnum == 0 ? rownum : rownum + 1;
+            int tempitemindex = 0;
+            for (int line = 0; line < rownum; line++)
             {
-                ItemProto ip = itemProtos[i];
-                GUIStyle style = new GUIStyle();
-                GUI.Button(new Rect(tempwidth, heightdis * tempheight, heightdis * 2, heightdis * 2), ip.iconSprite.texture, style);
-                if (GUI.Button(new Rect(tempwidth, heightdis * (tempheight + 2), heightdis * 2, heightdis), (mechalogistics[i] == 0 ? "储存" : (mechalogistics[i] == -1 ? "回收" : "需求")).getTranslate()))
+                GUILayout.BeginHorizontal();
+                for (int i = 0; i < colnum && tempitemindex < itemProtos.Length; i++, tempitemindex++)
                 {
-                    mechalogistics[i]++;
-                    if (mechalogistics[i] > 1) mechalogistics[i] = -1;
-                    Savemechalogisticsneed();
-                }
-
-                if (mechalogistics[i] == 1)
-                {
-                    int temp = mechalogisticsneed[i];
-                    int.TryParse(Regex.Replace(GUI.TextField(new Rect(tempwidth, heightdis * (tempheight + 3), heightdis * 2, heightdis), mechalogisticsneed[i] + ""), @"[^0-9]", ""), out temp);
-                    if (temp != mechalogisticsneed[i])
+                    ItemProto ip = itemProtos[tempitemindex];
+                    GUIStyle style = new GUIStyle();
+                    GUILayout.BeginVertical();
+                    GUILayout.Button(ip.iconSprite.texture, style, new[] { GUILayout.Width(heightdis * 2), GUILayout.Height(heightdis * 2) });
+                    if (GUILayout.Button((mechalogistics[tempitemindex] == 0 ? "储存" : (mechalogistics[tempitemindex] == -1 ? "回收" : "需求")).getTranslate(), new[] { GUILayout.Width(heightdis * 2) }))
                     {
-                        mechalogisticsneed[i] = temp;
+                        mechalogistics[tempitemindex]++;
+                        if (mechalogistics[tempitemindex] > 1) mechalogistics[tempitemindex] = -1;
                         Savemechalogisticsneed();
                     }
+                    if (mechalogistics[tempitemindex] == 1 && int.TryParse(Regex.Replace(GUILayout.TextField(mechalogisticsneed[tempitemindex] + "", new[] { GUILayout.Width(heightdis * 2) }), @"[^0-9]", ""), out int temp) && temp != mechalogisticsneed[tempitemindex])
+                    {
+                        mechalogisticsneed[tempitemindex] = temp;
+                        Savemechalogisticsneed();
+                    }
+                    GUILayout.EndVertical();
                 }
-                tempwidth += heightdis * 2;
-                if (tempwidth > MainWindow_width.Value - 4 * heightdis)
-                {
-                    tempheight += 4;
-                    tempwidth = 0;
-                }
+                GUILayout.EndHorizontal();
             }
-            GUILayout.EndArea();
-            GUILayout.EndArea();
+            GUILayout.EndScrollView();
+            
+            GUILayout.EndVertical();
         }
 
         #endregion
@@ -1363,7 +1318,7 @@ namespace Multfunction_mod
             for(int i=0;i< GameMain.data.galacticTransport.stationPool.Length;i++)
             {
                 StationComponent sc = GameMain.data.galacticTransport.stationPool[i];
-                if (sc == null || sc.storage == null || sc.name == null || sc.isCollector) continue;
+                if (sc == null || sc.storage == null || sc.name == null || sc.isVeinCollector || sc.isCollector) continue;
                 if (sc.name == "星系量子传输站")
                 {
                     StarSuperStation.Add(i);
@@ -1377,6 +1332,12 @@ namespace Multfunction_mod
                             }
                             if (sc.storage[j].count < 0)
                                 sc.storage[j].count = 0;
+                            if (sc.storage[j].inc < 0)
+                                sc.storage[j].inc = 0;
+                            else if(sc.storage[j].inc > sc.storage[j].count * 4)
+                            {
+                                sc.storage[j].inc = sc.storage[j].count * 4;
+                            }
                         }
                     }
                     if (changequapowerpertick)
@@ -1385,10 +1346,7 @@ namespace Multfunction_mod
                         {
                             GameMain.galaxy.PlanetById(sc.planetId).factory.powerSystem.consumerPool[sc.pcId].workEnergyPerTick = (long)starquamaxpowerpertick.Value * 16667;
                         }
-                        catch
-                        {
-
-                        }
+                        catch{}
                     }
                 }
                 if (sc.name == "星球量子传输站")
@@ -1400,33 +1358,28 @@ namespace Multfunction_mod
                         {
                             GameMain.galaxy.PlanetById(sc.planetId).factory.powerSystem.consumerPool[sc.pcId].workEnergyPerTick = (long)planetquamaxpowerpertick.Value * 16667;
                         }
-                        catch
-                        {
-
-                        }
+                        catch{}
                     }
 
                 }
             }
+            int SuperStationCount = SuperStation.Count;
+            int StarSuperStationCount = StarSuperStation.Count;
+            if (SuperStationCount == 0 && StarSuperStationCount == 0) return;
             foreach (StationComponent sc in GameMain.data.galacticTransport.stationPool)
             {
-                if (sc == null) continue;
-                if (sc.isCollector)
-                {
-                    sc.storage[0].count -= doitemfromStarsuper(sc.storage[0].itemId, sc.storage[0].count, 0, false)[0];
-                    sc.storage[1].count -= doitemfromStarsuper(sc.storage[1].itemId, sc.storage[1].count, 0, false)[0];
-                }
+                if (sc == null || !sc.isCollector) continue;
+                sc.storage[0].count -= doitemfromStarsuper(sc.storage[0].itemId, sc.storage[0].count, 0, false)[0];
+                sc.storage[1].count -= doitemfromStarsuper(sc.storage[1].itemId, sc.storage[1].count, 0, false)[0];
             }
             changequapowerpertick = false;
-            if (StarSuperStation.Count == 0 && SuperStation.Count == 0) return;
             if (Math.Max(StarSuperStation.Count, SuperStation.Count) > warpstationqua.Length - 50)
                 SetSuperStationCapacity(Math.Max(StarSuperStation.Count, SuperStation.Count) + 50);
-
-            for (int j = 0; j < SuperStation.Count; j++)
+            for (int j = 0; j < SuperStationCount; j++)
             {
                 StationComponent sc = GameMain.data.galacticTransport.stationPool[SuperStation[j]];
                 int pdID = sc.planetId;
-                for (int i = 0; i < sc.storage.Length; i++)
+                for (int i = sc.storage.Length-1; i >= 0; i--)
                 {
                     int itemID = sc.storage[i].itemId;
                     if (itemID > 0)
@@ -1466,16 +1419,19 @@ namespace Multfunction_mod
                         }
                         if (sc.storage[i].count < 0)
                             sc.storage[i].count = 0;
+                        if (sc.storage[i].inc < 0)
+                            sc.storage[i].inc = 0;
                     }
                 }
                 if (Quantumtransportpdwarp_bool.Value && sc.warperCount == 0)
                     sc.warperCount += doitemfromStarsuper(1210, 50, 0)[0];
             }
-            for (int j = 0; j < StarSuperStation.Count; j++)
+            for (int j = 0; j < StarSuperStationCount; j++)
             {
                 StationComponent sc = GameMain.data.galacticTransport.stationPool[StarSuperStation[j]];
                 if (Quantumtransportstarwarp_bool.Value && sc.warperCount == 0)
                     sc.warperCount += doitemfromStarsuper(1210, 50, 0)[0];
+
             }
             if (Quantumtransportbuild_bool.Value)
                 SuperStationProvide();
@@ -1492,26 +1448,35 @@ namespace Multfunction_mod
                     {
                         if (sc.storage[i].itemId > 0)
                         {
-                            if (sc.storage[i].localLogic == ELogisticStorage.Supply )
+                            if (QuantumtransportstationDemand.Value)
                             {
-                                if(sc.name != "星系量子传输站" && sc.storage[i].count > 0)
+                                if(sc.storage[i].localLogic == ELogisticStorage.Supply)
                                 {
-                                    int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].count, pdid, sc.storage[i].inc, false);
+                                    if (sc.name != "星系量子传输站" && sc.storage[i].count > 0)
+                                    {
+                                        int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].count, pdid, sc.storage[i].inc, false);
+                                        sc.storage[i].count -= takeitem[0];
+                                        sc.storage[i].inc -= takeitem[1];
+                                    }
+                                }
+                                if(sc.storage[i].localLogic == ELogisticStorage.Demand && sc.storage[i].count > sc.storage[i].max)
+                                {
+                                    int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].count - sc.storage[i].max, pdid, sc.storage[i].inc, false);
                                     sc.storage[i].count -= takeitem[0];
                                     sc.storage[i].inc -= takeitem[1];
                                 }
                             }
-                            else if (sc.storage[i].count > sc.storage[i].max)
+                            if (QuantumtransportstationSupply.Value)
                             {
-                                int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].count - sc.storage[i].max, pdid, sc.storage[i].inc, false);
-                                sc.storage[i].count -= takeitem[0];
-                                sc.storage[i].inc -= takeitem[1];
-                            }
-                            else
-                            {
-                                int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].max - sc.storage[i].count, pdid);
-                                sc.storage[i].count += takeitem[0];
-                                sc.storage[i].inc += takeitem[1];
+                                if (sc.storage[i].localLogic == ELogisticStorage.Demand)
+                                {
+                                    if (sc.storage[i].count <= sc.storage[i].max)
+                                    {
+                                        int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].max - sc.storage[i].count, pdid);
+                                        sc.storage[i].count += takeitem[0];
+                                        sc.storage[i].inc += takeitem[1];
+                                    }
+                                }
                             }
                         }
                     }
@@ -1556,22 +1521,27 @@ namespace Multfunction_mod
             {
                 if (ac.id > 0 && ac.entityId > 0 && ac.recipeId > 0)
                 {
-                    for (int i = 0; i < ac.productCounts.Length; i++)
+                    if (QuantumtransportassembleDemand.Value)
                     {
-                        if (ac.produced[i] > 0) ac.produced[i] -= doitemfromPlanetSuper(ac.products[i], ac.produced[i], pdid, 0, false)[0];
-                        if (ac.produced[i] > 500) ac.produced[i] = 200;
-                    }
-                    for (int i = 0; i < ac.served.Length; i++)
-                    {
-                        if (ac.served[i] <= ac.requireCounts[i] * 2)
+                        for (int i = 0; i < ac.productCounts.Length; i++)
                         {
-                            int[] takeitem = doitemfromPlanetSuper(ac.requires[i], 20, pdid);
-                            ac.served[i] += takeitem[0];
-                            ac.incServed[i] += takeitem[1];
+                            if (ac.produced[i] > 0) ac.produced[i] -= doitemfromPlanetSuper(ac.products[i], ac.produced[i], pdid, 0, false)[0];
+                            if (ac.produced[i] > 500) ac.produced[i] = 200;
                         }
-                        if (ac.served[i] < 0) ac.served[i] = 0;
                     }
-                    //if (condition) ac.UpdateNeeds();
+                    if (QuantumtransportassembleSupply.Value)
+                    {
+                        for (int i = 0; i < ac.served.Length; i++)
+                        {
+                            if (ac.served[i] <= ac.requireCounts[i] * 2)
+                            {
+                                int[] takeitem = doitemfromPlanetSuper(ac.requires[i], 20, pdid);
+                                ac.served[i] += takeitem[0];
+                                ac.incServed[i] += takeitem[1];
+                            }
+                            if (ac.served[i] < 0) ac.served[i] = 0;
+                        }
+                    }
                 }
             }
         }
@@ -1581,11 +1551,10 @@ namespace Multfunction_mod
             {
                 if (lc.id > 0 && lc.entityId > 0)
                 {
-                    if (lc.researchMode)
+                    if (QuantumtransportlabSupply.Value && lc.researchMode)
                     {
                         for (int i = 0; i < lc.matrixPoints.Length; i++)
                         {
-
                             if (lc.matrixServed[i] > 288000) continue;
                             int[] takeitem = doitemfromPlanetSuper(6001 + i, 20, pdid);
                             lc.matrixServed[i] += takeitem[0] * 3600;
@@ -1594,18 +1563,23 @@ namespace Multfunction_mod
                     }
                     if (lc.matrixMode)
                     {
-                        for (int i = 0; i < lc.productCounts.Length; i++)
+                        if (QuantumtransportlabDemand.Value)
                         {
-                            if (lc.produced[i] > 5) lc.produced[i] -= doitemfromPlanetSuper(lc.products[i], lc.produced[i], pdid, 0, false)[0];
+                            for (int i = 0; i < lc.productCounts.Length; i++)
+                            {
+                                if (lc.produced[i] > 5) lc.produced[i] -= doitemfromPlanetSuper(lc.products[i], lc.produced[i], pdid, 0, false)[0];
+                            }
                         }
-                        for (int i = 0; i < lc.served.Length; i++)
+                        if (QuantumtransportlabSupply.Value)
                         {
-                            if (lc.served[i] > 20) continue;
-                            int[] takeitem = doitemfromPlanetSuper(lc.requires[i], 20, pdid);
-                            lc.served[i] += takeitem[0];
-                            lc.incServed[i] += takeitem[1];
+                            for (int i = 0; i < lc.served.Length; i++)
+                            {
+                                if (lc.served[i] > 20) continue;
+                                int[] takeitem = doitemfromPlanetSuper(lc.requires[i], 20, pdid);
+                                lc.served[i] += takeitem[0];
+                                lc.incServed[i] += takeitem[1];
+                            }
                         }
-                        //if (condition) lc.UpdateNeedsAssemble();
                     }
                 }
             }
@@ -1618,15 +1592,15 @@ namespace Multfunction_mod
                 {
                     if (pgc.gamma)
                     {
-                        if (pgc.productCount >= 1) fs.factory.powerSystem.genPool[pgc.id].productCount -= doitemfromPlanetSuper(1208, (int)pgc.productCount, pdid, 0, false)[0];
-                        if (pgc.catalystPoint == 0)
+                        if (QuantumtransportpowerDemand.Value && pgc.productCount >= 1) fs.factory.powerSystem.genPool[pgc.id].productCount -= doitemfromPlanetSuper(1208, (int)pgc.productCount, pdid, 0, false)[0];
+                        if (QuantumtransportpowerSupply.Value && pgc.catalystPoint == 0)
                         {
                             int[] takeitem = doitemfromPlanetSuper(1209, 5, pdid);
                             fs.factory.powerSystem.genPool[pgc.id].catalystPoint += takeitem[0] * 3600;
                             fs.factory.powerSystem.genPool[pgc.id].catalystIncPoint += takeitem[1] * 3600;
                         }
                     }
-                    else
+                    else if(QuantumtransportpowerSupply.Value)
                     {
                         int itemid = 0;
                         switch (pgc.fuelMask)
@@ -1650,12 +1624,12 @@ namespace Multfunction_mod
             {
                 PlanetData pd = GameMain.galaxy.PlanetById(pdid);
                 FactorySystem fs = pd.factory.factorySystem;
-                StationSupplyDemand(fs, pdid);
-                MinerSupplyDemand(fs, pdid);
-                SiloComponentSupplyDemand(fs, pdid);
-                LabSupplyDemand(fs, pdid);
-                PowerSupplyDemand(fs, pdid);
-                AssemblerSupplyDemand(fs, pdid);
+                if (QuantumtransportstationSupply.Value || QuantumtransportstationDemand.Value) StationSupplyDemand(fs, pdid);
+                if (QuantumtransportminerDemand.Value) MinerSupplyDemand(fs, pdid);
+                if (QuantumtransportsiloDemand.Value) SiloComponentSupplyDemand(fs, pdid);
+                if (QuantumtransportlabSupply.Value || QuantumtransportlabDemand.Value) LabSupplyDemand(fs, pdid);
+                if (QuantumtransportpowerSupply.Value || QuantumtransportpowerDemand.Value) PowerSupplyDemand(fs, pdid);
+                if (QuantumtransportassembleSupply.Value || QuantumtransportassembleDemand.Value) AssemblerSupplyDemand(fs, pdid);
             }
         }
         public static int[] doitemfromStarsuper(int itemid, int itemcount, int inc = 0, bool take = true)
@@ -1684,7 +1658,7 @@ namespace Multfunction_mod
             if (take)
             {
                 count = Math.Min(count, sc.storage[i].count);
-                if (sc.energy < count * energycost && sc.energy >= 0)
+                if (sc.energy <= count * energycost && sc.energy > 0)
                 {
                     count = Math.Min(count, (int)(sc.energy / energycost));
                     if (count == 0) return new int[2] { 0, 0 };
@@ -1701,36 +1675,47 @@ namespace Multfunction_mod
                     count = Math.Min(count, (int)(sc.energy / energycost));
                     if (count == 0) return new int[2] { 0, 0 };
                 }
-                int inputinc = Math.Min(count * 4, inc);
-                inc -= inputinc;
                 if (sc.storage[i].count + count <= sc.storage[i].max)
                 {
+                    inc = Math.Min(count * incAbility, inc);
                     sc.storage[i].count += count;
-                    sc.storage[i].inc += inputinc;
+                    sc.storage[i].inc += inc;
                 }
-                else if (sc.storage[i].localLogic==ELogisticStorage.None && sc.storage[i].remoteLogic==ELogisticStorage.None)
+                else if (sc.storage[i].localLogic==ELogisticStorage.None && sc.storage[i].remoteLogic==ELogisticStorage.None && sc.storage[i].max <int.MaxValue-100)
                 {
-                    sc.storage[i].max = sc.storage[i].count + count;
-                    sc.storage[i].count = sc.storage[i].max;
-                    sc.storage[i].inc += inputinc;
+                    if (sc.storage[i].count + count <= int.MaxValue - 100)
+                    {
+                        inc = Math.Min(count * incAbility, inc);
+                        sc.storage[i].max = sc.storage[i].count + count;
+                        sc.storage[i].count = sc.storage[i].max;
+                        sc.storage[i].inc += inc;
+                    }
+                    else
+                    {
+                        count = int.MaxValue - 100 - sc.storage[i].count;
+                        sc.storage[i].max = sc.storage[i].count + count;
+                        sc.storage[i].count = sc.storage[i].max;
+                        sc.storage[i].inc += inc;
+                    }
                 }
-                else if (sc.storage[i].count < sc.storage[i].max)
+                else
                 {
-                    count = sc.storage[i].max - sc.storage[i].count;
+                    count=sc.storage[i].max - sc.storage[i].count;
+                    inc = Math.Min(count * incAbility, inc);
                     sc.storage[i].count = sc.storage[i].max;
-                    sc.storage[i].inc += inputinc;
+                    sc.storage[i].inc += inc;
                 }
-                else count = 0;
                 sc.energy -= count * energycost;
             }
             StationPowerGeneration(sc);
-            return new int[2] { count, StationMaxproliferator.Value ? 4 * count : inc };
+            return new int[2] { count, StationMaxproliferator.Value ? incAbility * count : inc };
         }
 
         public static int[] doitemfromPlanetSuper(int itemid, int itemcount, int planetid, int inc = 0, bool take = true)
         {
             if (!PlanetSuperStationItemidstore.ContainsKey(planetid) || !PlanetSuperStationItemidstore[planetid].ContainsKey(itemid) || itemcount == 0) return new int[2] { 0, 0 };
-            for (int i = 0; i < PlanetSuperStationItemidstore[planetid][itemid].Count; i++)
+            int PlanetSuperStationItemidstorecount = PlanetSuperStationItemidstore[planetid][itemid].Count;
+            for (int i = 0; i < PlanetSuperStationItemidstorecount; i++)
             {
                 int index = PlanetSuperStationItemidstore[planetid][itemid][i][0];
                 int storageindex = PlanetSuperStationItemidstore[planetid][itemid][i][1];
@@ -1772,42 +1757,36 @@ namespace Multfunction_mod
                     }
                     else
                     {
-                        inc = Math.Min(count * 4, sc.storage[storageindex].inc);
+                        inc = Math.Min(count * incAbility, sc.storage[storageindex].inc);
                         sc.storage[storageindex].count -= count;
                         sc.storage[storageindex].inc -= inc;
                     }
                 }
                 else
                 {
-                    int inputinc;
                     if (sc.energy < count * energycost)
                     {
                         count = Math.Min(count, (int)(sc.energy / energycost));
-                        inputinc = Math.Min(count * 4, inc);
-                        inc -= inputinc;
+                        if (count == 0) return new int[2] { 0, 0 };
                     }
-                    else
-                    {
-                        inputinc = inc;
-                        inc = 0;
-                    }
+                    inc = Math.Min(count * incAbility, inc);
                     if (sc.storage[storageindex].count + count >= sc.storage[storageindex].max)
                     {
                         int upload = sc.storage[storageindex].count + count - sc.storage[storageindex].max;
-                        int[] uploaded = doitemfromStarsuper(itemid, upload, inputinc, false);
+                        int[] uploaded = doitemfromStarsuper(itemid, upload, inc, false);
                         count -= upload - uploaded[0];
-                        inc -= uploaded[1];
+                        inc = Math.Min(count * incAbility, inc);
                         sc.storage[storageindex].count = sc.storage[storageindex].max;
-                        sc.storage[storageindex].inc += uploaded[1];
+                        sc.storage[storageindex].inc += inc-uploaded[1];
                     }
                     else
                     {
                         sc.storage[storageindex].count += count;
-                        sc.storage[storageindex].inc += inputinc;
+                        sc.storage[storageindex].inc += inc;
                     }
                 }
                 StationPowerGeneration(sc);
-                return new int[2] { count, StationMaxproliferator.Value ? 4 * count : inc };
+                return new int[2] { count, StationMaxproliferator.Value ? incAbility * count : inc };
             }
             return new int[2] { 0, 0 };
         }
@@ -1929,6 +1908,10 @@ namespace Multfunction_mod
                     SetDronenocomsume();
                     MechaLogisticsMethod();
                     InfiniteAllThingInPackage();
+                    DriftBuild();
+                    Multifunctionpatch.InitPatch();
+
+                    bool isInfiniteResource = GameMain.data.gameDesc.isInfiniteResource;
                     if (Infiniteplayerpower.Value)
                     {
                         player.mecha.coreEnergy = player.mecha.coreEnergyCap;
@@ -1947,6 +1930,111 @@ namespace Multfunction_mod
                     }
                 }
 
+            }
+        }
+
+        private void CancelAllToggle()
+        {
+            NotTidyVein.Value = false;
+            InspectDisNoLimit.Value = false;
+            RandomEmission.Value = false;
+            changexveinspos = false;
+            StationMaxproliferator.Value = false;
+            Mechalogistics_bool.Value = false;
+            MechalogStoragerecycle_bool.Value = false;
+            MechalogStorageprovide_bool.Value = false;
+            MechalogStationrecycle_bool.Value = false;
+            MechalogStationprovide_bool.Value = false;
+            Infinitestoragetank.Value = false;
+            TankMaxproliferator.Value = false;
+            Quantumtransport_bool.Value = false;
+            Quantumtransportbuild_bool.Value = false;
+            Quantumtransportpdwarp_bool.Value = false;
+            Quantumtransportstarwarp_bool.Value = false;
+            noneedtrashsand.Value = false;
+            InfineteStarPower.Value = false;
+            PlanetPower_bool.Value = false;
+            allhandcraft.Value = false;
+            quickproduce.Value = false;
+            lockpackage_bool.Value = false;
+            blueprintpastenoneed_bool.Value = false;
+            noneedwarp.Value = false;
+            Infinitething.Value = false;
+            Infiniteplayerpower.Value = false;
+            deleteveinbool.Value = false;
+            changeveinposbool = false;
+            MechalogisticsPlanet_bool.Value = false;
+            StationMiner.Value = false;
+            autochangestationname.Value = false;
+            changeveingroupposbool = false;
+            dismantle_but_nobuild.Value = false;
+            build_gascol_noequator.Value = false;
+            StationTrash.Value = false;
+            build_tooclose_bool.Value = false;
+            sunlight_bool.Value = false;
+            DroneNoenergy_bool.Value = false;
+            BuildNotime_bool.Value = false;
+            Station_infiniteWarp_bool.Value = false;
+            Station_miner_noconsume_bool.Value = false;
+            StationfullCount_bool.Value = false;
+            ItemList_bool.Value = false;
+            getallVein_bool = false;
+            Buildingnoconsume.Value = false;
+            Stationfullenergy.Value = false;
+            BeltSignalFunction.Value = false;
+            Tankcontentall.Value = false;
+            ArchitectMode.Value = false;
+            quickabsorbsolar.Value = false;
+            cancelsolarbullet.Value = false;
+            alwaysemission.Value = false;
+            StationSpray.Value = false;
+            Maxproliferator.Value = false;
+            StationPowerGen.Value = false;
+            CloseUIpanel.Value = false;
+            CloseUIAbnormalityTip.Value = false;
+            QuantumtransportstationSupply.Value = false;
+            QuantumtransportlabSupply.Value = false;
+            QuantumtransportpowerSupply.Value = false;
+            QuantumtransportassembleSupply.Value = false;
+            QuantumtransportstationDemand.Value = false;
+            QuantumtransportminerDemand.Value = false;
+            QuantumtransportsiloDemand.Value = false;
+            QuantumtransportlabDemand.Value = false;
+            QuantumtransportpowerDemand.Value = false;
+            QuantumtransportassembleDemand.Value = false;
+        }
+
+        public void DriftBuild()
+        {
+            if (player?.controller != null && player.controller.cmd.type == ECommand.Build && player.controller.actionBuild != null)
+            {
+                if (blueprintPasteToolActive != player.controller.actionBuild.blueprintPasteTool.active)
+                {
+                    blueprintPasteToolActive = !blueprintPasteToolActive;
+                    DriftBuildingLevel = 0;
+                }
+                if (Input.GetKeyDown(KeyCode.UpArrow))
+                {
+                    DriftBuildingLevel++;
+                    if (blueprintPasteToolActive)
+                    {
+                        player.controller.actionBuild.blueprintPasteTool.cursorValid = true;
+                        player.controller.actionBuild.blueprintPasteTool.DeterminePreviewsPrestage();
+                    }
+                }
+                if (Input.GetKeyDown(KeyCode.DownArrow))
+                {
+                    DriftBuildingLevel--;
+                    if (blueprintPasteToolActive)
+                    {
+                        player.controller.actionBuild.blueprintPasteTool.cursorValid = true;
+                        player.controller.actionBuild.blueprintPasteTool.DeterminePreviewsPrestage();
+                    }
+                }
+            }
+            else if (DriftBuildingLevel != 0)
+            {
+                DriftBuildingLevel = 0;
             }
         }
 
@@ -2061,38 +2149,48 @@ namespace Multfunction_mod
         {
             if (player == null || player.mecha == null || player.mecha.idleDroneCount < player.mecha.droneCount) return;
             refreshPlayerData = true;
+            ModeConfig freeMode = Configs.freeMode;
             GameHistoryData historyData = GameMain.history;
-            player.mecha.coreEnergyCap = 100000000;
-            player.mecha.coreLevel = 0;
-            player.mecha.miningSpeed = 1;
-            player.mecha.walkSpeed = 6;
-            player.mecha.jumpSpeed = 32;
-            player.mecha.droneCount = 3;
-            player.mecha.droneMovement = 1;
-            player.mecha.droneSpeed = 6;
-            player.mecha.maxSailSpeed = 1000;
-            player.mecha.maxWarpSpeed = 480000;
-            player.mecha.buildArea = 80;
-            player.mecha.replicateSpeed = 1;
-            player.mecha.reactorPowerGen = 800000;
+            Mecha mecha = player.mecha;
+            mecha.coreEnergyCap = freeMode.mechaCoreEnergyCap;
+            mecha.coreLevel = freeMode.mechaCoreLevel;
+            mecha.miningSpeed = freeMode.mechaMiningSpeed;
+            mecha.walkSpeed = freeMode.mechaWalkSpeed;
+            mecha.jumpSpeed = freeMode.mechaJumpSpeed;
+            mecha.droneCount = 0;
+            mecha.droneCount = freeMode.mechaDroneCount;
+            mecha.droneSpeed = freeMode.mechaDroneSpeed;
+            mecha.droneMovement = freeMode.mechaDroneMovement;
+            mecha.maxSailSpeed = freeMode.mechaSailSpeedMax;
+            mecha.maxWarpSpeed = freeMode.mechaWarpSpeedMax;
+            mecha.buildArea = freeMode.mechaBuildArea;
+            mecha.replicateSpeed = freeMode.mechaReplicateSpeed;
+            mecha.reactorPowerGen = freeMode.mechaReactorPowerGen;
+            player.deliveryPackage.colCount = 0;
+            player.deliveryPackage.rowCount = 0;
+            player.deliveryPackage.stackSizeMultiplier = Configs.freeMode.deliveryPackageStackSizeMultiplier;
             historyData.stationPilerLevel = 1;
-            historyData.logisticDroneCarries = 25;
-            historyData.logisticDroneSpeed = 8;
-            historyData.logisticShipCarries = 200;
-            historyData.logisticShipSailSpeed = 600;
-            historyData.logisticDroneSpeedScale = 1;
+            historyData.logisticDroneCarries = freeMode.logisticDroneCarries;
+            historyData.logisticDroneSpeed = freeMode.logisticDroneSpeed;
+            historyData.logisticShipCarries = freeMode.logisticShipCarries;
+            historyData.logisticShipSailSpeed = freeMode.logisticShipSailSpeed;
+            historyData.logisticShipWarpSpeed = freeMode.logisticShipWarpSpeed;
+            historyData.logisticCourierSpeed = freeMode.logisticCourierSpeed;
+            historyData.logisticCourierCarries = freeMode.logisticCourierCarries;
+            historyData.dispenserDeliveryMaxAngle = freeMode.dispenserDeliveryMaxAngle;
             historyData.logisticShipSpeedScale = 1;
-            historyData.logisticShipWarpSpeed = 120000;
-            historyData.inserterStackCount = 1;
-            historyData.logisticShipWarpDrive = false;
-            historyData.miningCostRate = 1;
-            historyData.miningSpeedScale = 1;
-            historyData.techSpeed = 1;
+            historyData.logisticDroneSpeedScale = 1;
+            historyData.logisticCourierSpeedScale = 1;
+            historyData.inserterStackCount = freeMode.inserterStackCount;
+            historyData.logisticShipWarpDrive = freeMode.logisticShipWarpDrive;
+            historyData.miningCostRate = freeMode.miningCostRate;
+            historyData.miningSpeedScale = freeMode.miningSpeedScale;
+            historyData.techSpeed = freeMode.techSpeed;
             historyData.storageLevel = 2;
             historyData.labLevel = 3;
             historyData.dysonNodeLatitude = 0;
             historyData.solarEnergyLossRate = 0.7f;
-            historyData.solarSailLife = 5400;
+            historyData.solarSailLife = freeMode.solarSailLife;
             historyData.localStationExtraStorage = 0;
             historyData.remoteStationExtraStorage = 0;
             int packagesize = 40;
@@ -2104,7 +2202,7 @@ namespace Multfunction_mod
                     for (int i = tp.Level; i < GameMain.history.techStates[tp.ID].curLevel + (GameMain.history.techStates[tp.ID].curLevel >= tp.MaxLevel ? 1 : 0); i++)
                         for (int j = 0; j < tp.UnlockFunctions.Length; j++)
                         {
-                            t += tp.UnlockFunctions[j] + " " + tp.UnlockValues[j].ToString() + " ";
+                            t +=tp.Name+" "+ tp.UnlockFunctions[j] + " " + tp.UnlockValues[j].ToString() + " ";
                             if (tp.UnlockFunctions[j] == 30) historyData.localStationExtraStorage += (int)tp.UnlockValues[j];
                             else if (tp.UnlockFunctions[j] == 31) historyData.remoteStationExtraStorage += (int)tp.UnlockValues[j];
                             else GameMain.history.UnlockTechFunction(tp.UnlockFunctions[j], tp.UnlockValues[j], i);
@@ -2114,8 +2212,10 @@ namespace Multfunction_mod
                 {
                     if (!GameMain.history.techStates[tp.ID].unlocked)
                         continue;
+                    string t = "";
                     for (int index = 0; index < tp.UnlockFunctions.Length; ++index)
                     {
+                        t += tp.Name + " " + tp.UnlockFunctions[index] + " " + tp.UnlockValues[index].ToString() + " ";
                         GameMain.history.UnlockTechFunction(tp.UnlockFunctions[index], tp.UnlockValues[index], GameMain.history.techStates[tp.ID].maxLevel);
                         if (tp.UnlockFunctions[index] == 5) packagesize += 10;
                     }
@@ -2195,8 +2295,7 @@ namespace Multfunction_mod
                                 foreach (StorageComponent sc in pd.factory.factoryStorage.storagePool)
                                 {
                                     if (sc == null) continue;
-                                    int inc1 = 0;
-                                    int temp = sc.TakeItem(itemid, need, out inc1);
+                                    int temp = sc.TakeItem(itemid, need, out int inc1);
                                     count += temp;
                                     inc += inc1;
                                     need -= temp;
@@ -2400,21 +2499,21 @@ namespace Multfunction_mod
                 ChangeValueArray[2] = mecha.droneSpeed;
                 ChangeValueArray[3] = mecha.droneMovement;
                 ChangeValueArray[4] = mecha.droneCount;
-                ChangeValueArray[5] = mecha.miningSpeed;
-                ChangeValueArray[6] = mecha.replicateSpeed;
-                ChangeValueArray[7] = mecha.maxSailSpeed / 1000;
-                ChangeValueArray[8] = mecha.maxWarpSpeed / 480000;
-                ChangeValueArray[9] = mecha.jumpSpeed;
-                ChangeValueArray[10] = mecha.buildArea;
-                ChangeValueArray[11] = (float)mecha.reactorPowerGen;
-                ChangeValueArray[12] = historyData.logisticDroneSpeedScale > 0 ? historyData.logisticDroneSpeedScale : 3;
-                ChangeValueArray[13] = historyData.logisticShipSpeedScale > 0 ? historyData.logisticShipSpeedScale : 5;
-                ChangeValueArray[14] = historyData.logisticDroneCarries > 0 ? historyData.logisticDroneCarries : 100;
-                ChangeValueArray[15] = historyData.logisticShipCarries > 0 ? historyData.logisticShipCarries : 100;
-                ChangeValueArray[16] = historyData.miningSpeedScale;
-                ChangeValueArray[17] = historyData.inserterStackCount;
-                ChangeValueArray[18] = historyData.labLevel;
-                ChangeValueArray[19] = historyData.storageLevel > 4 ? 4 : historyData.storageLevel;
+                ChangeValueArray[5] = mecha.maxSailSpeed / 1000;
+                ChangeValueArray[6] = mecha.maxWarpSpeed / 480000;
+                ChangeValueArray[7] = mecha.buildArea;
+                ChangeValueArray[8] = (float)mecha.reactorPowerGen;
+                ChangeValueArray[9] = historyData.logisticCourierSpeed > 0 ? historyData.logisticDroneSpeedScale : 6;
+                ChangeValueArray[10] = historyData.logisticDroneSpeedScale > 0 ? historyData.logisticDroneSpeedScale : 3;
+                ChangeValueArray[11] = historyData.logisticShipSpeedScale > 0 ? historyData.logisticShipSpeedScale : 5;
+                ChangeValueArray[12] = historyData.logisticCourierCarries > 0 ? historyData.logisticDroneCarries : 3;
+                ChangeValueArray[13] = historyData.logisticDroneCarries > 0 ? historyData.logisticDroneCarries : 100;
+                ChangeValueArray[14] = historyData.logisticShipCarries > 0 ? historyData.logisticShipCarries : 100;
+                ChangeValueArray[15] = historyData.miningSpeedScale;
+                ChangeValueArray[16] = historyData.inserterStackCount;
+                ChangeValueArray[17] = historyData.labLevel;
+                ChangeValueArray[18] = historyData.storageLevel > 4 ? 4 : historyData.storageLevel;
+                ChangeValueArray[19] = player.deliveryPackage.stackSizeMultiplier;
                 packageitemlist = new List<int[]>();
             }
 
@@ -2461,106 +2560,106 @@ namespace Multfunction_mod
             if (i == 5)
             {
                 left = 1;
-                right = 100;
-                str = "采矿速度";
+                right = 10;
+                str = "最大航行速度";
                 return;
             }
             if (i == 6)
             {
                 left = 1;
                 right = 100;
-                str = "制造速度";
-                return;
-            }
-            if (i == 7)
-            {
-                left = 1;
-                right = 10;
-                str = "最大航行速度";
-                return;
-            }
-            if (i == 8)
-            {
-                left = 1;
-                right = 100;
                 str = "最大曲速";
                 return;
             }
-            if (i == 9)
-            {
-                left = 32;
-                right = 3200;
-                str = "跳跃速度";
-                return;
-            }
-            if (i == 10)
+            if (i == 7)
             {
                 left = 80;
                 right = 400;
                 str = "建造范围";
                 return;
             }
-            if (i == 11)
+            if (i == 8)
             {
                 left = 1000000;
                 right = 500000000;
-                str = "核心功率" + "(W)";
+                str = "核心功率";
                 return;
             }
-            if (i == 12)
+            if (i == 9)
+            {
+                left = 1;
+                right = 100;
+                str = "配送机速度";
+                return;
+            }
+            if (i == 10)
             {
                 left = 1;
                 right = 100;
                 str = "运输机速度";
                 return;
             }
-            if (i == 13)
+            if (i == 11)
             {
                 left = 1;
                 right = 100;
                 str = "运输船速度";
                 return;
             }
-            if (i == 14)
+            if (i == 12)
+            {
+                left = 1;
+                right = 10000;
+                str = "配送机载量";
+                return;
+            }
+            if (i == 13)
             {
                 left = 1;
                 right = 10000;
                 str = "运输机载量";
                 return;
             }
-            if (i == 15)
+            if (i == 14)
             {
                 left = 100;
                 right = 100000;
                 str = "运输船载量";
                 return;
             }
-            if (i == 16)
+            if (i == 15)
             {
                 left = 1;
                 right = 100;
                 str = "采矿机速度倍率";
                 return;
             }
-            if (i == 17)
+            if (i == 16)
             {
                 left = 1;
                 right = 100;
                 str = "极速分拣器数量";
                 return;
             }
-            if (i == 18)
+            if (i == 17)
             {
                 left = 2;
                 right = 100;
                 str = "建筑堆叠高度";
                 return;
             }
-            if (i == 19)
+            if (i == 18)
             {
                 left = 1;
                 right = 20;
                 str = "货物集装数量";
+                return;
+            }
+            if (i == 19)
+            {
+                left = 1;
+                right = 10000;
+                str = "物流背包堆叠倍率";
                 return;
             }
             left = 1;
@@ -2574,36 +2673,36 @@ namespace Multfunction_mod
             if (value != ChangeValueArray[valueId] && ChangePlayerbool)
             {
                 ChangeValueArray[valueId] = value;
-                if (valueId == 14)
+                if (valueId == 13)
                 {
                     ChangeValueArray[valueId] = (int)(value / 50) * 50;
                 }
-                else if (valueId == 15)
+                else if (valueId == 14)
                 {
                     ChangeValueArray[valueId] = (int)(value / 500) * 500;
                 }
                 switch (valueId)
                 {
-                    case 0: SetWalkSpeed(); break;
-                    case 1: SetTechSpeed(); break;
-                    case 2: SetDroneSpeed(); break;
-                    case 3: SetDroneMoveMent(); break;
-                    case 4: SetDroneCount(); break;
-                    case 5: SetminingSpeed(); break;
-                    case 6: SetreplicateSpeed(); break;
-                    case 7: SetMaxsailSpeed(); break;
-                    case 8: SetMaxWarpSpeed(); break;
-                    case 9: SetJumpSpeed(); break;
-                    case 10: SetBuildarea(); break;
-                    case 11: SetreactorPowerGen(); break;
-                    case 12: SetlogisticDroneSpeedScale(); break;
-                    case 13: SetlogisticShipSpeedScale(); break;
-                    case 14: SetlogisticDroneCarries(); break;
-                    case 15: SetlogisticShipCarries(); break;
-                    case 16: SetminingSpeedScale(); break;
-                    case 17: SetInserterStack(); break;
-                    case 18: SetBuildStack(); break;
-                    case 19: SetStationPilerStack(); break;
+                    case 0: SetWalkSpeed(value); break;
+                    case 1: SetTechSpeed(value); break;
+                    case 2: SetDroneSpeed(value); break;
+                    case 3: SetDroneMoveMent(value); break;
+                    case 4: SetDroneCount(value); break;
+                    case 5: SetMaxsailSpeed(value); break;
+                    case 6: SetMaxWarpSpeed(value); break;
+                    case 7: SetBuildarea(value); break;
+                    case 8: SetreactorPowerGen(value); break;
+                    case 9: SetlogisticCourierSpeedScale(value); break;
+                    case 10: SetlogisticDroneSpeedScale(value); break;
+                    case 11: SetlogisticShipSpeedScale(value); break;
+                    case 12: SetlogisticCourierCarries(value); break;
+                    case 13: SetlogisticDroneCarries(value); break;
+                    case 14: SetlogisticShipCarries(value); break;
+                    case 15: SetminingSpeedScale(value); break;
+                    case 16: SetInserterStack(value); break;
+                    case 17: SetBuildStack(value); break;
+                    case 18: SetStationPilerStack(value); break;
+                    case 19: SetDeliveryPackageStackSize(value); break;
                 }
             }
 
@@ -2693,7 +2792,6 @@ namespace Multfunction_mod
                                 }
                                 if (StationMiner.Value&& !sc.isVeinCollector && (sc.name == "Station_miner" || sc.name == "星球矿机"))
                                 {
-                                    int lastIndex = sc.storage.Length != 3 ? 4 : 2;
                                     if ((Time.time - StationMinerTime) > 1)
                                     {
                                         for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
@@ -2709,7 +2807,6 @@ namespace Multfunction_mod
                                                 if (Stationfullenergy.Value || sc.energy - pointminenum * GameMain.history.miningSpeedScale * 5000 > 0)
                                                 {
                                                     int minenum = StationMine(itemID, pointminenum, pdId);
-                                                    UnityEngine.Debug.Log(pdId + " " + LDB.items.Select(itemID).name + " " +minenum);
                                                     if(minenum > 0)
                                                     {
                                                         AddStatInfo(pdId, itemID, minenum);
@@ -2721,7 +2818,6 @@ namespace Multfunction_mod
                                             }
                                         }
                                     }
-                                    StationPowerGeneration(sc,pdId);
                                 }
 
                                 if (StationTrash.Value && (sc.name == "垃圾站" || sc.name == "Station_trash"))
@@ -2835,10 +2931,8 @@ namespace Multfunction_mod
         {
             EjectorNumber = 0;
             SiloNumber = 0;
-            if (!RandomEmission.Value)
-            {
-                return;
-            }
+            if (!RandomEmission.Value) return;
+
             foreach (var sd in GameMain.galaxy.stars)
             {
                 foreach (var pd in sd.planets)
@@ -2862,6 +2956,7 @@ namespace Multfunction_mod
                     }
                 }
             }
+            Multifunctionpatch.InitPatch();
             TempEjectorRandomEmission = true;
             TempSiloRandomEmission = true;
         }
@@ -2882,11 +2977,14 @@ namespace Multfunction_mod
                     addvein(veintype, 1000000000, new Vector3());
                 }
             }
-            if ((addveinbool || changeveingroupposbool.Value || changeveinposbool.Value) && Input.GetMouseButton(1))
+            if (Input.GetMouseButton(1))
             {
                 addveinbool = false;
-                changeveingroupposbool.Value = false;
-                //changeveinposbool.Value = false;
+                changeveingroupposbool = false;
+                changexveinspos = false;
+                changeveinposbool = false;
+                getallVein_bool = false;
+                //changeveinposbool = false;
             }
             if (Input.GetMouseButton(0) && !player.controller.actionBuild.dismantleTool.active)
             {
@@ -2896,19 +2994,19 @@ namespace Multfunction_mod
                 }
                 if (pointveindata.amount != 0)
                 {
-                    if (getallVein_bool.Value)
+                    if (getallVein_bool)
                     {
                         getallVein(pointveindata);
                     }
-                    else if (changeveingroupposbool.Value)
+                    else if (changeveingroupposbool)
                     {
                         changeveingrouppos(pointveindata);
                     }
-                    else if (changexveinspos.Value)
+                    else if (changexveinspos)
                     {
                         changexveins(pointveindata);
                     }
-                    else if (changeveinposbool.Value)
+                    else if (changeveinposbool)
                     {
                         RaycastHit raycastHit1;
                         if (!Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
@@ -3652,6 +3750,7 @@ namespace Multfunction_mod
             {
                 player.package.grids[i].count = 0;
             }
+            player.package.NotifyStorageChange();
         }
 
         public void LockPlayerPackage()
@@ -3685,16 +3784,33 @@ namespace Multfunction_mod
             player.SetSandCount(10000000);
         }
 
-        public void Addpackagesize()
+        public void Operatepackagesize(int rownum,int colnum,bool add=true)
         {
             if (player == null) return;
-            player.package.SetSize(player.package.size + UIRoot.instance.uiGame.inventory.colCount);
-        }
-
-        public void Reducepackagesize()
-        {
-            if (player == null) return;
-            player.package.SetSize(player.package.grids.Length - UIRoot.instance.uiGame.inventory.colCount);
+            if (add)
+            {
+                if (rownum > 0)
+                {
+                    player.package.SetSize(player.package.size / 10 * 10 + 10*rownum);
+                }
+                if (colnum>0)
+                {
+                    player.deliveryPackage.colCount += colnum;
+                    player.deliveryPackage.NotifySizeChange();
+                }
+            }
+            else
+            {
+                if (rownum > 0)
+                {
+                    player.package.SetSize(player.package.size / 10 * 10 - 10 * rownum);
+                }
+                if (colnum > 0 && player.deliveryPackage.colCount>colnum)
+                {
+                    player.deliveryPackage.colCount -= colnum;
+                    player.deliveryPackage.NotifySizeChange();
+                }
+            }
         }
 
         public void UnlockallTech()
@@ -3719,7 +3835,13 @@ namespace Multfunction_mod
                                 AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
                             }
                             for (int index = 0; index < techProto.UnlockFunctions.Length; ++index)
+                            {
+                                if (techProto.UnlockFunctions[index] == 7)
+                                {
+                                    Debug.Log(techProto.Name);
+                                }
                                 GameMain.history.UnlockTechFunction(techProto.UnlockFunctions[index], techProto.UnlockValues[index], level);
+                            }
                         }
                     }
                     if (!GameMain.history.techStates[techProto.ID].unlocked)
@@ -3727,6 +3849,13 @@ namespace Multfunction_mod
                         for (int i = 0; i < techProto.itemArray.Length; i++)
                         {
                             AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
+                        }
+                        for (int index = 0; index < techProto.UnlockFunctions.Length; ++index)
+                        {
+                            if (techProto.UnlockFunctions[index] == 7)
+                            {
+                                Debug.Log(techProto.Name);
+                            }
                         }
                         GameMain.history.UnlockTech(techProto.ID);
                     }
@@ -3842,27 +3971,27 @@ namespace Multfunction_mod
             {
                 StorageComponent.itemStackCount[dataArray[j].ID] = dataArray[j].StackSize * StackMultiple.Value;
             }
-            foreach (ItemProto ip in itemProtos)
-            {
-                //Debug.Log(ip.ID + " " + ip.Name);
-                //ip.StackSize *= StackMultiple.Value;
-                //if (ip.prefabDesc!=null)
-                //{
-                //    Debug.Log(ip.name+" "+ ip.prefabDesc.isInserter);
-                //}
-                //if (ip.CanBuild)
-                //{
-                //    ip.BuildInGas = true;
-                //    if (ip.prefabDesc != null)
-                //    {
-                //        ip.prefabDesc.workEnergyPerTick = 0;
-                //        ip.prefabDesc.idleEnergyPerTick = 0;
-                //    }
-                //}
-                //string t = ip.Description + ";" + ip.ID + ";" + ip.GridIndex + ";" + ip.HeatValue + ";" + ip.Potential + ";" + ip.StackSize;
+            //foreach (ItemProto ip in itemProtos)
+            //{
+            //    Debug.Log(ip.ID + " " + ip.Name);
+            //    ip.StackSize *= StackMultiple.Value;
+            //    if (ip.prefabDesc != null)
+            //    {
+            //        Debug.Log(ip.name + " " + ip.prefabDesc.isInserter);
+            //    }
+            //    if (ip.CanBuild)
+            //    {
+            //        ip.BuildInGas = true;
+            //        if (ip.prefabDesc != null)
+            //        {
+            //            ip.prefabDesc.workEnergyPerTick = 0;
+            //            ip.prefabDesc.idleEnergyPerTick = 0;
+            //        }
+            //    }
+            //    string t = ip.Description + ";" + ip.ID + ";" + ip.GridIndex + ";" + ip.HeatValue + ";" + ip.Potential + ";" + ip.StackSize;
 
-                //Logger.LogInfo(t);
-            }
+            //    Logger.LogInfo(t);
+            //}
         }
 
         public void InfiniteAllThingInPackage()
@@ -3883,6 +4012,7 @@ namespace Multfunction_mod
                 if (i == grids.Length) break;
             }
             player.SetSandCount(10000000);
+            player.package.NotifyStorageChange();
         }
 
         public void Sunlightset()
@@ -3921,159 +4051,182 @@ namespace Multfunction_mod
                 }
             }
         }
-        public void SetWalkSpeed()
+        public void SetWalkSpeed(float value)
         {
             if (player != null && player.mecha != null)
             {
-                GameMain.mainPlayer.mecha.walkSpeed = ChangeValueArray[0];
+                GameMain.mainPlayer.mecha.walkSpeed = value;
             }
         }
-        public void SetTechSpeed()
+        public void SetTechSpeed(float value)
         {
             if (GameMain.history != null)
             {
-                GameMain.history.techSpeed = (int)ChangeValueArray[1];
+                GameMain.history.techSpeed = (int)value;
             }
         }
-        public void SetDroneSpeed()
+        public void SetDroneSpeed(float value)
         {
             if (player != null && player.mecha != null)
             {
-                GameMain.mainPlayer.mecha.droneSpeed = ChangeValueArray[2];
+                GameMain.mainPlayer.mecha.droneSpeed = value;
             }
         }
-        public void SetDroneMoveMent()
+        public void SetDroneMoveMent(float value)
         {
             if (player != null && player.mecha != null)
             {
-                player.mecha.droneMovement = (int)ChangeValueArray[3];
+                player.mecha.droneMovement = (int)value;
             }
         }
-        public void SetDroneCount()
+        public void SetDroneCount(float value)
         {
             if (player != null && player.mecha != null)
             {
-                player.mecha.droneCount = (int)ChangeValueArray[4];
+                player.mecha.droneCount = (int)value;
             }
         }
-        public void SetminingSpeed()
+        public void SetMaxsailSpeed(float value)
         {
             if (player != null && player.mecha != null)
             {
-                player.mecha.miningSpeed = (int)ChangeValueArray[5];
+                player.mecha.maxSailSpeed = (int)value * 1000;
             }
         }
-        public void SetreplicateSpeed()
+        public void SetMaxWarpSpeed(float value)
         {
             if (player != null && player.mecha != null)
             {
-                player.mecha.replicateSpeed = (int)ChangeValueArray[6];
+                player.mecha.maxWarpSpeed = (int)value * 1000 * 480;
             }
         }
-        public void SetMaxsailSpeed()
+        public void SetBuildarea(float value)
         {
             if (player != null && player.mecha != null)
             {
-                player.mecha.maxSailSpeed = (int)ChangeValueArray[7] * 1000;
+                player.mecha.buildArea = value;
             }
         }
-        public void SetMaxWarpSpeed()
+        public void SetreactorPowerGen(float value)
         {
             if (player != null && player.mecha != null)
             {
-                player.mecha.maxWarpSpeed = (int)ChangeValueArray[8] * 1000 * 480;
+                player.mecha.reactorPowerGen = value;
             }
         }
-        public void SetJumpSpeed()
-        {
-            if (player != null && player.mecha != null)
-            {
-                player.mecha.jumpSpeed = (int)ChangeValueArray[9];
-            }
-        }
-        public void SetBuildarea()
-        {
-            if (player != null && player.mecha != null)
-            {
-                player.mecha.buildArea = ChangeValueArray[10];
-            }
-        }
-        public void SetreactorPowerGen()
-        {
-            if (player != null && player.mecha != null)
-            {
-                player.mecha.reactorPowerGen = ChangeValueArray[11];
-            }
-        }
-        public void SetminingSpeedScale()
+        public void SetlogisticCourierSpeedScale(float value)
         {
             if (GameMain.history != null)
             {
-                GameMain.history.miningSpeedScale = ChangeValueArray[16];
+                GameMain.history.logisticCourierSpeed = (int)value;
             }
         }
-        public void SetlogisticShipCarries()
+        public void SetlogisticDroneSpeedScale(float value)
         {
             if (GameMain.history != null)
             {
-                GameMain.history.logisticShipCarries = (int)(ChangeValueArray[15] / 100) * 100;
+                GameMain.history.logisticDroneSpeedScale = (int)value;
             }
         }
-        public void SetlogisticDroneCarries()
+        public void SetlogisticShipSpeedScale(float value)
         {
             if (GameMain.history != null)
             {
-                GameMain.history.logisticDroneCarries = (int)(ChangeValueArray[14] / 50) * 50;
+                GameMain.history.logisticShipSpeedScale = (int)value;
             }
         }
-        public void SetlogisticDroneSpeedScale()
+        public void SetlogisticCourierCarries(float value)
         {
             if (GameMain.history != null)
             {
-                GameMain.history.logisticDroneSpeedScale = (int)ChangeValueArray[12];
+                GameMain.history.logisticCourierCarries = (int)value;
             }
         }
-        public void SetlogisticShipSpeedScale()
+
+        public void SetlogisticDroneCarries(float value)
         {
             if (GameMain.history != null)
             {
-                GameMain.history.logisticShipSpeedScale = (int)ChangeValueArray[13];
+                GameMain.history.logisticDroneCarries = (int)value;
             }
         }
-        public void SetInserterStack()
+        public void SetlogisticShipCarries(float value)
+        {
+            if (GameMain.history != null)
+            {
+                GameMain.history.logisticShipCarries = (int)value;
+            }
+        }
+        public void SetminingSpeedScale(float value)
+        {
+            if (GameMain.history != null)
+            {
+                GameMain.history.miningSpeedScale = value;
+            }
+        }
+        public void SetInserterStack(float value)
         {
             if (player == null) return;
-            GameMain.history.inserterStackCount = (int)ChangeValueArray[17];
+            GameMain.history.inserterStackCount = (int)value;
         }
-        public void SetBuildStack()
+        public void SetBuildStack(float value)
         {
             if (player == null) return;
-            GameMain.history.storageLevel = (int)ChangeValueArray[18];
-            GameMain.history.labLevel = (int)ChangeValueArray[18];
+            GameMain.history.storageLevel = (int)value;
+            GameMain.history.labLevel = (int)value;
         }
-        public void SetStationPilerStack()
+        public void SetStationPilerStack(float value)
         {
             if (player == null) return;
-            GameMain.history.stationPilerLevel = (int)ChangeValueArray[19];
+            GameMain.history.stationPilerLevel = (int)value;
+        }
+
+        public void SetDeliveryPackageStackSize(float value)
+        {
+            if (player == null) return;
+            player.deliveryPackage.stackSizeMultiplier = (int)value;
         }
         #endregion
 
         public static void StationPowerGeneration(StationComponent sc,int planetID=0)
         {
-            if(sc == null || sc.energy >= sc.energyMax) return;
+            if(sc == null || sc.storage == null || sc.energy >= sc.energyMax -1000000) return;
             planetID = sc.planetId > 0 ? sc.planetId : planetID;
             if (planetID == 0) return;
             int lastIndex = sc.storage.Length - 1;
             if (sc.storage[lastIndex].itemId > 0 && sc.storage[lastIndex].count > 0)
             {
                 ItemProto ip = LDB.items.Select(sc.storage[lastIndex].itemId);
-                if (ip.HeatValue > 0 )
+                if (ip.HeatValue > 0 && sc.energy+ip.HeatValue<sc.energyMax)
                 {
                     int num = Math.Min(sc.storage[lastIndex].count, (int)((sc.energyMax - sc.energy) / ip.HeatValue));
                     sc.energy += num * ip.HeatValue;
                     sc.storage[lastIndex].count -= num;
+                    if (num > 0)
+                    {
+                        AddStatInfo(planetID, ip.ID, num);
+                    }
+                }
+            }
+        }
 
-                    AddStatInfo(planetID, ip.ID, num);
+        public static void StationAssembler(StationComponent sc)
+        {
+            if (sc == null || sc.storage==null) return;
+            int itemId = sc.storage[0].itemId;
+            if (itemId > 0)
+            {
+                int needcount=sc.storage[0].max-sc.storage[1].count;
+                var item = LDB.items.Select(itemId);
+                if (item.recipes.Count > 0)
+                {
+                    foreach (var rp in item.recipes)
+                    {
+                        if(rp.Type == ERecipeType.Smelt && rp.Items.Length==1)
+                        {
+                            float mult = rp.ItemCounts[0] / rp.ResultCounts[0];
+                        }
+                    }
                 }
             }
         }
@@ -4082,16 +4235,21 @@ namespace Multfunction_mod
         {
             for (int i = 0; i < sc.storage.Length; i++)
             {
-                if (sc.storage[i].itemId == 1143 && sc.storage[i].count > 0 && sc.storage[i].localLogic == ELogisticStorage.Supply)
+                if (sc.storage[i].itemId == 1143 && sc.storage[i].count > 0 )
                 {
-                    for (int j = 0; j < sc.storage.Length; j++)
+                    if(sc.storage[i].localLogic != ELogisticStorage.None)
                     {
-                        if (j != i && sc.storage[j].itemId > 0 && sc.storage[j].count > 0 && sc.storage[i].count > 0)
+                        int incAbility = Maxproliferator.Value ? 10 : 4;
+                        for (int j = 0; j < sc.storage.Length; j++)
                         {
-                            int needinc = sc.storage[j].count * 4 - sc.storage[j].inc;
-                            int needNumber = Math.Min((int)Math.Ceiling(needinc / 296.0), sc.storage[i].count);
-                            sc.storage[j].inc += sc.storage[i].count >= needNumber ? needinc : sc.storage[i].count * 296;
-                            sc.storage[i].count -= needNumber;
+                            if (j != i && sc.storage[j].itemId > 0 && sc.storage[j].count > 0 && sc.storage[i].count > 0)
+                            {
+                                int needinc = sc.storage[j].count * incAbility - sc.storage[j].inc;
+                                int needNumber = Math.Min((int)Math.Ceiling(needinc / 296.0), sc.storage[i].count);
+                                sc.storage[j].inc += sc.storage[i].count >= needNumber ? needinc : sc.storage[i].count * 296;
+                                sc.storage[i].count -= needNumber;
+                                sc.storage[i].inc = Math.Min(sc.storage[i].count * incAbility, sc.storage[i].inc);
+                            }
                         }
                     }
                     return;

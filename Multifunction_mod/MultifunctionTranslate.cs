@@ -34,7 +34,7 @@ namespace Multfunction_mod
             TranslateDict.Add("最大曲速", "Max warp speed");
             TranslateDict.Add("跳跃速度", "Jump speed");
             TranslateDict.Add("建造范围", "Building range"); 
-            TranslateDict.Add("核心功率(W)", "Core Generation");
+            TranslateDict.Add("核心功率", "Core Generation");
             TranslateDict.Add("运输机速度", "Logistics drone flight speed");
             TranslateDict.Add("运输船速度", "Logistics vessel navigate speed");
             TranslateDict.Add("运输机载量", "Logistics drone carrying capacity");
@@ -54,7 +54,9 @@ namespace Multfunction_mod
             TranslateDict.Add("蓝图建造无需材料", "No materials required for blueprint construction");
             TranslateDict.Add("科技点击解锁", "Technology click to unlock"); 
             TranslateDict.Add("物品列表(Tab)", "ItemList(Tab)");
-            TranslateDict.Add("9999999元数据", "Property9999999");
+            TranslateDict.Add("物流背包堆叠倍率", "Delivery Package Stack Size");
+            
+            TranslateDict.Add("无限元数据", "Infinite Property");
             TranslateDict.Add("停止修改", "Stop change value");
             TranslateDict.Add("启动修改", "Start change value");
             TranslateDict.Add("清空背包", "Clear the package");
@@ -80,8 +82,8 @@ namespace Multfunction_mod
             TranslateDict.Add("极速轨道弹射器(慎用)", "Extremely quick Ejector(Danger)");
             TranslateDict.Add("极速垂直发射井(慎用)", "Extremely quick Silo(Danger");
             TranslateDict.Add("星球电网(人造恒星)", "Plnaet Power(Artificial star)");
-            TranslateDict.Add("覆盖全球", "Global coverage");
-            TranslateDict.Add("超长连接", "Long connection");
+            TranslateDict.Add("    覆盖全球", "    Global coverage");
+            TranslateDict.Add("    超长连接", "    Long connection");
             TranslateDict.Add("新建设备不耗电", "New buildings dont't require power"); 
             TranslateDict.Add("物流站永久满电", "Stations full energy");
             TranslateDict.Add("物流站无限增产", "Station Max proliferator");
@@ -167,7 +169,6 @@ namespace Multfunction_mod
             TranslateDict.Add("储存", "Store");
             TranslateDict.Add("需求", "Need");
             TranslateDict.Add("回收", "Recycle");
-            TranslateDict.Add("机甲物流(beta)", "Mecha Logistics(beta)");
             TranslateDict.Add("机甲物流专用星", "Mecha logistics Planet");
             TranslateDict.Add("回收使用储物仓", "Recycle use storage");
             TranslateDict.Add("需求使用储物仓", "Provide use storage");

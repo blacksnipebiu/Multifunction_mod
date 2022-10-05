@@ -127,28 +127,25 @@ namespace Multfunction_mod
                 }
             }
         }
+
         [HarmonyPatch(typeof(SiloComponent), "InternalUpdate")]
         class SiloComponentInternalUpdatePatch
         {
             public static int siloNum = 0;
             public static void Prefix(ref SiloComponent __instance)
             {
-                try
+                if (TempSiloRandomEmission && SiloNumber != 0 && __instance.chargeSpend != 0)
                 {
-                    if (TempSiloRandomEmission && SiloNumber != 0 && __instance.chargeSpend != 0)
+                    if (siloNum > 0 && siloNum % SiloNumber == 0)
                     {
-                        if (siloNum > 0 && siloNum % SiloNumber == 0)
-                        {
-                            TempSiloRandomEmission = false;
-                        }
-                        else
-                        {
-                            siloNum++;
-                            __instance.time = siloNum * 500000 % __instance.chargeSpend;
-                        }
+                        TempSiloRandomEmission = false;
+                    }
+                    else
+                    {
+                        siloNum++;
+                        __instance.time = siloNum * 500000 % __instance.chargeSpend;
                     }
                 }
-                catch { }
             }
         }
         [HarmonyPatch(typeof(EjectorComponent), "InternalUpdate")]
@@ -159,19 +156,15 @@ namespace Multfunction_mod
             {
                 if (TempEjectorRandomEmission && EjectorNumber > 0 && __instance.chargeSpend>0)
                 {
-                    try
+                    if (ejectorNum > 0 && ejectorNum % EjectorNumber == 0)
                     {
-                        if (ejectorNum > 0 && ejectorNum % EjectorNumber == 0)
-                        {
-                            TempEjectorRandomEmission = false;
-                        }
-                        else
-                        {
-                            ejectorNum++;
-                            __instance.time = ejectorNum * 10000 % __instance.chargeSpend;
-                        }
+                        TempEjectorRandomEmission = false;
                     }
-                    catch { }
+                    else
+                    {
+                        ejectorNum++;
+                        __instance.time = ejectorNum * 10000 % __instance.chargeSpend;
+                    }
                 }
                 if (playcancelsolarbullet || alwaysemissiontemp)
                 {
@@ -407,6 +400,12 @@ namespace Multfunction_mod
                 }
             }
         }
+
+        public static void InitPatch()
+        {
+            EjectorComponentPatch.ejectorNum = 0;
+            SiloComponentInternalUpdatePatch.siloNum = 0;
+        }
         class TakeTailItemsPatch
         {
             public static bool Prefix(StorageComponent __instance, ref int itemId)
@@ -432,6 +431,46 @@ namespace Multfunction_mod
                 }
             }
 
+        }
+        [HarmonyPatch(typeof(MechaForge), "GameTick")]
+        class MechaForgeGameTickPatch
+        {
+            public static void Prefix(ref MechaForge __instance)
+            {
+                if (QuickHandcraft.Value && __instance.tasks.Count > 0)
+                {
+                    __instance.tasks[0].tick = __instance.tasks[0].tickSpend;
+                }
+            }
+        }
+        [HarmonyPatch(typeof(PlayerAction_Mine), "GameTick")]
+        class PlayerAction_MineGameTickPatch
+        {
+            public static void Postfix(ref PlayerAction_Mine __instance)
+            {
+                var factory = __instance.player.factory;
+                if (QuickPlayerMine.Value && __instance.miningId>0 && factory != null && GameMain.localPlanet!=null)
+                {
+                    if (__instance.miningType == EObjectType.Vegetable)
+                    {
+                        VegeData vegeData = factory.GetVegeData(__instance.miningId);
+                        VegeProto vegeProto = LDB.veges.Select(vegeData.protoId);
+                        if (vegeProto != null)
+                        {
+                            __instance.miningTick = LDB.veges.Select(factory.GetVegeData(__instance.miningId).protoId).MiningTime * 10000;
+                        }
+                    }
+                    else  if(__instance.miningType == EObjectType.Vein)
+                    {
+                        VeinData veinData = factory.GetVeinData(__instance.miningId);
+                        VeinProto veinProto = LDB.veins.Select((int)veinData.type);
+                        if(veinProto != null)
+                        {
+                            __instance.miningTick = veinProto.MiningTime * 100000;
+                        }
+                    }
+                }
+            }
         }
         //关闭窗口快捷键
         [HarmonyPatch(typeof(UIGame), "On_E_Switch")]
@@ -493,17 +532,6 @@ namespace Multfunction_mod
                     return false;
                 }
                 return true;
-            }
-        }
-
-        [HarmonyPatch(typeof(GameHistoryData), "UnlockTechFunction")]
-        class UnlockTechFunctionPatch
-        {
-            public static bool Prefix(int func)
-            {
-                if (func == 5 && GameMain.mainPlayer.package.size > 180) return false;
-                return true;
-
             }
         }
         [HarmonyPatch(typeof(PowerSystem), "NewGeneratorComponent")]
@@ -599,6 +627,24 @@ namespace Multfunction_mod
                 return true;
             }
         }
+        [HarmonyPatch(typeof(DispenserComponent), "InternalTick")]
+        class DispenserComponentInternalTickPatch
+        {
+            public static void Prefix(ref DispenserComponent __instance)
+            {
+                if (Stationfullenergy.Value)
+                {
+                    __instance.energy = __instance.energyMax;
+                }
+            }
+            public static void Postfix(ref DispenserComponent __instance)
+            {
+                if (Stationfullenergy.Value)
+                {
+                    __instance.energy = __instance.energyMax;
+                }
+            }
+        }
         [HarmonyPatch(typeof(StationComponent), "InternalTickRemote")]
         class InternalTickRemotePatch
         {
@@ -611,7 +657,7 @@ namespace Multfunction_mod
                 if (StationMaxproliferator.Value)
                 {
                     for (int i = 0; i < __instance.storage.Length && __instance.storage[i].itemId > 0; i++)
-                        __instance.storage[i].inc = __instance.storage[i].count * 4 + 100;
+                        __instance.storage[i].inc = __instance.storage[i].count * incAbility + 100;
                 }
             }
             public static void Postfix(ref StationComponent __instance)
@@ -634,7 +680,7 @@ namespace Multfunction_mod
                 if (StationMaxproliferator.Value)
                 {
                     for (int i = 0; i < __instance.storage.Length && __instance.storage[i].itemId > 0; i++)
-                        __instance.storage[i].inc = __instance.storage[i].count * 4 + 100;
+                        __instance.storage[i].inc = __instance.storage[i].count * incAbility + 100;
                 }
             }
             public static void Postfix(ref StationComponent __instance)
@@ -665,7 +711,7 @@ namespace Multfunction_mod
             public static void Postfix(ref int __result)
             {
                 if (Property9999999)
-                    __result = 9999999;
+                    __result = int.MaxValue;
             }
         }
         [HarmonyPatch(typeof(FactorySystem), "NewSiloComponent")]
@@ -692,7 +738,45 @@ namespace Multfunction_mod
                     fCount = int.MaxValue-200;
             }
         }
-
+        [HarmonyPatch(typeof(TankComponent), "GameTick")]
+        class TankComponentGameTickPatch
+        {
+            public static void Prefix(ref TankComponent __instance)
+            {
+                if (TankMaxproliferator.Value)
+                {
+                    __instance.fluidInc = __instance.fluidCount * incAbility;
+                    if (__instance.fluidCount > 100) __instance.fluidInc += 100;
+                }
+            }
+            public static void Postfix(ref TankComponent __instance)
+            {
+                if (TankMaxproliferator.Value)
+                {
+                    __instance.fluidInc = __instance.fluidCount * incAbility;
+                }
+            }
+        }
+        [HarmonyPatch(typeof(SpraycoaterComponent), "InternalUpdate")]
+        class SpraycoaterComponentInternalUpdatePatch
+        {
+            public static int ability = 4;
+            public static void Prefix(ref SpraycoaterComponent __instance)
+            {
+                if (Maxproliferator.Value)
+                {
+                    ability = __instance.incAbility;
+                    __instance.incAbility = 10;
+                }
+            }
+            public static void Postfix(ref SpraycoaterComponent __instance)
+            {
+                if (!Maxproliferator.Value && __instance.incAbility>4)
+                {
+                    __instance.incAbility = ability;
+                }
+            }
+        }
         [HarmonyPatch(typeof(PowerSystem), "NewNodeComponent")]
         class NewNodeComponentPatch
         {
@@ -831,26 +915,6 @@ namespace Multfunction_mod
             }
         }
 
-        [HarmonyPatch(typeof(PlatformSystem), "RefreshColorsTexture")]
-        private class PlatformSystemRefreshColorsTexturePatch
-        {
-            public static bool Prefix()
-            {
-                return temp;
-            }
-        }
-        [HarmonyPatch(typeof(DysonSphere), "BeforeGameTick")]
-        private class ImportFromBlueprintPatch
-        {
-            static int num = 0;
-            public static void Postfix(DysonSphere __instance)
-            {
-                if(num++ < 10)
-                {
-                    Debug.Log(__instance.starData.dysonLumino + " "+__instance.energyGenPerNode +" "+ __instance.energyGenPerFrame);
-                }
-            }
-        }
         [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]
         private class PasteCheckBuildConditionsPatch
         {
@@ -1728,7 +1792,7 @@ namespace Multfunction_mod
                 }
             }
         }
-        [HarmonyPatch(typeof(StorageComponent), "GetItemCount")]
+        [HarmonyPatch(typeof(StorageComponent), "GetItemCount",new Type[] {typeof(int)})]
         class GetItemCountPatch
         {
             public static void Postfix(StorageComponent __instance, int itemId, ref int __result)
