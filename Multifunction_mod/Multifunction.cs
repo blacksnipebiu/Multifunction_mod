@@ -15,12 +15,11 @@ using Debug = UnityEngine.Debug;
 namespace Multfunction_mod
 {
     [BepInPlugin(GUID, NAME, VERSION)]
-    [BepInProcess(GAME_PROCESS)]
     public class Multifunction : BaseUnityPlugin
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.5.5";
+        public const string VERSION = "2.5.8";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
         private Vector2 scrollPosition;
@@ -49,8 +48,6 @@ namespace Multfunction_mod
         public int oillowerlimit;
         public int whichpannel = 1;
         public int veintype = 1;
-        public int[] mechalogistics;
-        public int[] mechalogisticsneed;
         public static int DriftBuildingLevel;
         public static int productmaxindex;
         public static int incAbility = 4;
@@ -409,7 +406,14 @@ namespace Multfunction_mod
             //}
             if (Input.GetKey(KeyCode.F10) && Input.GetKeyDown(KeyCode.LeftShift))
             {
-                //temp = !temp;
+                temp = !temp;
+                foreach(var item in LDB.items.dataArray)
+                {
+                    if (item.prefabDesc.isDispenser)
+                    {
+                        Debug.Log(item.prefabDesc.dispenserMaxCourierCount);
+                    }
+                }
             }
             if (ItemDisplayingWindow)
             {
@@ -785,7 +789,7 @@ namespace Multfunction_mod
                 GUILayout.EndHorizontal();
 
                 GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
-                StationStoExtra.Value = (int)GUILayout.HorizontalSlider(StationStoExtra.Value, 15, 100, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5), GUILayout.ExpandWidth(false) });
+                StationStoExtra.Value = (int)GUILayout.HorizontalSlider(StationStoExtra.Value, 0, 100, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5), GUILayout.ExpandWidth(false) });
                 GUILayout.Label(StationStoExtra.Value + " " + "运输站存储倍率".getTranslate(), style, GUILayout.ExpandWidth(false));
                 GUILayout.EndHorizontal();
                 RefreshStationStorage           = GUILayout.Toggle(RefreshStationStorage, "实时更改全部运输站存储倍率".getTranslate(), options);
@@ -1261,47 +1265,30 @@ namespace Multfunction_mod
         public void LogisticsPannel()
         {
             GUILayout.BeginVertical();
-            GUILayout.BeginHorizontal();
-            GUILayoutOption[] options = new[] { GUILayout.Height(heightdis) };
-            Mechalogistics_bool.Value = GUILayout.Toggle(Mechalogistics_bool.Value, "机甲物流".getTranslate(), options);
-            MechalogisticsPlanet_bool.Value = GUILayout.Toggle(MechalogisticsPlanet_bool.Value, "机甲物流专用星".getTranslate(), options);
-            MechalogStoragerecycle_bool.Value = GUILayout.Toggle(MechalogStoragerecycle_bool.Value, "回收使用储物仓".getTranslate(), options);
-            MechalogStorageprovide_bool.Value = GUILayout.Toggle(MechalogStorageprovide_bool.Value, "需求使用储物仓".getTranslate(), options);
-            MechalogStationrecycle_bool.Value = GUILayout.Toggle(MechalogStationrecycle_bool.Value, "回收使用物流站".getTranslate(), options);
-            MechalogStationprovide_bool.Value = GUILayout.Toggle(MechalogStationprovide_bool.Value, "需求使用物流站".getTranslate(), options);
-
-            GUILayout.EndHorizontal();
-            scrollPosition = GUILayout.BeginScrollView(scrollPosition, new[] { GUILayout.Width(MainWindow_width.Value - 20), GUILayout.Height(MainWindow_height.Value - heightdis * 3) });
-            int colnum = Math.Max((int)(MainWindow_width.Value - heightdis) / heightdis / 2 - 1, 1);
-            int rownum = itemProtos.Length / colnum;
-            rownum = itemProtos.Length % colnum == 0 ? rownum : rownum + 1;
-            int tempitemindex = 0;
-            for (int line = 0; line < rownum; line++)
             {
                 GUILayout.BeginHorizontal();
-                for (int i = 0; i < colnum && tempitemindex < itemProtos.Length; i++, tempitemindex++)
+                GUILayoutOption[] options = new[] { GUILayout.Height(heightdis) };
+                if(Mechalogistics_bool.Value != GUILayout.Toggle(Mechalogistics_bool.Value, "强化机甲物流".getTranslate(), options))
                 {
-                    ItemProto ip = itemProtos[tempitemindex];
-                    GUIStyle style = new GUIStyle();
-                    GUILayout.BeginVertical();
-                    GUILayout.Button(ip.iconSprite.texture, style, new[] { GUILayout.Width(heightdis * 2), GUILayout.Height(heightdis * 2) });
-                    if (GUILayout.Button((mechalogistics[tempitemindex] == 0 ? "储存" : (mechalogistics[tempitemindex] == -1 ? "回收" : "需求")).getTranslate(), new[] { GUILayout.Width(heightdis * 2) }))
+                    Mechalogistics_bool.Value = !Mechalogistics_bool.Value;
+                    if (Mechalogistics_bool.Value && !player.deliveryPackage.unlocked)
                     {
-                        mechalogistics[tempitemindex]++;
-                        if (mechalogistics[tempitemindex] > 1) mechalogistics[tempitemindex] = -1;
-                        Savemechalogisticsneed();
+                        player.deliveryPackage.unlocked = true;
+                        player.deliveryPackage.colCount = 1;
+                        player.deliveryPackage.NotifySizeChange();
                     }
-                    if (mechalogistics[tempitemindex] == 1 && int.TryParse(Regex.Replace(GUILayout.TextField(mechalogisticsneed[tempitemindex] + "", new[] { GUILayout.Width(heightdis * 2) }), @"[^0-9]", ""), out int temp) && temp != mechalogisticsneed[tempitemindex])
-                    {
-                        mechalogisticsneed[tempitemindex] = temp;
-                        Savemechalogisticsneed();
-                    }
-                    GUILayout.EndVertical();
                 }
+                MechalogisticsPlanet_bool.Value = GUILayout.Toggle(MechalogisticsPlanet_bool.Value, "机甲物流专用星".getTranslate(), options);
+                MechalogStoragerecycle_bool.Value = GUILayout.Toggle(MechalogStoragerecycle_bool.Value, "回收使用储物仓".getTranslate(), options);
+                MechalogStorageprovide_bool.Value = GUILayout.Toggle(MechalogStorageprovide_bool.Value, "需求使用储物仓".getTranslate(), options);
+                MechalogStationrecycle_bool.Value = GUILayout.Toggle(MechalogStationrecycle_bool.Value, "回收使用物流站".getTranslate(), options);
+                MechalogStationprovide_bool.Value = GUILayout.Toggle(MechalogStationprovide_bool.Value, "需求使用物流站".getTranslate(), options);
+
                 GUILayout.EndHorizontal();
             }
-            GUILayout.EndScrollView();
-            
+            GUILayout.Label("如果启动机甲物流，物流背包没有解锁会自动解锁一列。");
+            GUILayout.Label("物流背包里的设置可以直接从全星系的存储设备中获取或回收");
+            GUILayout.Label("设置机甲物流专用星后，只有名字是\"机甲物流\"的星球才会进行物流操作");
             GUILayout.EndVertical();
         }
 
@@ -1816,21 +1803,7 @@ namespace Multfunction_mod
                 RecipeList = new RecipeProto[LDB.recipes.dataArray.Length];
                 Array.Copy(LDB.items.dataArray, itemProtos, itemProtos.Length);
                 Array.Copy(LDB.recipes.dataArray, RecipeList, RecipeList.Length);
-                mechalogistics = new int[itemProtos.Length];
-                mechalogisticsneed = new int[itemProtos.Length];
 
-                if ("".Equals(Mechalogneed.Value) || Mechalogneed.Value.Length == 0)
-                {
-                    for (int i = 0; i < itemProtos.Length; i++)
-                    {
-                        mechalogistics[i] = 0;
-                        mechalogisticsneed[i] = 0;
-                    }
-                }
-                else
-                {
-                    Loadmechalogisticsneed();
-                }
                 first = false;
                 ready = true;
             }
@@ -2229,25 +2202,26 @@ namespace Multfunction_mod
             if (!Mechalogistics_bool.Value || Time.time - MechaLogisticsTime < 1) return;
             MechaLogisticsTime = Time.time;
             StorageComponent package = player.package;
-            for (int i = 0; i < mechalogistics.Length; i++)
+
+            for(int i=0;i< player.deliveryPackage.grids.Length; i++)
             {
-                if (mechalogistics[i] == 0) continue;
-                int itemid = itemProtos[i].ID;
-                if (mechalogistics[i] == 1)
+                var item=player.deliveryPackage.grids[i];
+                int itemId = item.itemId;
+                int count = item.count;
+                int packagecount = player.packageUtility.GetPackageItemCount(itemId);
+                int exsitcount = packagecount + count;
+                if (item.requireCount > exsitcount)
                 {
-                    if (!MechalogStationprovide_bool.Value && !MechalogStorageprovide_bool.Value) continue;
-                    if (package.grids[package.size - 1].itemId != 0) continue;
-                    int remain = 0;
+                    int remain = item.stackSizeModified - count;
                     for (int index = 0; index < package.size; ++index)
                     {
-                        if (package.grids[index].itemId == itemid)
-                            remain += LDB.items.Select(itemid).StackSize - package.grids[index].count;
+                        if (package.grids[index].itemId == itemId)
+                            remain += LDB.items.Select(itemId).StackSize - package.grids[index].count;
                         else if (package.grids[index].itemId == 0)
-                            remain += LDB.items.Select(itemid).StackSize;
+                            remain += LDB.items.Select(itemId).StackSize;
                     }
-                    int need = mechalogisticsneed[i] - package.GetItemCount(itemid);
-                    need = remain > need ? need : remain;
-                    int count = 0;
+                    int need = Math.Min(item.requireCount - exsitcount,remain);
+                    int getcount = 0;
                     int inc = 0;
                     foreach (StarData sd in GameMain.galaxy.stars)
                     {
@@ -2261,19 +2235,18 @@ namespace Multfunction_mod
                                 {
                                     if (sc == null || sc.storage == null) continue;
                                     int temp = need;
-                                    int tempitemid = itemid;
-                                    int inc1 = 0;
-                                    sc.TakeItem(ref tempitemid, ref temp, out inc1);
-                                    count += temp;
+                                    int tempitemid = itemId;
+                                    sc.TakeItem(ref tempitemid, ref temp, out int tempinc);
+                                    getcount += temp;
                                     need -= temp;
-                                    inc += inc1;
-                                    if (count >= need) break;
+                                    inc += tempinc;
+                                    if (getcount >= need) break;
                                 }
-                                if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.tankPool != null && count < need)
+                                if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.tankPool != null && getcount < need)
                                 {
                                     foreach (TankComponent tc in pd.factory.factoryStorage.tankPool)
                                     {
-                                        if (tc.id > 0 && tc.fluidId > 0 && tc.fluidCount > 0 && itemid == tc.fluidId)
+                                        if (tc.id > 0 && tc.fluidId > 0 && tc.fluidCount > 0 && itemId == tc.fluidId)
                                         {
                                             int temp = tc.fluidCount > need ? need : tc.fluidCount;
 
@@ -2282,39 +2255,38 @@ namespace Multfunction_mod
                                             pd.factory.factoryStorage.tankPool[tc.id].fluidInc -= num;
 
                                             inc += num;
-                                            count += temp;
+                                            getcount += temp;
                                             need -= temp;
-                                            if (count >= need) break;
+                                            if (getcount >= need) break;
                                         }
                                     }
                                 }
-                                if (count >= need) break;
+                                if (getcount >= need) break;
                             }
-                            if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.storagePool != null && MechalogStorageprovide_bool.Value && count < need)
+                            if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.storagePool != null && MechalogStorageprovide_bool.Value && getcount < need)
                             {
                                 foreach (StorageComponent sc in pd.factory.factoryStorage.storagePool)
                                 {
                                     if (sc == null) continue;
-                                    int temp = sc.TakeItem(itemid, need, out int inc1);
-                                    count += temp;
-                                    inc += inc1;
+                                    int temp = sc.TakeItem(itemId, need, out int tempinc);
+                                    getcount += temp;
+                                    inc += tempinc;
                                     need -= temp;
-                                    if (count >= need) break;
+                                    if (getcount >= need) break;
                                 }
-                                if (count >= need) break;
+                                if (getcount >= need) break;
                             }
                         }
-                        if (count >= need) break;
+                        if (getcount >= need) break;
                     }
-                    player.TryAddItemToPackage(itemid, count, inc, false);
+                    int remaingetcount= getcount-player.deliveryPackage.AddItem(itemId, getcount, inc, out int remaininc);
+                    player.package.AddItem(itemId, remaingetcount, remaininc,out _);
                 }
-                else
+                if (item.recycleCount < exsitcount)
                 {
-                    if (!MechalogStationrecycle_bool.Value && !MechalogStoragerecycle_bool.Value) continue;
-                    int recyclenum = package.GetItemCount(itemid);
-                    int temprecycle = recyclenum;
-                    int inc1 = 0;
-                    package.TakeItem(itemid, recyclenum, out inc1);
+                    int recyclenum = exsitcount-item.recycleCount;
+                    player.packageUtility.TakeItemFromAllPackages(i,ref itemId,ref recyclenum, out int inc1);
+                    if (itemId == 0 || recyclenum == 0) continue;
                     foreach (StarData sd in GameMain.galaxy.stars)
                     {
                         foreach (PlanetData pd in sd.planets)
@@ -2326,83 +2298,187 @@ namespace Multfunction_mod
                                 foreach (StationComponent sc in pd.factory.transport.stationPool)
                                 {
                                     if (sc == null || sc.storage == null) continue;
-                                    temprecycle -= sc.AddItem(itemid, temprecycle, inc1);
-                                    if (temprecycle == 0) break;
+                                    recyclenum -= sc.AddItem(itemId, recyclenum, inc1);
+                                    if (recyclenum == 0) break;
                                 }
 
-                                if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.tankPool != null && temprecycle > 0)
+                                if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.tankPool != null && recyclenum > 0)
                                 {
                                     foreach (TankComponent tc in pd.factory.factoryStorage.tankPool)
                                     {
-                                        if (temprecycle == 0) break;
-                                        if (tc.id > 0 && tc.fluidId > 0 && tc.fluidCount > 0 && itemid == tc.fluidId)
+                                        if (recyclenum == 0) break;
+                                        if (tc.id > 0 && tc.fluidId > 0 && tc.fluidCount > 0 && itemId == tc.fluidId)
                                         {
                                             if (tc.fluidCount > 10000)
                                             {
-                                                pd.factory.factoryStorage.tankPool[tc.id].fluidCount += temprecycle;
+                                                pd.factory.factoryStorage.tankPool[tc.id].fluidCount += recyclenum;
                                                 pd.factory.factoryStorage.tankPool[tc.id].fluidInc += inc1;
-                                                temprecycle = 0;
+                                                recyclenum = 0;
                                             }
                                             else
                                             {
-                                                int temp = tc.fluidCapacity - tc.fluidCount > temprecycle ? temprecycle : tc.fluidCapacity - tc.fluidCount;
-                                                temprecycle -= temp;
+                                                int temp = tc.fluidCapacity - tc.fluidCount > recyclenum ? recyclenum : tc.fluidCapacity - tc.fluidCount;
+                                                recyclenum -= temp;
                                                 pd.factory.factoryStorage.tankPool[tc.id].fluidCount += temp;
                                             }
                                         }
                                     }
                                 }
-                                if (temprecycle == 0) break;
+                                if (recyclenum == 0) break;
                             }
-                            if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.storagePool != null && MechalogStoragerecycle_bool.Value && temprecycle > 0)
+                            if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.storagePool != null && MechalogStoragerecycle_bool.Value && recyclenum > 0)
                             {
                                 foreach (StorageComponent sc in pd.factory.factoryStorage.storagePool)
                                 {
                                     if (sc == null) continue;
-                                    int inc = 0;
-                                    temprecycle -= sc.AddItem(itemid, temprecycle, inc1, out inc);
-                                    if (temprecycle == 0) break;
+                                    recyclenum -= sc.AddItem(itemId, recyclenum, inc1, out int inc);
+                                    if (recyclenum == 0) break;
                                 }
-                                if (temprecycle == 0) break;
+                                if (recyclenum == 0) break;
                             }
                         }
-                        if (temprecycle == 0) break;
+                        if (recyclenum == 0) break;
                     }
-
                 }
             }
-        }
+            //for (int i = 0; i < mechalogistics.Length; i++)
+            //{
+            //    if (mechalogistics[i] == 0) continue;
+            //    int itemid = itemProtos[i].ID;
+            //    if (mechalogistics[i] == 1)
+            //    {
+            //        if (!MechalogStationprovide_bool.Value && !MechalogStorageprovide_bool.Value) continue;
+            //        if (package.grids[package.size - 1].itemId != 0) continue;
+            //        int remain = 0;
+            //        for (int index = 0; index < package.size; ++index)
+            //        {
+            //            if (package.grids[index].itemId == itemid)
+            //                remain += LDB.items.Select(itemid).StackSize - package.grids[index].count;
+            //            else if (package.grids[index].itemId == 0)
+            //                remain += LDB.items.Select(itemid).StackSize;
+            //        }
+            //        int need = mechalogisticsneed[i] - package.GetItemCount(itemid);
+            //        need = remain > need ? need : remain;
+            //        int getcount = 0;
+            //        int inc = 0;
+            //        foreach (StarData sd in GameMain.galaxy.stars)
+            //        {
+            //            foreach (PlanetData pd in sd.planets)
+            //            {
+            //                if (pd == null || pd.factory == null) continue;
+            //                if (MechalogisticsPlanet_bool.Value && !pd.displayName.Equals("机甲物流")) continue;
+            //                if (pd.factory.transport != null && pd.factory.transport.stationPool != null && MechalogStationprovide_bool.Value)
+            //                {
+            //                    foreach (StationComponent sc in pd.factory.transport.stationPool)
+            //                    {
+            //                        if (sc == null || sc.storage == null) continue;
+            //                        int temp = need;
+            //                        int tempitemid = itemid;
+            //                        sc.TakeItem(ref tempitemid, ref temp, out int tempinc);
+            //                        getcount += temp;
+            //                        need -= temp;
+            //                        inc += tempinc;
+            //                        if (getcount >= need) break;
+            //                    }
+            //                    if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.tankPool != null && getcount < need)
+            //                    {
+            //                        foreach (TankComponent tc in pd.factory.factoryStorage.tankPool)
+            //                        {
+            //                            if (tc.id > 0 && tc.fluidId > 0 && tc.fluidCount > 0 && itemid == tc.fluidId)
+            //                            {
+            //                                int temp = tc.fluidCount > need ? need : tc.fluidCount;
 
-        public void Savemechalogisticsneed()
-        {
-            string result = "";
-            for (int i = 0; i < itemProtos.Length; i++)
-            {
-                result += mechalogistics[i] + "," + mechalogisticsneed[i];
-                result += i == itemProtos.Length - 1 ? "" : ";";
-            }
-            Mechalogneed.Value = result;
-        }
+            //                                int num = (int)((double)tc.fluidInc / (double)tc.fluidCount + 0.5) * temp;
+            //                                pd.factory.factoryStorage.tankPool[tc.id].fluidCount -= temp;
+            //                                pd.factory.factoryStorage.tankPool[tc.id].fluidInc -= num;
 
-        public void Loadmechalogisticsneed()
-        {
-            string[] t1 = Mechalogneed.Value.Split(';');
-            if (t1.Length != itemProtos.Length)
-            {
-                for (int i = 0; i < itemProtos.Length; i++)
-                {
-                    mechalogistics[i] = 0;
-                    mechalogisticsneed[i] = 0;
-                }
-            }
-            else
-            {
-                for (int i = 0; i < itemProtos.Length; i++)
-                {
-                    mechalogistics[i] = int.Parse(t1[i].Split(',')[0]);
-                    mechalogisticsneed[i] = int.Parse(t1[i].Split(',')[1]);
-                }
-            }
+            //                                inc += num;
+            //                                getcount += temp;
+            //                                need -= temp;
+            //                                if (getcount >= need) break;
+            //                            }
+            //                        }
+            //                    }
+            //                    if (getcount >= need) break;
+            //                }
+            //                if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.storagePool != null && MechalogStorageprovide_bool.Value && getcount < need)
+            //                {
+            //                    foreach (StorageComponent sc in pd.factory.factoryStorage.storagePool)
+            //                    {
+            //                        if (sc == null) continue;
+            //                        int temp = sc.TakeItem(itemid, need, out int tempinc);
+            //                        getcount += temp;
+            //                        inc += tempinc;
+            //                        need -= temp;
+            //                        if (getcount >= need) break;
+            //                    }
+            //                    if (getcount >= need) break;
+            //                }
+            //            }
+            //            if (getcount >= need) break;
+            //        }
+            //        player.TryAddItemToPackage(itemid, getcount, inc, false);
+            //    }
+            //    else
+            //    {
+            //        if (!MechalogStationrecycle_bool.Value && !MechalogStoragerecycle_bool.Value) continue;
+            //        int recyclenum = package.GetItemCount(itemid);
+            //        package.TakeItem(itemid, recyclenum, out int inc1);
+            //        foreach (StarData sd in GameMain.galaxy.stars)
+            //        {
+            //            foreach (PlanetData pd in sd.planets)
+            //            {
+            //                if (pd == null || pd.factory == null) continue;
+            //                if (MechalogisticsPlanet_bool.Value && !pd.displayName.Equals("机甲物流")) continue;
+            //                if (pd.factory.transport != null && pd.factory.transport.stationPool != null && MechalogStationrecycle_bool.Value)
+            //                {
+            //                    foreach (StationComponent sc in pd.factory.transport.stationPool)
+            //                    {
+            //                        if (sc == null || sc.storage == null) continue;
+            //                        recyclenum -= sc.AddItem(itemid, recyclenum, inc1);
+            //                        if (recyclenum == 0) break;
+            //                    }
+
+            //                    if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.tankPool != null && recyclenum > 0)
+            //                    {
+            //                        foreach (TankComponent tc in pd.factory.factoryStorage.tankPool)
+            //                        {
+            //                            if (recyclenum == 0) break;
+            //                            if (tc.id > 0 && tc.fluidId > 0 && tc.fluidCount > 0 && itemid == tc.fluidId)
+            //                            {
+            //                                if (tc.fluidCount > 10000)
+            //                                {
+            //                                    pd.factory.factoryStorage.tankPool[tc.id].fluidCount += recyclenum;
+            //                                    pd.factory.factoryStorage.tankPool[tc.id].fluidInc += inc1;
+            //                                    recyclenum = 0;
+            //                                }
+            //                                else
+            //                                {
+            //                                    int temp = tc.fluidCapacity - tc.fluidCount > recyclenum ? recyclenum : tc.fluidCapacity - tc.fluidCount;
+            //                                    recyclenum -= temp;
+            //                                    pd.factory.factoryStorage.tankPool[tc.id].fluidCount += temp;
+            //                                }
+            //                            }
+            //                        }
+            //                    }
+            //                    if (recyclenum == 0) break;
+            //                }
+            //                if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.storagePool != null && MechalogStoragerecycle_bool.Value && recyclenum > 0)
+            //                {
+            //                    foreach (StorageComponent sc in pd.factory.factoryStorage.storagePool)
+            //                    {
+            //                        if (sc == null) continue;
+            //                        recyclenum -= sc.AddItem(itemid, recyclenum, inc1, out int inc);
+            //                        if (recyclenum == 0) break;
+            //                    }
+            //                    if (recyclenum == 0) break;
+            //                }
+            //            }
+            //            if (recyclenum == 0) break;
+            //        }
+
+            //    }
+            //}
         }
 
         public void InitBeltSignalDiction()
@@ -2515,6 +2591,12 @@ namespace Multfunction_mod
                 ChangeValueArray[18] = historyData.storageLevel > 4 ? 4 : historyData.storageLevel;
                 ChangeValueArray[19] = player.deliveryPackage.stackSizeMultiplier;
                 packageitemlist = new List<int[]>();
+                if (Mechalogistics_bool.Value && !player.deliveryPackage.unlocked)
+                {
+                    player.deliveryPackage.unlocked = true;
+                    player.deliveryPackage.colCount = 1;
+                    player.deliveryPackage.NotifySizeChange();
+                }
             }
 
         }
@@ -3795,6 +3877,7 @@ namespace Multfunction_mod
                 }
                 if (colnum>0)
                 {
+                    player.deliveryPackage.unlocked = true;
                     player.deliveryPackage.colCount += colnum;
                     player.deliveryPackage.NotifySizeChange();
                 }
@@ -3807,6 +3890,7 @@ namespace Multfunction_mod
                 }
                 if (colnum > 0 && player.deliveryPackage.colCount>colnum)
                 {
+                    player.deliveryPackage.unlocked = true;
                     player.deliveryPackage.colCount -= colnum;
                     player.deliveryPackage.NotifySizeChange();
                 }
