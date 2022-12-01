@@ -19,7 +19,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.5.8";
+        public const string VERSION = "2.6.2";
         public const string GAME_PROCESS = "DSPGAME.exe";
         #region 临时变量
         private Vector2 scrollPosition;
@@ -1485,7 +1485,7 @@ namespace Multfunction_mod
         {
             foreach (SiloComponent sc in fs.siloPool)
             {
-                if (sc.id > 0 && sc.entityId > 0 && sc.bulletCount<=0)
+                if (sc.id > 0 && sc.entityId > 0 && sc.bulletCount<=1)
                 {
                     int[] takeitem = doitemfromPlanetSuper(1503, 20, pdid);
                     fs.siloPool[sc.id].bulletCount += takeitem[0];
@@ -1494,7 +1494,7 @@ namespace Multfunction_mod
             }
             foreach (EjectorComponent ec in fs.ejectorPool)
             {
-                if (ec.id > 0 && ec.entityId > 0 && ec.bulletCount<=0)
+                if (ec.id > 0 && ec.entityId > 0 && ec.bulletCount<=1)
                 {
                     int[] takeitem = doitemfromPlanetSuper(1501, 20, pdid);
                     fs.ejectorPool[ec.id].bulletCount += takeitem[0];
@@ -2279,8 +2279,7 @@ namespace Multfunction_mod
                         }
                         if (getcount >= need) break;
                     }
-                    int remaingetcount= getcount-player.deliveryPackage.AddItem(itemId, getcount, inc, out int remaininc);
-                    player.package.AddItem(itemId, remaingetcount, remaininc,out _);
+                    player.packageUtility.AddItemToAllPackages(itemId, getcount,i, inc, out _);
                 }
                 if (item.recycleCount < exsitcount)
                 {
@@ -2832,30 +2831,22 @@ namespace Multfunction_mod
                             for (int i = 0; i < sc.storage.Length; i++)
                             {
                                 int itemID = sc.storage[i].itemId;
+                                int basemax = sc.isStellar ? 10000 : 5000;
+                                int extramax = sc.isStellar ? GameMain.history.remoteStationExtraStorage : GameMain.history.localStationExtraStorage;
                                 if (StationfullCount && itemID > 0)
                                 {
                                     sc.storage[i].count = sc.storage[i].max;
                                 }
                                 if (StationStoExtra.Value >= 0)
                                 {
-                                    if (sc.storage[i].max == 10000 + GameMain.history.remoteStationExtraStorage)
+                                    
+                                    if (sc.storage[i].max == basemax + extramax)
                                     {
-                                        sc.storage[i].max += StationStoExtra.Value * 10000;
+                                        sc.storage[i].max += StationStoExtra.Value * basemax;
                                     }
-                                    if (RefreshStationStorage && sc.storage[i].max % 10000 == 0 && sc.storage[i].max != 0)
+                                    if (RefreshStationStorage && sc.storage[i].max % basemax == 0 && sc.storage[i].max != 0)
                                     {
-                                        sc.storage[i].max = 10000 + GameMain.history.remoteStationExtraStorage + StationStoExtra.Value * 10000;
-                                    }
-                                    if (sc.isCollector)
-                                    {
-                                        if (sc.storage[i].max == 5000)
-                                        {
-                                            sc.storage[i].max += StationStoExtra.Value * 5000;
-                                        }
-                                        if (RefreshStationStorage && sc.storage[i].max % 5000 == 0 && sc.storage[i].max != 0)
-                                        {
-                                            sc.storage[i].max = 5000 + GameMain.history.localStationExtraStorage + StationStoExtra.Value * 5000;
-                                        }
+                                        sc.storage[i].max = basemax + extramax + StationStoExtra.Value * basemax;
                                     }
                                 }
                             }
@@ -2945,7 +2936,7 @@ namespace Multfunction_mod
             EVeinType evt = LDB.veins.GetVeinTypeByItemId(itemid);// ItemIdtoVeintype(itemid);
             PlanetData pd = GameMain.galaxy.PlanetById(pdid);
             long[] veinAmounts = new long[64];
-            pd.CalcVeinAmounts(ref veinAmounts);
+            pd.CalcVeinAmounts(ref veinAmounts,new HashSet<int>(), UIRoot.instance.uiGame.veinAmountDisplayFilter);
             if (evt == EVeinType.Oil)
             {
                 int collectspeed = (int)(veinAmounts[7] * VeinData.oilSpeedMultiplier + 0.5);

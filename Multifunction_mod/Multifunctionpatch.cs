@@ -614,6 +614,20 @@ namespace Multfunction_mod
             }
         }
 
+        [HarmonyPatch(typeof(BuildTool_Addon), "CheckBuildConditions")]
+        class BuildTool_AddonCheckBuildConditionsPatch
+        {
+            public static bool Prefix(ref bool __result)
+            {
+                if (PasteBuildAnyWay)
+                {
+                    __result = true;
+                    return false;
+                }
+                return true;
+            }
+        }
+
         [HarmonyPatch(typeof(BuildTool_Path), "CheckBuildConditions")]
         class BuildTool_PathCheckBuildConditionsPatch
         {
