@@ -247,7 +247,7 @@ namespace Multfunction_mod
             tempy1 = MainWindow_y;
             scrollPosition[0] = 0;
 
-            //初始化配置
+            #region 初始化配置
             {
                 Quantumtransport_bool = Config.Bind("量子传输站", "Quantumtransport_bool", false);
                 Quantumtransportstarwarp_bool = Config.Bind("星系级翘曲全面供应", "Quantumtransportstarwarp_bool", false);
@@ -348,6 +348,7 @@ namespace Multfunction_mod
                 CloseUIpanel = Config.Bind("关闭面板", "CloseUIpanel", false);
                 WindowQuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt));
             }
+            #endregion
 
 
             incAbility = Maxproliferator.Value ? 10 : 4;
@@ -422,6 +423,7 @@ namespace Multfunction_mod
             }
         }
 
+        #region GUI处理
         public void OnGUI()
         {
             heightdis = GUI.skin.button.fontSize * 2;
@@ -479,6 +481,7 @@ namespace Multfunction_mod
                 windowRect2 = GUI.Window(20210219, windowRect2, TabItemWindow, "");
             }
         }
+        #endregion
 
         #region 窗口操作
 
@@ -1833,6 +1836,7 @@ namespace Multfunction_mod
 
         #endregion
 
+        #region 配方、物品
         /// <summary>
         /// 配方、物品常规初始化
         /// </summary>
@@ -1849,7 +1853,9 @@ namespace Multfunction_mod
                 ready = true;
             }
         }
+        #endregion
 
+        #region 存档初始化
         /// <summary>
         /// 加载存档时进行初始化操作
         /// </summary>
@@ -1906,7 +1912,9 @@ namespace Multfunction_mod
             }
 
         }
+        #endregion
 
+        #region 游戏启动后
         public void AfterGameStart()
         {
             if (ready && GameMain.history != null && FinallyInit)
@@ -1944,7 +1952,9 @@ namespace Multfunction_mod
 
             }
         }
+        #endregion
 
+        #region 取消所有调整
         private void CancelAllToggle()
         {
             NotTidyVein.Value = false;
@@ -2015,6 +2025,7 @@ namespace Multfunction_mod
             QuantumtransportpowerDemand.Value = false;
             QuantumtransportassembleDemand.Value = false;
         }
+        #endregion
 
         public void DriftBuild()
         {
@@ -2050,6 +2061,7 @@ namespace Multfunction_mod
             }
         }
 
+        #region 开启窗口
         public void QuickKeyOpenWindow()
         {
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -2086,6 +2098,7 @@ namespace Multfunction_mod
                 ItemDisplayingWindow = false;
             }
         }
+        #endregion
 
         public void ChangeQuickKeyMethod()
         {
@@ -2379,6 +2392,9 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 初始化信号传送带功能
+        /// </summary>
         public void InitBeltSignalDiction()
         {
             if (GameMain.galaxy == null || GameMain.galaxy.stars == null) return;
@@ -2701,7 +2717,7 @@ namespace Multfunction_mod
             }
         }
 
-        //星际物流站设置及星球矿机
+        #region 星际物流站设置及星球矿机
         public void StationComponentSet()
         {
             if (GameMain.data.galacticTransport == null || GameMain.data.galacticTransport.stationPool == null) return;
@@ -2823,11 +2839,12 @@ namespace Multfunction_mod
                 StationMinerTime = Time.time;
             }
         }
+        #endregion
 
         /// <summary>
         /// 获取目标星球目标矿脉数量
         /// </summary>
-        /// <param name="itemid"></param>
+        /// <param name="itemid" ></param>
         /// <param name="pdid"></param>
         /// <returns></returns>
         public int GetNumberOfVein(int itemid, int pdid)
@@ -2990,6 +3007,12 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 添加矿脉
+        /// </summary>
+        /// <param name="veintype"></param>
+        /// <param name="number"></param>
+        /// <param name="pos"></param>
         public void addvein(int veintype, int number, Vector3 pos)
         {
             if (number == 0) return;
@@ -3854,6 +3877,7 @@ namespace Multfunction_mod
             }
         }
 
+        #region 配方修改
         /// <summary>
         /// 配方相关修改
         /// </summary>
@@ -3932,7 +3956,9 @@ namespace Multfunction_mod
 
             }
         }
+        #endregion
 
+        #region 物品修改
         /// <summary>
         /// 物品相关修改
         /// </summary>
@@ -3965,6 +3991,7 @@ namespace Multfunction_mod
             //    Logger.LogInfo(t);
             //}
         }
+        #endregion
 
         public void InfiniteAllThingInPackage()
         {
@@ -4006,7 +4033,6 @@ namespace Multfunction_mod
         }
 
         #region 设置属性
-
         public void SetDronenocomsume()
         {
             if (player.mecha != null)
