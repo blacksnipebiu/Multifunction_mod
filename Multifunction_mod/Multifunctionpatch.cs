@@ -385,28 +385,13 @@ namespace Multfunction_mod
                 return true;
             }
         }
-        public static void patchallmethod()
-        {
-            Harmony harmony= new Harmony(GUID);
-            harmony.PatchAll();
-            var m = typeof(StorageComponent).GetMethods();
-            foreach (var i in m)
-            {
-                if (i.Name == "TakeTailItems" && i.ReturnType == typeof(void))
-                {
-                    var prefix = typeof(TakeTailItemsPatch).GetMethod("Prefix");
-                    harmony.Patch(i, new HarmonyMethod(prefix));
-                    break;
-                }
-            }
-        }
 
         public static void InitPatch()
         {
             EjectorComponentPatch.ejectorNum = 0;
             SiloComponentInternalUpdatePatch.siloNum = 0;
         }
-        class TakeTailItemsPatch
+        public static class TakeTailItemsPatch
         {
             public static bool Prefix(StorageComponent __instance, ref int itemId)
             {

@@ -1,5 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using static Multfunction_mod.Constant;
+using static Multfunction_mod.Multifunctionpatch;
 using Debug = UnityEngine.Debug;
 
 namespace Multfunction_mod
@@ -19,8 +21,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.6.2";
-        public const string GAME_PROCESS = "DSPGAME.exe";
+        public const string VERSION = "2.6.3";
         #region 临时变量
         private Vector2 scrollPosition;
         public Light SunLight;
@@ -228,7 +229,8 @@ namespace Multfunction_mod
 
         void Start()
         {
-            Multifunctionpatch.patchallmethod();
+            Patchallmethod();
+            //Multifunctionpatch.patchallmethod();
             AssetBundle assetBundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("Multifunction_mod.multifunctionpanel"));
             MultiFunctionPanel = assetBundle.LoadAsset<GameObject>("MultiFunctionPanel");
             preparedraw();
@@ -4422,6 +4424,23 @@ namespace Multfunction_mod
             if (t == 4) return coreEnergyCap + "T" + unit;
 
             return "";
+        }
+
+
+        public static void Patchallmethod()
+        {
+            Harmony harmony = new Harmony(GUID);
+            harmony.PatchAll();
+            var m = typeof(StorageComponent).GetMethods();
+            foreach (var i in m)
+            {
+                if (i.Name == "TakeTailItems" && i.ReturnType == typeof(void))
+                {
+                    var prefix = typeof(TakeTailItemsPatch).GetMethod("Prefix");
+                    harmony.Patch(i, new HarmonyMethod(prefix));
+                    break;
+                }
+            }
         }
     }
 }

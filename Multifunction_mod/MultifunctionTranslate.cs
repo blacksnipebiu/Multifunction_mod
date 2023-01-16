@@ -19,7 +19,7 @@ namespace Multfunction_mod
             TranslateDict.Add("建筑", "Building");
             TranslateDict.Add("星球", "Planet");
             TranslateDict.Add("戴森球", "DysonSphere");
-            TranslateDict.Add("其它功能", "Ohter");
+            TranslateDict.Add("其它功能", "Other");
             TranslateDict.Add("机甲物流", "Mechalogistics");
             TranslateDict.Add("关闭白色面板", "ClosePanel");
 
