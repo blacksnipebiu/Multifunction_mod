@@ -21,7 +21,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.6.3";
+        public const string VERSION = "2.6.9";
         #region 临时变量
         private Vector2 scrollPosition;
         public Light SunLight;
@@ -227,10 +227,12 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> QuantumtransportassembleDemand;
         #endregion
 
-        void Start()
+        void Awake()
         {
             Patchallmethod();
-            //Multifunctionpatch.patchallmethod();
+        }
+        void Start()
+        {
             AssetBundle assetBundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("Multifunction_mod.multifunctionpanel"));
             MultiFunctionPanel = assetBundle.LoadAsset<GameObject>("MultiFunctionPanel");
             preparedraw();
@@ -3672,8 +3674,7 @@ namespace Multfunction_mod
                         restorewater = temprestorewater;
                     }
                     #endregion
-                    for (int i = 0; i < GameMain.localPlanet.factory.vegePool.Length; i++)
-                        planet.factory.RemoveVegeWithComponents(i);
+
                     planet.UnloadFactory();
                     int index = planet.factory.index;
 
@@ -3695,8 +3696,8 @@ namespace Multfunction_mod
                     planet.CalculateVeinGroups();
                     planetFactory.Init(GameMain.data, planet, index);
                     GameMain.data.factories[index] = planetFactory;
-                    planet.factory = planetFactory;
                     planet.factoryIndex = index;
+                    planet.factory.platformSystem.EnsureReformData();
                     //GameMain.data.statistics.production.CreateFactoryStat(index);
                     planet.LoadFactory();
                     ui_MultiFunctionPanel.SetActive(DisplayingWindow && CloseUIpanel.Value);
@@ -4430,13 +4431,13 @@ namespace Multfunction_mod
         public static void Patchallmethod()
         {
             Harmony harmony = new Harmony(GUID);
-            harmony.PatchAll();
+            harmony.PatchAll(typeof(Multifunctionpatch));
             var m = typeof(StorageComponent).GetMethods();
             foreach (var i in m)
             {
                 if (i.Name == "TakeTailItems" && i.ReturnType == typeof(void))
                 {
-                    var prefix = typeof(TakeTailItemsPatch).GetMethod("Prefix");
+                    var prefix = typeof(Multifunctionpatch).GetMethod("TakeTailItemsPatch");
                     harmony.Patch(i, new HarmonyMethod(prefix));
                     break;
                 }
