@@ -21,7 +21,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.7.0";
+        public const string VERSION = "2.7.1";
         #region 临时变量
         private Vector2 scrollPosition;
         public Light SunLight;
@@ -716,12 +716,12 @@ namespace Multfunction_mod
                     float temp = GUILayout.HorizontalSlider(ChangeValueArray[i], left, right, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 6) });
                     string result = "";
                     if (i == 8 && player.mecha != null) result += TGMKinttostring(player.mecha.reactorPowerGen, "W");
-                    else if (i == 0 || i == 15) result = string.Format("{0:N2}", temp);
+                    else if (i == 0 || i==10 || i==11 || i == 15) result = string.Format("{0:N2}", temp);
                     else result = (int)temp + "";
                     if (temp == ChangeValueArray[i] && i != 8)
                     {
                         string t = GUILayout.TextField(result, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 3) });
-                        if (i == 0 || i == 15)
+                        if (result.Contains("."))
                         {
                             if(!float.TryParse(Regex.Replace(t, @"^[^0-9]+(.[^0-9]{2})?$", ""), out temp))
                             {
@@ -1144,9 +1144,9 @@ namespace Multfunction_mod
             var tempvalue = Regex.Replace(GUI.TextField(new Rect(0, heightdis * line++, heightdis * 10, heightdis), MaxOrbitRadiusConfig.Value+"", 10), @"[^0-9]", "");
             if(int.TryParse(tempvalue,out int result))
             {
-                if (result < 300000)
+                if (result < 100000)
                 {
-                    result = 300000;
+                    result = 100000;
                 }
                 else if (result > 10_000_000)
                 {
@@ -2204,8 +2204,9 @@ namespace Multfunction_mod
             mecha.replicateSpeed = freeMode.mechaReplicateSpeed;
             mecha.reactorPowerGen = freeMode.mechaReactorPowerGen;
             player.deliveryPackage.colCount = 0;
-            player.deliveryPackage.rowCount = 0;
             player.deliveryPackage.stackSizeMultiplier = Configs.freeMode.deliveryPackageStackSizeMultiplier;
+            int packagesize = freeMode.playerPackageSize;
+            player.deliveryPackage.rowCount = (packagesize - 1) / 10 + 1;
             historyData.stationPilerLevel = 1;
             historyData.logisticDroneCarries = freeMode.logisticDroneCarries;
             historyData.logisticDroneSpeed = freeMode.logisticDroneSpeed;
@@ -2230,16 +2231,16 @@ namespace Multfunction_mod
             historyData.solarSailLife = freeMode.solarSailLife;
             historyData.localStationExtraStorage = 0;
             historyData.remoteStationExtraStorage = 0;
-            int packagesize = 40;
+            player.package.SetSize(packagesize);
             foreach (TechProto tp in new List<TechProto>(LDB.techs.dataArray))
             {
+                string t = "";
                 if (tp.Level < tp.MaxLevel)
                 {
-                    string t = "";
                     for (int i = tp.Level; i < GameMain.history.techStates[tp.ID].curLevel + (GameMain.history.techStates[tp.ID].curLevel >= tp.MaxLevel ? 1 : 0); i++)
                         for (int j = 0; j < tp.UnlockFunctions.Length; j++)
                         {
-                            t +=tp.Name+" "+ tp.UnlockFunctions[j] + " " + tp.UnlockValues[j].ToString() + " ";
+                            //t +=tp.Name+" "+ tp.UnlockFunctions[j] + " " + tp.UnlockValues[j].ToString() + " ";
                             if (tp.UnlockFunctions[j] == 30) historyData.localStationExtraStorage += (int)tp.UnlockValues[j];
                             else if (tp.UnlockFunctions[j] == 31) historyData.remoteStationExtraStorage += (int)tp.UnlockValues[j];
                             else GameMain.history.UnlockTechFunction(tp.UnlockFunctions[j], tp.UnlockValues[j], i);
@@ -2249,16 +2250,13 @@ namespace Multfunction_mod
                 {
                     if (!GameMain.history.techStates[tp.ID].unlocked)
                         continue;
-                    string t = "";
                     for (int index = 0; index < tp.UnlockFunctions.Length; ++index)
                     {
-                        t += tp.Name + " " + tp.UnlockFunctions[index] + " " + tp.UnlockValues[index].ToString() + " ";
+                        //t += tp.Name + " " + tp.UnlockFunctions[index] + " " + tp.UnlockValues[index].ToString() + " ";
                         GameMain.history.UnlockTechFunction(tp.UnlockFunctions[index], tp.UnlockValues[index], GameMain.history.techStates[tp.ID].maxLevel);
-                        if (tp.UnlockFunctions[index] == 5) packagesize += 10;
                     }
                 }
             }
-            player.package.SetSize(packagesize);
         }
 
         public void MechaLogisticsMethod()
@@ -2634,7 +2632,7 @@ namespace Multfunction_mod
                 player = GameMain.mainPlayer;
                 Mecha mecha = player.mecha;
                 ChangeValueArray[0] = mecha.walkSpeed;
-                ChangeValueArray[1] = GameMain.history.techSpeed;
+                ChangeValueArray[1] = historyData.techSpeed;
                 ChangeValueArray[2] = mecha.droneSpeed;
                 ChangeValueArray[3] = mecha.droneMovement;
                 ChangeValueArray[4] = mecha.droneCount;
@@ -2642,7 +2640,7 @@ namespace Multfunction_mod
                 ChangeValueArray[6] = mecha.maxWarpSpeed / 480000;
                 ChangeValueArray[7] = mecha.buildArea;
                 ChangeValueArray[8] = (float)mecha.reactorPowerGen;
-                ChangeValueArray[9] = historyData.logisticCourierSpeed > 0 ? historyData.logisticDroneSpeedScale : 6;
+                ChangeValueArray[9] = historyData.logisticCourierSpeed > 0 ? historyData.logisticCourierSpeed : 6;
                 ChangeValueArray[10] = historyData.logisticDroneSpeedScale > 0 ? historyData.logisticDroneSpeedScale : 3;
                 ChangeValueArray[11] = historyData.logisticShipSpeedScale > 0 ? historyData.logisticShipSpeedScale : 5;
                 ChangeValueArray[12] = historyData.logisticCourierCarries > 0 ? historyData.logisticDroneCarries : 3;
@@ -4266,14 +4264,14 @@ namespace Multfunction_mod
         {
             if (GameMain.history != null)
             {
-                GameMain.history.logisticDroneSpeedScale = (int)value;
+                GameMain.history.logisticDroneSpeedScale = value;
             }
         }
         public void SetlogisticShipSpeedScale(float value)
         {
             if (GameMain.history != null)
             {
-                GameMain.history.logisticShipSpeedScale = (int)value;
+                GameMain.history.logisticShipSpeedScale = value;
             }
         }
         public void SetlogisticCourierCarries(float value)
