@@ -136,13 +136,20 @@ namespace Multfunction_mod
             TranslateDict.Add("改变海洋类型", "Change water type");
             TranslateDict.Add("还原所有海洋类型", "Restore all water types");
 
+            TranslateDict.Add("初始化当前戴森球", "Clear current DysonSphere");
             TranslateDict.Add("瞬间完成戴森球(用前存档)", "Finish DysonSphere(Remember to save)");
             TranslateDict.Add("保存戴森球", "save DysonSphere");
             TranslateDict.Add("打开戴森球蓝图文件夹", "Open DysonSphere Blueprint folder");
             TranslateDict.Add("导入戴森球", "Load DysonSphere");
             TranslateDict.Add("跳过太阳帆吸收阶段", "Skip the solar sail absorption phase"); 
             TranslateDict.Add("跳过太阳帆子弹阶段", "Skip the solar sail bullet stage");
+            TranslateDict.Add("太阳帆秒吸收", "Quick abort solarsail");
             TranslateDict.Add("全球打帆", "Sail anywhere in the planet");
+            TranslateDict.Add("间隔发射", "Eject average");
+            TranslateDict.Add("开放戴森壳半径上下限(用前存档)", "Open the upper and lower limits of the Dyson shell radius (save before use)");
+
+            TranslateDict.Add("最大半径", "maxOrbitRadius");
+            TranslateDict.Add("最小半径", "minOrbitRadius");
             TranslateDict.Add("戴森云和戴森壳至少要有一层，否则会出bug", "Dyson swarm must have at least one orbit.Dyson shell must have al least one layer");
             
             TranslateDict.Add("丢垃圾速率", "throw trash speed");

@@ -84,6 +84,35 @@ namespace Multfunction_mod
             return true;
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(DysonSphere), "Init")]
+        public static void DysonSphereInit(ref DysonSphere __instance)
+        {
+            if (ChangeDysonradius.Value)
+            {
+                __instance.minOrbitRadius = 100;
+                __instance.maxOrbitRadius = MaxOrbitRadiusConfig.Value;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(DysonSphereLayer), "GameTick")]
+        public static void DysonSphereLayerGameTick(ref DysonSphereLayer __instance,long gameTick)
+        {
+            if (QuickabortSwarm.Value)
+            {
+                DysonSwarm swarm = __instance.dysonSphere.swarm;
+                for (int i = 1; i < __instance.nodeCursor; i++)
+                {
+                    DysonNode dysonNode = __instance.nodePool[i];
+                    if (dysonNode != null && dysonNode.id == i && dysonNode.sp == dysonNode.spMax)
+                    {
+                        dysonNode.OrderConstructCp(gameTick, swarm);
+                    }
+                }
+            }
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DysonSwarm), "GameTick")]
         public static void DysonSwarmPatch2(ref DysonSwarm __instance, long time)

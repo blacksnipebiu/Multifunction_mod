@@ -21,7 +21,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.6.9";
+        public const string VERSION = "2.7.0";
         #region 临时变量
         private Vector2 scrollPosition;
         public Light SunLight;
@@ -122,6 +122,7 @@ namespace Multfunction_mod
         public static bool TempSiloRandomEmission;
         public string stackmultiple1 = "";
         public string multipelsmelt1 = "";
+        private string maxOrbitRadius = "1000000";
         public string watertype = "";
         //public static Queue<int[]> addStatQueue = new Queue<int[]>();
         public static Dictionary<int, Dictionary<int, long>> addStatDic = new Dictionary<int, Dictionary<int, long>>();
@@ -145,6 +146,7 @@ namespace Multfunction_mod
         public static ConfigEntry<int> Buildmaxlen;
         public static ConfigEntry<int> Quantumenergy;
         public static ConfigEntry<int> changeveinsposx;
+        public static ConfigEntry<int> MaxOrbitRadiusConfig;
         public static ConfigEntry<float> mytexturer;
         public static ConfigEntry<float> mytextureg;
         public static ConfigEntry<float> mytextureb;
@@ -209,10 +211,12 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> ArchitectMode;
         public static ConfigEntry<Boolean> quickabsorbsolar;
         public static ConfigEntry<Boolean> cancelsolarbullet;
+        public static ConfigEntry<Boolean> QuickabortSwarm;
         public static ConfigEntry<Boolean> alwaysemission;
         public static ConfigEntry<Boolean> StationSpray;
         public static ConfigEntry<Boolean> Maxproliferator;
         public static ConfigEntry<Boolean> StationPowerGen;
+        public static ConfigEntry<Boolean> ChangeDysonradius;
         public static ConfigEntry<Boolean> CloseUIpanel;
         public static ConfigEntry<Boolean> CloseUIAbnormalityTip;
         public static ConfigEntry<Boolean> QuantumtransportstationSupply;
@@ -231,6 +235,7 @@ namespace Multfunction_mod
         {
             Patchallmethod();
         }
+
         void Start()
         {
             AssetBundle assetBundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("Multifunction_mod.multifunctionpanel"));
@@ -318,6 +323,9 @@ namespace Multfunction_mod
                 cancelsolarbullet = Config.Bind("跳过太阳帆子弹阶段", "cancelsolarbullet", false);
                 alwaysemission = Config.Bind("全球打帆", "alwaysemission", false);
                 RandomEmission = Config.Bind("随机发射", "RandomEmission", false);
+                QuickabortSwarm = Config.Bind("太阳帆秒吸收", "QuickabortSwarm", false);
+                ChangeDysonradius = Config.Bind("改变戴森球半径上下限", "ChangeDysonradius", false);
+                MaxOrbitRadiusConfig = Config.Bind("戴森球最大半径", "MaxOrbitRadiusConfig", 1000000);
                 StationStoExtra = Config.Bind("运输站额外储量", "StationStoExtra", 0);
                 StackMultiple = Config.Bind("堆叠倍数", "StackMultiple", 1);
                 Stationminenumber = Config.Bind("星球矿机速率", "Stationminenumber", 1);
@@ -347,6 +355,7 @@ namespace Multfunction_mod
             incAbility = Maxproliferator.Value ? 10 : 4;
             MainWindow_x = MainWindow_x_config.Value;
             MainWindow_y = MainWindow_y_config.Value;
+            maxOrbitRadius = MaxOrbitRadiusConfig.Value.ToString();
             oillowerlimit = (int)(0.1 / VeinData.oilSpeedMultiplier);
             mytexture = new Texture2D(10, 10);
             for (int i = 0; i < mytexture.width; i++)
@@ -410,14 +419,14 @@ namespace Multfunction_mod
             //}
             if (Input.GetKey(KeyCode.F10) && Input.GetKeyDown(KeyCode.LeftShift))
             {
-                temp = !temp;
-                foreach(var item in LDB.items.dataArray)
-                {
-                    if (item.prefabDesc.isDispenser)
-                    {
-                        Debug.Log(item.prefabDesc.dispenserMaxCourierCount);
-                    }
-                }
+                //temp = !temp;
+                //foreach(var item in LDB.items.dataArray)
+                //{
+                //    if (item.prefabDesc.isDispenser)
+                //    {
+                //        Debug.Log(item.prefabDesc.dispenserMaxCourierCount);
+                //    }
+                //}
             }
             if (ItemDisplayingWindow)
             {
@@ -816,8 +825,6 @@ namespace Multfunction_mod
                     PlanetPower_bool.Value = GUILayout.Toggle(PlanetPower_bool.Value, "    覆盖全球".getTranslate(), options);
                     farconnectdistance = GUILayout.Toggle(farconnectdistance, "    超长连接".getTranslate(), options);
                 }
-                quickEjector                    = GUILayout.Toggle(quickEjector, "极速轨道弹射器(慎用)".getTranslate(), options);
-                quicksilo                       = GUILayout.Toggle(quicksilo, "极速垂直发射井(慎用)".getTranslate(), options);
 
                 GUILayout.EndVertical();
             }
@@ -1068,7 +1075,7 @@ namespace Multfunction_mod
         public void DysonPannel()
         {
             bool english = Localization.language != Language.zhCN;
-            int line = 0;
+            int line = 0; 
             GUI.Label(new Rect(0, line++ * heightdis, MainWindow_width.Value, heightdis * 2), "注意事项:戴森云和戴森壳不要出现一层轨道都没有的情况(用前存档)".getTranslate());
             if (!(GameMain.localStar == null || GameMain.data.dysonSpheres == null || GameMain.data.dysonSpheres[GameMain.localStar.index] == null))
             {
@@ -1112,12 +1119,15 @@ namespace Multfunction_mod
                 }
                 line += 2;
             }
+            quickEjector = GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), quickEjector, "极速轨道弹射器(慎用)".getTranslate());
+            quicksilo = GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), quicksilo, "极速垂直发射井(慎用)".getTranslate());
             if (cancelsolarbullet.Value != GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), cancelsolarbullet.Value, "跳过太阳帆子弹阶段".getTranslate()))
             {
                 cancelsolarbullet.Value = !cancelsolarbullet.Value;
                 playcancelsolarbullet = cancelsolarbullet.Value;
             }
             quickabsorbsolar.Value = GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), quickabsorbsolar.Value, "跳过太阳帆吸收阶段".getTranslate());
+            QuickabortSwarm.Value = GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), QuickabortSwarm.Value, "太阳帆秒吸收".getTranslate());
             if (alwaysemission.Value != GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), alwaysemission.Value, "全球打帆".getTranslate()))
             {
                 alwaysemission.Value = !alwaysemission.Value;
@@ -1128,7 +1138,57 @@ namespace Multfunction_mod
                 RandomEmission.Value = !RandomEmission.Value;
                 RandomEmissionEjectorSilo();
             }
-
+            var temp = GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), ChangeDysonradius.Value, "开放戴森壳半径上下限(用前存档)".getTranslate());
+            GUI.Label(new Rect(0, heightdis * line++, heightdis * 10, heightdis), "最小半径".getTranslate() + ":100");
+            GUI.Label(new Rect(0, heightdis * line++, heightdis * 10, heightdis), "最大半径".getTranslate() + ":"+TGMKinttostring(MaxOrbitRadiusConfig.Value,""));
+            var tempvalue = Regex.Replace(GUI.TextField(new Rect(0, heightdis * line++, heightdis * 10, heightdis), MaxOrbitRadiusConfig.Value+"", 10), @"[^0-9]", "");
+            if(int.TryParse(tempvalue,out int result))
+            {
+                if (result < 300000)
+                {
+                    result = 300000;
+                }
+                else if (result > 10_000_000)
+                {
+                    result = 10_000_000;
+                }
+                MaxOrbitRadiusConfig.Value = result;
+            }
+            if(temp != ChangeDysonradius.Value)
+            {
+                ChangeDysonradius.Value = temp;
+                var selectdyson = UIRoot.instance?.uiGame?.dysonEditor?.selection?.viewDysonSphere;
+                foreach (var dyson in GameMain.data?.dysonSpheres)
+                {
+                    if (dyson != null)
+                    {
+                        if (temp)
+                        {
+                            dyson.maxOrbitRadius = MaxOrbitRadiusConfig.Value;
+                            dyson.minOrbitRadius = 100;
+                        }
+                        else
+                        {
+                            dyson.minOrbitRadius = dyson.starData.physicsRadius * 1.5f;
+                            if (dyson.minOrbitRadius < 4000f)
+                            {
+                                dyson.minOrbitRadius = 4000f;
+                            }
+                            dyson.maxOrbitRadius = dyson.defOrbitRadius * 2f;
+                            if (dyson.starData.type == EStarType.GiantStar)
+                            {
+                                dyson.minOrbitRadius *= 0.6f;
+                            }
+                            dyson.minOrbitRadius = Mathf.Ceil(dyson.minOrbitRadius / 100f) * 100f;
+                            dyson.maxOrbitRadius = Mathf.Round(dyson.maxOrbitRadius / 100f) * 100f;
+                        }
+                        if (selectdyson == dyson)
+                        {
+                            UIRoot.instance.uiGame.dysonEditor.controlPanel.OnViewStarChange(dyson);
+                        }
+                    }
+                }
+            }
         }
 
         public void OtherPannel()
@@ -3543,6 +3603,9 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 瞬间完成戴森球
+        /// </summary>
         public void FinishDysonShell()
         {
             foreach (DysonSphere ds in GameMain.data.dysonSpheres)
