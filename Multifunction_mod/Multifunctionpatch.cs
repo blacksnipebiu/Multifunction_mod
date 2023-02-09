@@ -26,7 +26,7 @@ namespace Multfunction_mod
             this.index = index;
         }
     }
-    public static class Multifunctionpatch
+    public class Multifunctionpatch
     {
         public static int ability = 4;
         public static int ejectorNum;
@@ -37,6 +37,23 @@ namespace Multfunction_mod
             ejectorNum = 0;
             siloNum = 0;
         }
+
+        public static void Patchallmethod()
+        {
+            Harmony harmony = new Harmony(GUID);
+            var m = typeof(StorageComponent).GetMethods();
+            foreach (var i in m)
+            {
+                if (i.Name == "TakeTailItems" && i.ReturnType == typeof(void))
+                {
+                    var prefix = typeof(Multifunctionpatch).GetMethod("TakeTailItemsPatch");
+                    harmony.Patch(i, new HarmonyMethod(prefix));
+                    break;
+                }
+            }
+            harmony.PatchAll(typeof(Multifunctionpatch));
+        }
+
         public static bool TakeTailItemsPatch(StorageComponent __instance, ref int itemId)
         {
             if (ArchitectMode.Value)
@@ -48,9 +65,19 @@ namespace Multfunction_mod
             return true;
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
+        public static void PlanetFactoryNoComsumeSand(ref int __result)
+        {
+            if (InfiniteSand.Value)
+            {
+                __result = 0;
+            }
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DysonSwarm), "AbsorbSail")]
-        public static bool DysonSwarmPatch1(ref DysonSwarm __instance, ref bool __result, DysonNode node, long gameTick)
+        public static bool DysonSwarmPatch1(ref DysonSwarm __instance, ref bool __result, DysonNode node)
         {
             if (quickabsorbsolar.Value)
             {
@@ -423,6 +450,7 @@ namespace Multfunction_mod
                 __instance.tasks[0].tick = __instance.tasks[0].tickSpend;
             }
         }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerAction_Mine), "GameTick")]
         public static void PlayerAction_MineGameTickPatch(ref PlayerAction_Mine __instance)
@@ -800,8 +828,21 @@ namespace Multfunction_mod
             return !entityitemnoneed;
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(Mecha), "UseEnergy")]
+        public static bool InfiniteplayerpowerPatch(Mecha __instance,ref float __result)
+        {
+            if (Infiniteplayerpower.Value)
+            {
+                __result = 1;
+                __instance.coreEnergy = __instance.coreEnergyCap;
+                return false;
+            }
+            return true;
+        }
+
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(BuildTool_Click), "DeterminePreviews")]
+        [HarmonyPatch(typeof(BuildTool_Click), "_OnInit")]
         public static void DeterminePreviewsPatch(BuildTool_Click __instance)
         {
             __instance.dotsSnapped = new Vector3[Buildmaxlen.Value];
@@ -1692,10 +1733,9 @@ namespace Multfunction_mod
                                         BeltComponent belt1 = fs.traffic.beltPool[wap3.Key];
                                         if (fs.factory.cargoTraffic.GetCargoPath(belt1.segPathId).TryInsertItem(belt1.segIndex + belt1.segPivotOffset, itemid, stack, inc))
                                         {
-                                            byte inc1 = 0, stack1 = 1;
-                                            cargoPath.TryPickItem(num1 - 5, 12, out stack1, out inc1);
+                                            cargoPath.TryPickItem(num1 - 5, 12, out byte stack1, out byte inc1);
                                             if ((inc1 != inc || stack1 != stack))
-                                                cargoPath.TryPickItem(num1 - 5, 12, out stack1, out inc1);
+                                                cargoPath.TryPickItem(num1 - 5, 12, out _, out _);
                                             break;
                                         }
                                     }

@@ -21,7 +21,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.7.1";
+        public const string VERSION = "2.7.2";
         #region 临时变量
         private Vector2 scrollPosition;
         public Light SunLight;
@@ -34,7 +34,6 @@ namespace Multfunction_mod
         public static GameObject ui_MultiFunctionPanel;
         public List<string> BPPathList = new List<string>();
         public List<string> BPFileNameList = new List<string>();
-        public static Queue<string> TimesTest = new Queue<string>();
         public List<int[]> packageitemlist = new List<int[]>();
         public static List<int> SuperStation = new List<int>();
         public static List<int> StarSuperStation = new List<int>();
@@ -42,8 +41,8 @@ namespace Multfunction_mod
         public static Dictionary<int, int> tmp_levelChanges;
         public VeinData pointveindata;
         public KeyboardShortcut tempShowWindow;
-        public int maxheight;
-        public int maxwidth;
+        public int maxheight => Screen.height;
+        public int maxwidth => Screen.width;
         public int heightdis;
         public int togglesize;
         public int oillowerlimit;
@@ -59,6 +58,7 @@ namespace Multfunction_mod
 
         public float tempx1;
         public float tempy1;
+        public float InfiniteAllThingTime;
         public float MechaLogisticsTime;
         public float startsuperstationtime;
         public float StationMinerTime;
@@ -122,7 +122,6 @@ namespace Multfunction_mod
         public static bool TempSiloRandomEmission;
         public string stackmultiple1 = "";
         public string multipelsmelt1 = "";
-        private string maxOrbitRadius = "1000000";
         public string watertype = "";
         //public static Queue<int[]> addStatQueue = new Queue<int[]>();
         public static Dictionary<int, Dictionary<int, long>> addStatDic = new Dictionary<int, Dictionary<int, long>>();
@@ -162,6 +161,7 @@ namespace Multfunction_mod
         public static ConfigEntry<float> planetquamaxpowerpertick;
         public static ConfigEntry<string> watertypePlanet;
         public static ConfigEntry<string> Mechalogneed;
+        public static ConfigEntry<bool> InfiniteSand;
         public static ConfigEntry<Boolean> NotTidyVein;
         public static ConfigEntry<Boolean> InspectDisNoLimit;
         public static ConfigEntry<Boolean> RandomEmission;
@@ -231,18 +231,16 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> QuantumtransportassembleDemand;
         #endregion
 
-        void Awake()
-        {
-            Patchallmethod();
-        }
-
         void Start()
         {
+            preparedraw();
+            Patchallmethod();
+            MultifunctionTranslate.regallTranslate();
             AssetBundle assetBundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("Multifunction_mod.multifunctionpanel"));
             MultiFunctionPanel = assetBundle.LoadAsset<GameObject>("MultiFunctionPanel");
-            preparedraw();
             startsuperstationtime = Time.time;
             StationMinerTime = Time.time;
+            InfiniteAllThingTime = Time.time;
 
             MainWindow_x_move = 710;
             MainWindow_y_move = 390;
@@ -294,6 +292,7 @@ namespace Multfunction_mod
                 MechalogStorageprovide_bool = Config.Bind("需求使用储物仓", "MechalogStorageprovide_bool", false);
                 MechalogStoragerecycle_bool = Config.Bind("回收使用储物仓", "MechalogStoragerecycle_bool", false);
                 Infinitething = Config.Bind("无限物品", "Infinitething", false);
+                InfiniteSand = Config.Bind("无限沙土", "InfiniteSand", false);
                 Infiniteplayerpower = Config.Bind("无限机甲能量", "Infiniteplayerpower", false);
                 deleteveinbool = Config.Bind("删除矿物", "deleteveinbool", false);
                 StationMiner = Config.Bind("星球矿机", "stationmineropen", false);
@@ -355,7 +354,6 @@ namespace Multfunction_mod
             incAbility = Maxproliferator.Value ? 10 : 4;
             MainWindow_x = MainWindow_x_config.Value;
             MainWindow_y = MainWindow_y_config.Value;
-            maxOrbitRadius = MaxOrbitRadiusConfig.Value.ToString();
             oillowerlimit = (int)(0.1 / VeinData.oilSpeedMultiplier);
             mytexture = new Texture2D(10, 10);
             for (int i = 0; i < mytexture.width; i++)
@@ -381,7 +379,6 @@ namespace Multfunction_mod
                 string[] t = k.Split(',');
                 watertypePlanetArray.Add(int.Parse(t[0]), int.Parse(t[1]));
             }
-            MultifunctionTranslate.regallTranslate();
             ThreadPool.QueueUserWorkItem(o =>
             {
                 while (true)
@@ -405,28 +402,15 @@ namespace Multfunction_mod
 
         void Update()
         {
-            maxheight = Screen.height;
-            maxwidth = Screen.width;
             ChangeQuickKeyMethod();
             RecipeCustomization();
             RestoreWaterMethod();
             FirstStartGame();
             QuickKeyOpenWindow();
             AfterGameStart();
-            //while (TimesTest.Count > 0)
-            //{
-            //    Debug.Log(TimesTest.Dequeue());
-            //}
             if (Input.GetKey(KeyCode.F10) && Input.GetKeyDown(KeyCode.LeftShift))
             {
-                //temp = !temp;
-                //foreach(var item in LDB.items.dataArray)
-                //{
-                //    if (item.prefabDesc.isDispenser)
-                //    {
-                //        Debug.Log(item.prefabDesc.dispenserMaxCourierCount);
-                //    }
-                //}
+
             }
             if (ItemDisplayingWindow)
             {
@@ -748,6 +732,7 @@ namespace Multfunction_mod
             GUILayoutOption[] options = new[] { GUILayout.Height(heightdis), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 7) };
             {
                 Infinitething.Value = GUILayout.Toggle(Infinitething.Value, "无限物品".getTranslate(), options);
+                InfiniteSand.Value = GUILayout.Toggle(InfiniteSand.Value, "无限沙土".getTranslate(), options);
                 lockpackage_bool.Value = GUILayout.Toggle(lockpackage_bool.Value, "锁定背包".getTranslate(), options);
                 Property9999999 = GUILayout.Toggle(Property9999999, "无限元数据".getTranslate(), options);
                 DroneNoenergy_bool.Value = GUILayout.Toggle(DroneNoenergy_bool.Value, "小飞机不耗能".getTranslate(), options);
@@ -1361,7 +1346,7 @@ namespace Multfunction_mod
         #region 量子传输站
         public void takeitemfromstarsuperstation()
         {
-            if (GameMain.data == null || GameMain.data.galacticTransport == null || GameMain.data.galacticTransport.stationPool == null) return;
+            if (GameMain.data?.galacticTransport?.stationPool == null) return;
             StarSuperStation = new List<int>();
             SuperStation = new List<int>();
             StarSuperStationItemidstore = new Dictionary<int, int[]>();
@@ -1946,23 +1931,21 @@ namespace Multfunction_mod
                     MechaLogisticsMethod();
                     InfiniteAllThingInPackage();
                     DriftBuild();
-                    Multifunctionpatch.InitPatch();
-
-                    bool isInfiniteResource = GameMain.data.gameDesc.isInfiniteResource;
-                    if (Infiniteplayerpower.Value)
+                    InitPatch();
+                    if (BuildNotime_bool.Value && GameMain.localPlanet?.factory != null)
                     {
-                        player.mecha.coreEnergy = player.mecha.coreEnergyCap;
-                    }
-                    if (BuildNotime_bool.Value && player.controller.actionBuild.clickTool.factory != null)
-                    {
-                        if (!buildnotimecolddown && player.controller.actionBuild.clickTool.factory.prebuildCount > 0)
+                        if (GameMain.localPlanet.factory.prebuildCount > 0)
                         {
-                            foreach (PrebuildData pd in player.controller.actionBuild.clickTool.factory.prebuildPool)
+                            GameMain.localPlanet.factory.BeginFlattenTerrain();
+                            for (int i = 1; i < GameMain.localPlanet.factory.prebuildCursor; i++)
                             {
-                                if (pd.itemRequired > 0 && !Infinitething.Value && !ArchitectMode.Value) continue;
-                                if (pd.id <= 0) continue;
-                                player.controller.actionBuild.clickTool.factory.BuildFinally(player, pd.id);
+                                int preid = GameMain.localPlanet.factory.prebuildPool[i].id;
+                                if (preid == i)
+                                {
+                                    GameMain.localPlanet.factory.BuildFinally(GameMain.mainPlayer, preid, false);
+                                }
                             }
+                            GameMain.localPlanet.factory.EndFlattenTerrain();
                         }
                     }
                 }
@@ -2402,144 +2385,6 @@ namespace Multfunction_mod
                     }
                 }
             }
-            //for (int i = 0; i < mechalogistics.Length; i++)
-            //{
-            //    if (mechalogistics[i] == 0) continue;
-            //    int itemid = itemProtos[i].ID;
-            //    if (mechalogistics[i] == 1)
-            //    {
-            //        if (!MechalogStationprovide_bool.Value && !MechalogStorageprovide_bool.Value) continue;
-            //        if (package.grids[package.size - 1].itemId != 0) continue;
-            //        int remain = 0;
-            //        for (int index = 0; index < package.size; ++index)
-            //        {
-            //            if (package.grids[index].itemId == itemid)
-            //                remain += LDB.items.Select(itemid).StackSize - package.grids[index].count;
-            //            else if (package.grids[index].itemId == 0)
-            //                remain += LDB.items.Select(itemid).StackSize;
-            //        }
-            //        int need = mechalogisticsneed[i] - package.GetItemCount(itemid);
-            //        need = remain > need ? need : remain;
-            //        int getcount = 0;
-            //        int inc = 0;
-            //        foreach (StarData sd in GameMain.galaxy.stars)
-            //        {
-            //            foreach (PlanetData pd in sd.planets)
-            //            {
-            //                if (pd == null || pd.factory == null) continue;
-            //                if (MechalogisticsPlanet_bool.Value && !pd.displayName.Equals("机甲物流")) continue;
-            //                if (pd.factory.transport != null && pd.factory.transport.stationPool != null && MechalogStationprovide_bool.Value)
-            //                {
-            //                    foreach (StationComponent sc in pd.factory.transport.stationPool)
-            //                    {
-            //                        if (sc == null || sc.storage == null) continue;
-            //                        int temp = need;
-            //                        int tempitemid = itemid;
-            //                        sc.TakeItem(ref tempitemid, ref temp, out int tempinc);
-            //                        getcount += temp;
-            //                        need -= temp;
-            //                        inc += tempinc;
-            //                        if (getcount >= need) break;
-            //                    }
-            //                    if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.tankPool != null && getcount < need)
-            //                    {
-            //                        foreach (TankComponent tc in pd.factory.factoryStorage.tankPool)
-            //                        {
-            //                            if (tc.id > 0 && tc.fluidId > 0 && tc.fluidCount > 0 && itemid == tc.fluidId)
-            //                            {
-            //                                int temp = tc.fluidCount > need ? need : tc.fluidCount;
-
-            //                                int num = (int)((double)tc.fluidInc / (double)tc.fluidCount + 0.5) * temp;
-            //                                pd.factory.factoryStorage.tankPool[tc.id].fluidCount -= temp;
-            //                                pd.factory.factoryStorage.tankPool[tc.id].fluidInc -= num;
-
-            //                                inc += num;
-            //                                getcount += temp;
-            //                                need -= temp;
-            //                                if (getcount >= need) break;
-            //                            }
-            //                        }
-            //                    }
-            //                    if (getcount >= need) break;
-            //                }
-            //                if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.storagePool != null && MechalogStorageprovide_bool.Value && getcount < need)
-            //                {
-            //                    foreach (StorageComponent sc in pd.factory.factoryStorage.storagePool)
-            //                    {
-            //                        if (sc == null) continue;
-            //                        int temp = sc.TakeItem(itemid, need, out int tempinc);
-            //                        getcount += temp;
-            //                        inc += tempinc;
-            //                        need -= temp;
-            //                        if (getcount >= need) break;
-            //                    }
-            //                    if (getcount >= need) break;
-            //                }
-            //            }
-            //            if (getcount >= need) break;
-            //        }
-            //        player.TryAddItemToPackage(itemid, getcount, inc, false);
-            //    }
-            //    else
-            //    {
-            //        if (!MechalogStationrecycle_bool.Value && !MechalogStoragerecycle_bool.Value) continue;
-            //        int recyclenum = package.GetItemCount(itemid);
-            //        package.TakeItem(itemid, recyclenum, out int inc1);
-            //        foreach (StarData sd in GameMain.galaxy.stars)
-            //        {
-            //            foreach (PlanetData pd in sd.planets)
-            //            {
-            //                if (pd == null || pd.factory == null) continue;
-            //                if (MechalogisticsPlanet_bool.Value && !pd.displayName.Equals("机甲物流")) continue;
-            //                if (pd.factory.transport != null && pd.factory.transport.stationPool != null && MechalogStationrecycle_bool.Value)
-            //                {
-            //                    foreach (StationComponent sc in pd.factory.transport.stationPool)
-            //                    {
-            //                        if (sc == null || sc.storage == null) continue;
-            //                        recyclenum -= sc.AddItem(itemid, recyclenum, inc1);
-            //                        if (recyclenum == 0) break;
-            //                    }
-
-            //                    if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.tankPool != null && recyclenum > 0)
-            //                    {
-            //                        foreach (TankComponent tc in pd.factory.factoryStorage.tankPool)
-            //                        {
-            //                            if (recyclenum == 0) break;
-            //                            if (tc.id > 0 && tc.fluidId > 0 && tc.fluidCount > 0 && itemid == tc.fluidId)
-            //                            {
-            //                                if (tc.fluidCount > 10000)
-            //                                {
-            //                                    pd.factory.factoryStorage.tankPool[tc.id].fluidCount += recyclenum;
-            //                                    pd.factory.factoryStorage.tankPool[tc.id].fluidInc += inc1;
-            //                                    recyclenum = 0;
-            //                                }
-            //                                else
-            //                                {
-            //                                    int temp = tc.fluidCapacity - tc.fluidCount > recyclenum ? recyclenum : tc.fluidCapacity - tc.fluidCount;
-            //                                    recyclenum -= temp;
-            //                                    pd.factory.factoryStorage.tankPool[tc.id].fluidCount += temp;
-            //                                }
-            //                            }
-            //                        }
-            //                    }
-            //                    if (recyclenum == 0) break;
-            //                }
-            //                if (pd.factory.factoryStorage != null && pd.factory.factoryStorage.storagePool != null && MechalogStoragerecycle_bool.Value && recyclenum > 0)
-            //                {
-            //                    foreach (StorageComponent sc in pd.factory.factoryStorage.storagePool)
-            //                    {
-            //                        if (sc == null) continue;
-            //                        recyclenum -= sc.AddItem(itemid, recyclenum, inc1, out int inc);
-            //                        if (recyclenum == 0) break;
-            //                    }
-            //                    if (recyclenum == 0) break;
-            //                }
-            //            }
-            //            if (recyclenum == 0) break;
-            //        }
-
-            //    }
-            //}
         }
 
         public void InitBeltSignalDiction()
@@ -2625,9 +2470,9 @@ namespace Multfunction_mod
         //初始化玩家数据
         public void PlayerDataInit()
         {
-            GameHistoryData historyData = GameMain.history;
-            if (player == null || GameMain.mainPlayer != player || refreshPlayerData)
+            if (refreshPlayerData || player == null || GameMain.mainPlayer != player)
             {
+                GameHistoryData historyData = GameMain.history;
                 refreshPlayerData = false;
                 player = GameMain.mainPlayer;
                 Mecha mecha = player.mecha;
@@ -2853,8 +2698,9 @@ namespace Multfunction_mod
 
         public void BluePrintpasteNoneed()
         {
-            if (!blueprintpastenoneed_bool.Value || GameMain.localPlanet == null || GameMain.localPlanet.factory == null) return;
-            for (int i = 0; i < GameMain.localPlanet.factory.prebuildPool.Length; i++)
+            if (!blueprintpastenoneed_bool.Value || GameMain.localPlanet?.factory == null) return;
+
+            for (int i = 1; i < GameMain.localPlanet.factory.prebuildCursor; i++)
             {
                 if (GameMain.localPlanet.factory.prebuildPool[i].protoId > 0)
                 {
@@ -3100,7 +2946,6 @@ namespace Multfunction_mod
         #region 矿脉管理
         public void ControlVein()
         {
-            if (player == null) return;
             if (Input.GetMouseButton(0))
             {
                 if (deleteveinbool.Value && GameMain.mainPlayer.controller.actionBuild.dismantleTool.active)
@@ -3392,9 +3237,7 @@ namespace Multfunction_mod
         public void getallVein(VeinData vd)
         {
             PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas) return;
-            RaycastHit raycastHit1;
-            if (pd == null || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
+            if (pd == null || pd.type == EPlanetType.Gas || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit raycastHit1, 800f, 8720, (QueryTriggerInteraction)2)) return;
                 return;
             Vector3 raycastpos = raycastHit1.point;
             VeinData[] veinPool = pd.factory.veinPool;
@@ -3430,9 +3273,7 @@ namespace Multfunction_mod
         public void removevein()
         {
             PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas) return;
-            RaycastHit raycastHit1;
-            if (pd == null || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
+            if (pd == null || pd.type == EPlanetType.Gas || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
                 return;
             Vector3 raycastpos = raycastHit1.point;
             foreach (VeinData i in pd.factory.veinPool)
@@ -3456,30 +3297,31 @@ namespace Multfunction_mod
         public VeinData getveinbymouse()
         {
             PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas) return new VeinData();
-            RaycastHit raycastHit1;
-            if (pd == null || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
-                return new VeinData();
-            Vector3 raycastpos = raycastHit1.point;
-            float min = 100;
-            VeinData vein = new VeinData();
-            foreach (VeinData vd in pd.factory.veinPool)
+            if (pd != null && pd.type != EPlanetType.Gas && Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
             {
-                if (vd.id == 0) continue;
-                if ((raycastpos - vd.pos).magnitude < min && vd.type != EVeinType.None)
+                Vector3 raycastpos = raycastHit1.point;
+                float min = 100;
+                VeinData vein = new VeinData();
+                foreach (VeinData vd in pd.factory.veinPool)
                 {
-                    min = (raycastpos - vd.pos).magnitude;
-                    vein = vd;
+                    if (vd.id == 0) continue;
+                    if ((raycastpos - vd.pos).magnitude < min && vd.type != EVeinType.None)
+                    {
+                        min = (raycastpos - vd.pos).magnitude;
+                        vein = vd;
+                    }
+                }
+                if (min > 4)
+                {
+                    return new VeinData();
+                }
+                else
+                {
+                    return vein;
                 }
             }
-            if (min > 4)
-            {
-                return new VeinData();
-            }
-            else
-            {
-                return vein;
-            }
+
+            return new VeinData();
         }
 
         public Vector3 PostionCompute(Vector3 begin, Vector3 end, Vector3 pointpos, int index, bool oil = false)
@@ -3918,7 +3760,6 @@ namespace Multfunction_mod
                 grids[i].itemId = packageitemlist[i][1];
                 grids[i].inc = packageitemlist[i][2];
             }
-            player.SetSandCount(10000000);
         }
 
         public void Operatepackagesize(int rownum,int colnum,bool add=true)
@@ -4135,7 +3976,8 @@ namespace Multfunction_mod
 
         public void InfiniteAllThingInPackage()
         {
-            if (!Infinitething.Value) return;
+            if (!Infinitething.Value || Time.time - InfiniteAllThingTime<1) return;
+            InfiniteAllThingTime = Time.time;
             if (player.package.grids.Length < itemProtos.Length)
             {
                 player.package.SetSize((itemProtos.Length / 10 + 1) * 10);
@@ -4150,7 +3992,6 @@ namespace Multfunction_mod
                 i++;
                 if (i == grids.Length) break;
             }
-            player.SetSandCount(10000000);
             player.package.NotifyStorageChange();
         }
 
@@ -4176,7 +4017,7 @@ namespace Multfunction_mod
 
         public void SetDronenocomsume()
         {
-            if (player != null && player.mecha != null)
+            if (player.mecha != null)
             {
                 if (DroneNoenergy_bool.Value && player.mecha.droneEjectEnergy != 0)
                 {
@@ -4355,7 +4196,6 @@ namespace Multfunction_mod
             int itemId = sc.storage[0].itemId;
             if (itemId > 0)
             {
-                int needcount=sc.storage[0].max-sc.storage[1].count;
                 var item = LDB.items.Select(itemId);
                 if (item.recipes.Count > 0)
                 {
@@ -4489,20 +4329,5 @@ namespace Multfunction_mod
         }
 
 
-        public static void Patchallmethod()
-        {
-            Harmony harmony = new Harmony(GUID);
-            harmony.PatchAll(typeof(Multifunctionpatch));
-            var m = typeof(StorageComponent).GetMethods();
-            foreach (var i in m)
-            {
-                if (i.Name == "TakeTailItems" && i.ReturnType == typeof(void))
-                {
-                    var prefix = typeof(Multifunctionpatch).GetMethod("TakeTailItemsPatch");
-                    harmony.Patch(i, new HarmonyMethod(prefix));
-                    break;
-                }
-            }
-        }
     }
 }

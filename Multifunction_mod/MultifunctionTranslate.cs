@@ -57,6 +57,7 @@ namespace Multfunction_mod
             TranslateDict.Add("物流背包堆叠倍率", "Delivery Package Stack Size");
             
             TranslateDict.Add("无限元数据", "Infinite Property");
+            TranslateDict.Add("无限沙土", "Infinite Sand");
             TranslateDict.Add("停止修改", "Stop change value");
             TranslateDict.Add("启动修改", "Start change value");
             TranslateDict.Add("清空背包", "Clear the package");
