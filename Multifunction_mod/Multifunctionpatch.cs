@@ -64,17 +64,7 @@ namespace Multfunction_mod
             }
             return true;
         }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
-        public static void PlanetFactoryNoComsumeSand(ref int __result)
-        {
-            if (InfiniteSand.Value)
-            {
-                __result = 0;
-            }
-        }
-
+        
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DysonSwarm), "AbsorbSail")]
         public static bool DysonSwarmPatch1(ref DysonSwarm __instance, ref bool __result, DysonNode node)
@@ -111,35 +101,6 @@ namespace Multfunction_mod
             return true;
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(DysonSphere), "Init")]
-        public static void DysonSphereInit(ref DysonSphere __instance)
-        {
-            if (ChangeDysonradius.Value)
-            {
-                __instance.minOrbitRadius = 100;
-                __instance.maxOrbitRadius = MaxOrbitRadiusConfig.Value;
-            }
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(DysonSphereLayer), "GameTick")]
-        public static void DysonSphereLayerGameTick(ref DysonSphereLayer __instance,long gameTick)
-        {
-            if (QuickabortSwarm.Value)
-            {
-                DysonSwarm swarm = __instance.dysonSphere.swarm;
-                for (int i = 1; i < __instance.nodeCursor; i++)
-                {
-                    DysonNode dysonNode = __instance.nodePool[i];
-                    if (dysonNode != null && dysonNode.id == i && dysonNode.sp == dysonNode.spMax)
-                    {
-                        dysonNode.OrderConstructCp(gameTick, swarm);
-                    }
-                }
-            }
-        }
-
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DysonSwarm), "GameTick")]
         public static void DysonSwarmPatch2(ref DysonSwarm __instance, long time)
@@ -173,6 +134,35 @@ namespace Multfunction_mod
                     __instance.AddSolarSail(tempsail.ss, tempsail.orbitid, tempsail.time + time);
                 }
                 tempsails.RemoveAt(i);
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(DysonSphere), "Init")]
+        public static void DysonSphereInit(ref DysonSphere __instance)
+        {
+            if (ChangeDysonradius.Value)
+            {
+                __instance.minOrbitRadius = 100;
+                __instance.maxOrbitRadius = MaxOrbitRadiusConfig.Value;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(DysonSphereLayer), "GameTick")]
+        public static void DysonSphereLayerGameTick(ref DysonSphereLayer __instance, long gameTick)
+        {
+            if (QuickabortSwarm.Value)
+            {
+                DysonSwarm swarm = __instance.dysonSphere.swarm;
+                for (int i = 1; i < __instance.nodeCursor; i++)
+                {
+                    DysonNode dysonNode = __instance.nodePool[i];
+                    if (dysonNode != null && dysonNode.id == i && dysonNode.sp == dysonNode.spMax)
+                    {
+                        dysonNode.OrderConstructCp(gameTick, swarm);
+                    }
+                }
             }
         }
 
@@ -429,7 +419,6 @@ namespace Multfunction_mod
             return true;
         }
 
-
         //无翘曲器曲速
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Mecha), "UseWarper")]
@@ -439,6 +428,19 @@ namespace Multfunction_mod
             {
                 __result = true;
             }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(Mecha), "UseEnergy")]
+        public static bool InfiniteplayerpowerPatch(Mecha __instance, ref float __result)
+        {
+            if (Infiniteplayerpower.Value)
+            {
+                __result = 1;
+                __instance.coreEnergy = __instance.coreEnergyCap;
+                return false;
+            }
+            return true;
         }
 
         [HarmonyPrefix]
@@ -473,7 +475,7 @@ namespace Multfunction_mod
                     VeinProto veinProto = LDB.veins.Select((int)veinData.type);
                     if (veinProto != null)
                     {
-                        __instance.miningTick = veinProto.MiningTime * 100000;
+                        __instance.miningTick = veinProto.MiningTime * 10000;
                     }
                 }
             }
@@ -540,19 +542,6 @@ namespace Multfunction_mod
 
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(PowerSystem), "NewGeneratorComponent")]
-        public static void PowerSystemNewGeneratorComponent(ref int __result, PowerSystem __instance)
-        {
-            if (InfineteStarPower.Value && __instance.genPool[__result].fuelMask == 4)
-            {
-                __instance.genPool[__result].fuelId = 1803;
-                __instance.genPool[__result].fuelCount = 100;
-                __instance.genPool[__result].fuelEnergy = long.MaxValue;
-                __instance.genPool[__result].genEnergyPerTick = 1000000000000;
-            }
-        }
-
-        [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerAction_Inspect), "GetObjectSelectDistance")]
         public static void PlayerAction_InspectPatch(ref float __result)
         {
@@ -569,6 +558,20 @@ namespace Multfunction_mod
             return !CloseUIAbnormalityTip.Value;
         }
 
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PowerSystem), "NewGeneratorComponent")]
+        public static void PowerSystemNewGeneratorComponent(ref int __result, PowerSystem __instance)
+        {
+            if (InfineteStarPower.Value && __instance.genPool[__result].fuelMask == 4)
+            {
+                __instance.genPool[__result].fuelId = 1803;
+                __instance.genPool[__result].fuelCount = 100;
+                __instance.genPool[__result].fuelEnergy = long.MaxValue;
+                __instance.genPool[__result].genEnergyPerTick = 1000000000000;
+            }
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PowerSystem), "NewConsumerComponent")]
         public static void PowerSystemNewConsumerComponent(ref int __result, PowerSystem __instance)
@@ -582,23 +585,30 @@ namespace Multfunction_mod
             }
         }
 
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(PlanetFactory), "UpgradeEntityWithComponents")]
-        public static void UpgradeEntityWithComponentsPatch(int entityId, PlanetFactory __instance)
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PowerSystem), "NewNodeComponent")]
+        public static void NewNodeComponentPatchPrefix(PowerSystem __instance, ref int entityId, ref float conn, ref float cover)
         {
-            if (entityId == 0 || __instance.entityPool[entityId].id == 0)
-                return;
-            if (Buildingnoconsume.Value && GameMain.localPlanet.factory.entityPool[entityId].stationId <= 0)
+            if (PlanetPower_bool.Value && LDB.items.Select(__instance.factory.entityPool[entityId].protoId).ID == 2210)
             {
-                int powerConId = __instance.entityPool[entityId].powerConId;
-                if (powerConId > 0)
+                cover = GameMain.localPlanet.realRadius * 4;
+                if (farconnectdistance)
                 {
-                    __instance.powerSystem.consumerPool[powerConId].idleEnergyPerTick = 0;
-                    __instance.powerSystem.consumerPool[powerConId].workEnergyPerTick = 0;
+                    conn = GameMain.localPlanet.realRadius * 1.5f;
+                    farconnectdistance = false;
                 }
             }
         }
-
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PowerSystem), "NewNodeComponent")]
+        public static void NewNodeComponentPatchPostfix(ref int __result, PowerSystem __instance)
+        {
+            if (Buildingnoconsume.Value && GameMain.localPlanet.factory.entityPool[__instance.nodePool[__result].entityId].stationId <= 0)
+            {
+                __instance.nodePool[__result].requiredEnergy = 0;
+                __instance.nodePool[__result].idleEnergyPerTick = 0;
+            }
+        }
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(BuildTool_Inserter), "CheckBuildConditions")]
@@ -635,8 +645,6 @@ namespace Multfunction_mod
             }
             return true;
         }
-
-        
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(FactorySystem), "NewEjectorComponent")]
@@ -681,11 +689,11 @@ namespace Multfunction_mod
                 fCount = int.MaxValue - 200;
         }
 
-        
+
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StarSimulator), "LateUpdate")]
-        public static bool StarSimulatorLateUpdate(ref StarSimulator __instance,Material ___bodyMaterial,Material ___haloMaterial)
+        public static bool StarSimulatorLateUpdate(ref StarSimulator __instance, Material ___bodyMaterial, Material ___haloMaterial)
         {
             __instance.sunLight.enabled = GameMain.localStar == __instance.starData && !FactoryModel.whiteMode0;
             if (GameMain.localStar == __instance.starData)
@@ -752,24 +760,6 @@ namespace Multfunction_mod
         }
 
 
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]
-        public static bool Prefix(BuildTool_BlueprintPaste __instance, ref bool __result)
-        {
-            if (pasteanyway && __instance.bpPool != null)
-            {
-                for (int i = 0; i < __instance.bpPool.Length; i++)
-                {
-                    if (__instance.bpPool[i] != null && __instance.bpPool[i].item != null && __instance.bpPool[i].item.prefabDesc != null)
-                    {
-                        if (__instance.bpPool[i].item.prefabDesc.veinMiner) return true;
-                    }
-                }
-                __result = true;
-                return false;
-            }
-            return true;
-        }
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(ProductionStatistics), "GameTick")]
@@ -821,77 +811,39 @@ namespace Multfunction_mod
             return true;
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
+        public static void PlanetFactoryNoComsumeSand(ref int __result)
+        {
+            if (InfiniteSand.Value)
+            {
+                __result = 0;
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlanetFactory), "UpgradeEntityWithComponents")]
+        public static void UpgradeEntityWithComponentsPatch(int entityId, PlanetFactory __instance)
+        {
+            if (entityId == 0 || __instance.entityPool[entityId].id == 0)
+                return;
+            if (Buildingnoconsume.Value && GameMain.localPlanet.factory.entityPool[entityId].stationId <= 0)
+            {
+                int powerConId = __instance.entityPool[entityId].powerConId;
+                if (powerConId > 0)
+                {
+                    __instance.powerSystem.consumerPool[powerConId].idleEnergyPerTick = 0;
+                    __instance.powerSystem.consumerPool[powerConId].workEnergyPerTick = 0;
+                }
+            }
+        }
+
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(PlanetFactory), "TakeBackItemsInEntity")]
         public static bool TakeBackItemsInEntityPatch()
         {
             return !entityitemnoneed;
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(Mecha), "UseEnergy")]
-        public static bool InfiniteplayerpowerPatch(Mecha __instance,ref float __result)
-        {
-            if (Infiniteplayerpower.Value)
-            {
-                __result = 1;
-                __instance.coreEnergy = __instance.coreEnergyCap;
-                return false;
-            }
-            return true;
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(BuildTool_Click), "_OnInit")]
-        public static void DeterminePreviewsPatch(BuildTool_Click __instance)
-        {
-            __instance.dotsSnapped = new Vector3[Buildmaxlen.Value];
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(StorageComponent), "Import")]
-        public static void StorageComponentImportPatch(StorageComponent __instance)
-        {
-            if (StackMultiple.Value > 1)
-            {
-                for (int i = 0; i < __instance.size; i++)
-                {
-                    if (__instance.entityId > 0 && __instance.grids[i].itemId > 0)
-                    {
-                        ItemProto itemProto = LDB.items.Select(__instance.grids[i].itemId);
-                        if (itemProto != null)
-                        {
-                            __instance.grids[i].stackSize = itemProto.StackSize * StackMultiple.Value;
-                        }
-                    }
-                }
-            }
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(StorageComponent), "LoadStatic")]
-        public static void Postfix()
-        {
-            if (StackMultiple.Value > 1)
-            {
-                ItemProto[] dataArray = LDB.items.dataArray;
-                for (int j = 0; j < dataArray.Length; j++)
-                {
-                    StorageComponent.itemStackCount[dataArray[j].ID] = dataArray[j].StackSize * StackMultiple.Value;
-                }
-            }
-
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(PlanetRawData), "AddModLevel")]
-        public static bool Prefix(int index, ref int level, PlanetRawData __instance)
-        {
-            if (!restorewater) return true;
-            int num1 = __instance.modData[index >> 1] >> ((index & 1) << 2) & 3;
-            level = -4 - num1;
-            return true;
-
         }
 
         [HarmonyPrefix]
@@ -954,7 +906,7 @@ namespace Multfunction_mod
                                     float num10 = float.PositiveInfinity;
                                     for (int index4 = 0; index4 < pointsCount; ++index4)
                                     {
-                                        double num11 = (double)points[index4].x - (double)vector3_1.x;
+                                        double num11 = points[index4].x - vector3_1.x;
                                         float num12 = points[index4].y - vector3_1.y;
                                         float num13 = points[index4].z - vector3_1.z;
                                         float num14 = (float)(num11 * num11 + (double)num12 * (double)num12 + (double)num13 * (double)num13);
@@ -995,13 +947,39 @@ namespace Multfunction_mod
         }
 
 
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(PlatformSystem), "SetReformType")]
-        public static bool Prefix(ref int type)
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StorageComponent), "Import")]
+        public static void StorageComponentImportPatch(StorageComponent __instance)
         {
-            if (restorewater) type = 0;
+            if (StackMultiple.Value > 1)
+            {
+                for (int i = 0; i < __instance.size; i++)
+                {
+                    if (__instance.entityId > 0 && __instance.grids[i].itemId > 0)
+                    {
+                        ItemProto itemProto = LDB.items.Select(__instance.grids[i].itemId);
+                        if (itemProto != null)
+                        {
+                            __instance.grids[i].stackSize = itemProto.StackSize * StackMultiple.Value;
+                        }
+                    }
+                }
+            }
+        }
 
-            return true;
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StorageComponent), "LoadStatic")]
+        public static void Postfix()
+        {
+            if (StackMultiple.Value > 1)
+            {
+                ItemProto[] dataArray = LDB.items.dataArray;
+                for (int j = 0; j < dataArray.Length; j++)
+                {
+                    StorageComponent.itemStackCount[dataArray[j].ID] = dataArray[j].StackSize * StackMultiple.Value;
+                }
+            }
+
         }
 
         [HarmonyPostfix]
@@ -1016,6 +994,38 @@ namespace Multfunction_mod
                     __instance.grids[gridIndex].count = count;
                 }
             }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StorageComponent), "GetItemCount", new Type[] { typeof(int) })]
+        public static void GetItemCountPatch(StorageComponent __instance, int itemId, ref int __result)
+        {
+            if (ArchitectMode.Value)
+            {
+                if (__instance == null || __instance.id != GameMain.mainPlayer.package.id) return;
+                if (itemId <= 0 || itemId >= 6007) return;
+                if (LDB.items.Select(itemId).CanBuild && __result == 0) __result = 100;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PlanetRawData), "AddModLevel")]
+        public static bool Prefix(int index, ref int level, PlanetRawData __instance)
+        {
+            if (!restorewater) return true;
+            int num1 = __instance.modData[index >> 1] >> ((index & 1) << 2) & 3;
+            level = -4 - num1;
+            return true;
+
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PlatformSystem), "SetReformType")]
+        public static bool Prefix(ref int type)
+        {
+            if (restorewater) type = 0;
+
+            return true;
         }
 
         [HarmonyPrefix]
@@ -1061,56 +1071,6 @@ namespace Multfunction_mod
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(CargoTraffic), "SetBeltSignalIcon")]
-        public static void SetBeltSignalIconPatch(int signalId, int entityId, CargoTraffic __instance)
-        {
-            if (!BeltSignalFunction.Value) return;
-            int factoryIndex = GameMain.localPlanet.factoryIndex;
-            int beltid = __instance.factory.entityPool[entityId].beltId;
-            if (!Beltsignal.ContainsKey(factoryIndex))
-                Beltsignal.Add(factoryIndex, new Dictionary<int, int>());
-            if (!Beltsignal[factoryIndex].ContainsKey(beltid))
-                Beltsignal[factoryIndex].Add(beltid, signalId);
-            else
-                Beltsignal[factoryIndex][beltid] = signalId;
-            if (Beltsignalnumberoutput.ContainsKey(factoryIndex) && Beltsignalnumberoutput[factoryIndex].ContainsKey(beltid) && signalId != 601)
-            {
-                Beltsignalnumberoutput[factoryIndex].Remove(beltid);
-            }
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(CargoTraffic), "SetBeltSignalNumber")]
-        public static void SetBeltSignalNumberPatch(float number, int entityId, CargoTraffic __instance)
-        {
-            if (!BeltSignalFunction.Value) return;
-            if (__instance.factory.entitySignPool[entityId].iconType != 0U && __instance.factory.entitySignPool[entityId].iconId0 != 0U)
-            {
-                int factoryIndex = GameMain.localPlanet.factoryIndex;
-                int beltid = __instance.factory.entityPool[entityId].beltId;
-                if (__instance.factory.entitySignPool[entityId].iconId0 == 600) { }
-                else if (__instance.factory.entitySignPool[entityId].iconId0 == 601)
-                {
-                    if (!Beltsignalnumberoutput.ContainsKey(factoryIndex))
-                    {
-                        Beltsignalnumberoutput.Add(factoryIndex, new Dictionary<int, int>());
-                    }
-                    if (!Beltsignalnumberoutput[factoryIndex].ContainsKey(beltid))
-                        Beltsignalnumberoutput[factoryIndex].Add(beltid, (int)number);
-                    else
-                        Beltsignalnumberoutput[factoryIndex][beltid] = (int)number;
-                }
-                else
-                {
-                    if (Beltsignalnumberoutput.ContainsKey(factoryIndex) && Beltsignalnumberoutput[factoryIndex].ContainsKey(beltid))
-                    {
-                        Beltsignalnumberoutput[factoryIndex][beltid] = (int)number;
-                    }
-                }
-            }
-        }
-
-        [HarmonyPostfix]
         [HarmonyPatch(typeof(ItemProto), "isFluid")]
         public static void ItemProtoisFluidPatch(ref bool __result)
         {
@@ -1118,6 +1078,25 @@ namespace Multfunction_mod
             {
                 __result = true;
             }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]
+        public static bool Prefix(BuildTool_BlueprintPaste __instance, ref bool __result)
+        {
+            if (pasteanyway && __instance.bpPool != null)
+            {
+                for (int i = 0; i < __instance.bpPool.Length; i++)
+                {
+                    if (__instance.bpPool[i] != null && __instance.bpPool[i].item != null && __instance.bpPool[i].item.prefabDesc != null)
+                    {
+                        if (__instance.bpPool[i].item.prefabDesc.veinMiner) return true;
+                    }
+                }
+                __result = true;
+                return false;
+            }
+            return true;
         }
 
         [HarmonyPrefix]
@@ -1136,6 +1115,52 @@ namespace Multfunction_mod
                 }
             }
         }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "UpdatePreviewModels")]
+        public static void BuildTool_BlueprintPastePrefix(ref BuildTool_BlueprintPaste __instance)
+        {
+            if (DriftBuildings)
+            {
+                for (int i = 0; i < __instance.bpCursor; i++)
+                {
+                    if (__instance.bpPool[i].desc.isBelt)
+                    {
+                        __instance.bpPool[i].lpos *= 1 + DriftBuildingLevel * 0.0066f;
+                        __instance.bpPool[i].lpos2 *= 1 + DriftBuildingLevel * 0.0066f;
+                    }
+                }
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "UpdatePreviewModels")]
+        public static void BuildTool_BlueprintPastePostfix(ref BuildTool_BlueprintPaste __instance)
+        {
+            if (DriftBuildings)
+            {
+                for (int i = 0; i < __instance.bpCursor; i++)
+                {
+                    if (__instance.bpPool[i].desc.isBelt)
+                    {
+                        __instance.bpPool[i].lpos /= 1 + DriftBuildingLevel * 0.0066f;
+                        __instance.bpPool[i].lpos2 /= 1 + DriftBuildingLevel * 0.0066f;
+                    }
+                }
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "AlterBPGPUIModel")]
+        public static void BuildTool_BlueprintPasteAlterBPGPUIModelPatch(ref BuildPreview _bp)
+        {
+            if (DriftBuildings)
+            {
+                _bp.lpos *= 1 + DriftBuildingLevel * 0.0066f;
+                _bp.lpos2 *= 1 + DriftBuildingLevel * 0.0066f;
+            }
+        }
+
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DispenserComponent), "InternalTick")]
@@ -1167,8 +1192,9 @@ namespace Multfunction_mod
             }
             if (StationMaxproliferator.Value)
             {
-                for (int i = 0; i < __instance.storage.Length && __instance.storage[i].itemId > 0; i++)
-                    __instance.storage[i].inc = __instance.storage[i].count * incAbility + 100;
+                for (int i = 0; i < __instance.storage.Length; i++)
+                    if(__instance.storage[i].itemId > 0)
+                        __instance.storage[i].inc = __instance.storage[i].count * incAbility + 100;
             }
         }
 
@@ -1224,29 +1250,11 @@ namespace Multfunction_mod
             }
         }
 
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(PowerSystem), "NewNodeComponent")]
-        public static void NewNodeComponentPatchPrefix(PowerSystem __instance, ref int entityId, ref float conn, ref float cover)
-        {
-            if (PlanetPower_bool.Value && LDB.items.Select(__instance.factory.entityPool[entityId].protoId).ID == 2210)
-            {
-                cover = GameMain.localPlanet.realRadius * 4;
-                if (farconnectdistance)
-                {
-                    conn = GameMain.localPlanet.realRadius * 1.5f;
-                    farconnectdistance = false;
-                }
-            }
-        }
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(PowerSystem), "NewNodeComponent")]
-        public static void NewNodeComponentPatchPostfix(ref int __result, PowerSystem __instance)
+        [HarmonyPatch(typeof(BuildTool_Click), "_OnInit")]
+        public static void DeterminePreviewsPatch(BuildTool_Click __instance)
         {
-            if (Buildingnoconsume.Value && GameMain.localPlanet.factory.entityPool[__instance.nodePool[__result].entityId].stationId <= 0)
-            {
-                __instance.nodePool[__result].requiredEnergy = 0;
-                __instance.nodePool[__result].idleEnergyPerTick = 0;
-            }
+            __instance.dotsSnapped = new Vector3[Buildmaxlen.Value];
         }
 
         [HarmonyPrefix]
@@ -1267,6 +1275,7 @@ namespace Multfunction_mod
             }
             return true;
         }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(BuildTool_Click), "CheckBuildConditions")]
         public static void CheckBuildConditionsPatchPostfix(BuildTool_Click __instance, ref bool __result)
@@ -1290,50 +1299,6 @@ namespace Multfunction_mod
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "UpdatePreviewModels")]
-        public static void BuildTool_BlueprintPastePrefix(ref BuildTool_BlueprintPaste __instance)
-        {
-            if (DriftBuildings)
-            {
-                for (int i = 0; i < __instance.bpCursor; i++)
-                {
-                    if (__instance.bpPool[i].desc.isBelt)
-                    {
-                        __instance.bpPool[i].lpos *= 1 + DriftBuildingLevel * 0.0066f;
-                        __instance.bpPool[i].lpos2 *= 1 + DriftBuildingLevel * 0.0066f;
-                    }
-                }
-            }
-        }
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "UpdatePreviewModels")]
-        public static void BuildTool_BlueprintPastePostfix(ref BuildTool_BlueprintPaste __instance)
-        {
-            if (DriftBuildings)
-            {
-                for (int i = 0; i < __instance.bpCursor; i++)
-                {
-                    if (__instance.bpPool[i].desc.isBelt)
-                    {
-                        __instance.bpPool[i].lpos /= 1 + DriftBuildingLevel * 0.0066f;
-                        __instance.bpPool[i].lpos2 /= 1 + DriftBuildingLevel * 0.0066f;
-                    }
-                }
-            }
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "AlterBPGPUIModel")]
-        public static void BuildTool_BlueprintPasteAlterBPGPUIModelPatch(ref BuildPreview _bp)
-        {
-            if (DriftBuildings)
-            {
-                _bp.lpos *= 1 + DriftBuildingLevel * 0.0066f;
-                _bp.lpos2 *= 1 + DriftBuildingLevel * 0.0066f;
-            }
-        }
-
-        [HarmonyPrefix]
         [HarmonyPatch(typeof(BuildTool_Click), "UpdatePreviewModels")]
         public static void Prefix(ref BuildTool_Click __instance)
         {
@@ -1343,6 +1308,56 @@ namespace Multfunction_mod
                 {
                     __instance.buildPreviews[i].lpos *= 1 + DriftBuildingLevel * 0.0066f;
                     __instance.buildPreviews[i].lpos2 *= 1 + DriftBuildingLevel * 0.0066f;
+                }
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(CargoTraffic), "SetBeltSignalIcon")]
+        public static void SetBeltSignalIconPatch(int signalId, int entityId, CargoTraffic __instance)
+        {
+            if (!BeltSignalFunction.Value) return;
+            int factoryIndex = GameMain.localPlanet.factoryIndex;
+            int beltid = __instance.factory.entityPool[entityId].beltId;
+            if (!Beltsignal.ContainsKey(factoryIndex))
+                Beltsignal.Add(factoryIndex, new Dictionary<int, int>());
+            if (!Beltsignal[factoryIndex].ContainsKey(beltid))
+                Beltsignal[factoryIndex].Add(beltid, signalId);
+            else
+                Beltsignal[factoryIndex][beltid] = signalId;
+            if (Beltsignalnumberoutput.ContainsKey(factoryIndex) && Beltsignalnumberoutput[factoryIndex].ContainsKey(beltid) && signalId != 601)
+            {
+                Beltsignalnumberoutput[factoryIndex].Remove(beltid);
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(CargoTraffic), "SetBeltSignalNumber")]
+        public static void SetBeltSignalNumberPatch(float number, int entityId, CargoTraffic __instance)
+        {
+            if (!BeltSignalFunction.Value) return;
+            if (__instance.factory.entitySignPool[entityId].iconType != 0U && __instance.factory.entitySignPool[entityId].iconId0 != 0U)
+            {
+                int factoryIndex = GameMain.localPlanet.factoryIndex;
+                int beltid = __instance.factory.entityPool[entityId].beltId;
+                if (__instance.factory.entitySignPool[entityId].iconId0 == 600) { }
+                else if (__instance.factory.entitySignPool[entityId].iconId0 == 601)
+                {
+                    if (!Beltsignalnumberoutput.ContainsKey(factoryIndex))
+                    {
+                        Beltsignalnumberoutput.Add(factoryIndex, new Dictionary<int, int>());
+                    }
+                    if (!Beltsignalnumberoutput[factoryIndex].ContainsKey(beltid))
+                        Beltsignalnumberoutput[factoryIndex].Add(beltid, (int)number);
+                    else
+                        Beltsignalnumberoutput[factoryIndex][beltid] = (int)number;
+                }
+                else
+                {
+                    if (Beltsignalnumberoutput.ContainsKey(factoryIndex) && Beltsignalnumberoutput[factoryIndex].ContainsKey(beltid))
+                    {
+                        Beltsignalnumberoutput[factoryIndex][beltid] = (int)number;
+                    }
                 }
             }
         }
@@ -1744,18 +1759,6 @@ namespace Multfunction_mod
                         }
                     }
                 }
-            }
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(StorageComponent), "GetItemCount", new Type[] { typeof(int) })]
-        public static void GetItemCountPatch(StorageComponent __instance, int itemId, ref int __result)
-        {
-            if (ArchitectMode.Value)
-            {
-                if (__instance == null || __instance.id != GameMain.mainPlayer.package.id) return;
-                if (itemId <= 0 || itemId >= 6007) return;
-                if (LDB.items.Select(itemId).CanBuild && __result == 0) __result = 100;
             }
         }
 

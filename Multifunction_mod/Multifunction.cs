@@ -21,7 +21,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.7.2";
+        public const string VERSION = "2.7.4";
         #region 临时变量
         private Vector2 scrollPosition;
         public Light SunLight;
@@ -123,7 +123,6 @@ namespace Multfunction_mod
         public string stackmultiple1 = "";
         public string multipelsmelt1 = "";
         public string watertype = "";
-        //public static Queue<int[]> addStatQueue = new Queue<int[]>();
         public static Dictionary<int, Dictionary<int, long>> addStatDic = new Dictionary<int, Dictionary<int, long>>();
         public static Dictionary<int, Dictionary<int, long>> consumeStatDic = new Dictionary<int, Dictionary<int, long>>();
         public static Dictionary<int, int> watertypePlanetArray = new Dictionary<int, int>();
@@ -389,10 +388,7 @@ namespace Multfunction_mod
                         {
                             takeitemfromstarsuperstation();
                         }
-                        catch (Exception ex)
-                        {
-                            Debug.Log(ex.ToString());
-                        }
+                        catch { }
                         Thread.Sleep(1000);
                     }
                     Thread.Sleep(1000);
@@ -408,10 +404,6 @@ namespace Multfunction_mod
             FirstStartGame();
             QuickKeyOpenWindow();
             AfterGameStart();
-            if (Input.GetKey(KeyCode.F10) && Input.GetKeyDown(KeyCode.LeftShift))
-            {
-
-            }
             if (ItemDisplayingWindow)
             {
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftShift))
@@ -1931,7 +1923,6 @@ namespace Multfunction_mod
                     MechaLogisticsMethod();
                     InfiniteAllThingInPackage();
                     DriftBuild();
-                    InitPatch();
                     if (BuildNotime_bool.Value && GameMain.localPlanet?.factory != null)
                     {
                         if (GameMain.localPlanet.factory.prebuildCount > 0)
@@ -1939,6 +1930,7 @@ namespace Multfunction_mod
                             GameMain.localPlanet.factory.BeginFlattenTerrain();
                             for (int i = 1; i < GameMain.localPlanet.factory.prebuildCursor; i++)
                             {
+                                if (GameMain.localPlanet.factory.prebuildPool[i].itemRequired > 0 && !Infinitething.Value && !ArchitectMode.Value) continue;
                                 int preid = GameMain.localPlanet.factory.prebuildPool[i].id;
                                 if (preid == i)
                                 {
@@ -2937,7 +2929,7 @@ namespace Multfunction_mod
                     }
                 }
             }
-            Multifunctionpatch.InitPatch();
+            InitPatch();
             TempEjectorRandomEmission = true;
             TempSiloRandomEmission = true;
         }
@@ -3237,7 +3229,7 @@ namespace Multfunction_mod
         public void getallVein(VeinData vd)
         {
             PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit raycastHit1, 800f, 8720, (QueryTriggerInteraction)2)) return;
+            if (pd == null || pd.type == EPlanetType.Gas || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
                 return;
             Vector3 raycastpos = raycastHit1.point;
             VeinData[] veinPool = pd.factory.veinPool;
