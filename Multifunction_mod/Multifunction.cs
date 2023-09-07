@@ -1,18 +1,14 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
-using HarmonyLib;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using static Multfunction_mod.Constant;
 using static Multfunction_mod.Multifunctionpatch;
-using Debug = UnityEngine.Debug;
 
 namespace Multfunction_mod
 {
@@ -21,8 +17,22 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.7.4";
+        public const string VERSION = "2.7.6";
+
         #region 临时变量
+
+        private int baseSize;
+        public int BaseSize
+        {
+            get => baseSize;
+            set
+            {
+                baseSize = value;
+                scale.Value = value;
+                firstopen = true;
+                heightdis = value * 2;
+            }
+        }
         private Vector2 scrollPosition;
         public Light SunLight;
         public Texture2D mytexture;
@@ -32,11 +42,7 @@ namespace Multfunction_mod
         public GUIStyle style = new GUIStyle();
         public static Player player;
         public static GameObject ui_MultiFunctionPanel;
-        public List<string> BPPathList = new List<string>();
-        public List<string> BPFileNameList = new List<string>();
         public List<int[]> packageitemlist = new List<int[]>();
-        public static List<int> SuperStation = new List<int>();
-        public static List<int> StarSuperStation = new List<int>();
         public static List<Tempsail> tempsails = new List<Tempsail>();
         public static Dictionary<int, int> tmp_levelChanges;
         public VeinData pointveindata;
@@ -127,8 +133,6 @@ namespace Multfunction_mod
         public static Dictionary<int, Dictionary<int, long>> consumeStatDic = new Dictionary<int, Dictionary<int, long>>();
         public static Dictionary<int, int> watertypePlanetArray = new Dictionary<int, int>();
         public static Dictionary<int, int> OrwatertypePlanetArray = new Dictionary<int, int>();
-        public static Dictionary<int, int[]> StarSuperStationItemidstore = new Dictionary<int, int[]>();
-        public static Dictionary<int, Dictionary<int, List<int[]>>> PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, List<int[]>>>();
         public static Dictionary<int, Dictionary<int, int>> Beltsignal = new Dictionary<int, Dictionary<int, int>>();
         public static Dictionary<int, Dictionary<int, int>> Beltsignalnumberoutput = new Dictionary<int, Dictionary<int, int>>();
         #endregion
@@ -200,7 +204,6 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> DroneNoenergy_bool;
         public static ConfigEntry<Boolean> BuildNotime_bool;
         public static ConfigEntry<Boolean> Station_infiniteWarp_bool;
-        public static ConfigEntry<Boolean> Station_miner_noconsume_bool;
         public static ConfigEntry<Boolean> StationfullCount_bool;
         public static ConfigEntry<Boolean> ItemList_bool;
         public static ConfigEntry<Boolean> Buildingnoconsume;
@@ -216,9 +219,10 @@ namespace Multfunction_mod
         public static ConfigEntry<Boolean> Maxproliferator;
         public static ConfigEntry<Boolean> StationPowerGen;
         public static ConfigEntry<Boolean> ChangeDysonradius;
-        public static ConfigEntry<Boolean> CloseUIpanel;
+        public static ConfigEntry<Boolean> Preventpenetration;
         public static ConfigEntry<Boolean> CloseUIAbnormalityTip;
         public static ConfigEntry<Boolean> QuantumtransportstationSupply;
+        public static ConfigEntry<Boolean> QuantumtransportCollectorSupply;
         public static ConfigEntry<Boolean> QuantumtransportlabSupply;
         public static ConfigEntry<Boolean> QuantumtransportpowerSupply;
         public static ConfigEntry<Boolean> QuantumtransportassembleSupply;
@@ -253,6 +257,7 @@ namespace Multfunction_mod
                 Quantumtransportstarwarp_bool = Config.Bind("星系级翘曲全面供应", "Quantumtransportstarwarp_bool", false);
                 Quantumtransportpdwarp_bool = Config.Bind("星球级翘曲全面供应", "Quantumtransportpdwarp_bool", false);
                 Quantumtransportbuild_bool = Config.Bind("星球级材料供应", "Quantumtransportbuild_bool", true);
+                QuantumtransportCollectorSupply = Config.Bind("采集器拿取", "QuantumtransportCollectorSupply", true);
                 QuantumtransportstationSupply = Config.Bind("星球级物流站材料供应", "QuantumtransportstationSupply", true);
                 QuantumtransportlabSupply = Config.Bind("星球级研究站材料供应", "QuantumtransportlabSupply", true);
                 QuantumtransportpowerSupply = Config.Bind("星球级电力设备材料供应", "QuantumtransportpowerSupply", true);
@@ -314,7 +319,6 @@ namespace Multfunction_mod
                 Station_infiniteWarp_bool = Config.Bind("星际运输站无限曲速", "Station_infiniteWarp_bool", false);
                 BuildNotime_bool = Config.Bind("建筑秒完成", "BuildNotime_bool", false);
                 PlanetPower_bool = Config.Bind("星球电网", "PlanetPower_bool", false);
-                Station_miner_noconsume_bool = Config.Bind("星球矿机无消耗", "Station_miner_noconsume_bool", false);
                 build_tooclose_bool = Config.Bind("强行近距离建造物流站", "build_tooclose_bool", false);
                 blueprintpastenoneed_bool = Config.Bind("蓝图建造无需材料", "blueprintpastenoneed_bool", false);
                 quickabsorbsolar = Config.Bind("跳过太阳帆吸收阶段", "quickabsorbsolar", false);
@@ -332,7 +336,7 @@ namespace Multfunction_mod
                 Maxproliferator = Config.Bind("增产点数上限10", "Maxproliferator", false);
                 starquamaxpowerpertick = Config.Bind("实时修改星球量子充电功率", "starquamaxpowerpertick", 60f);
                 planetquamaxpowerpertick = Config.Bind("实时修改星系量子充电功率", "planetquamaxpowerpertick", 60f);
-                CloseUIAbnormalityTip= Config.Bind("关闭异常提示", "CloseUIAbnormalityTip", false);
+                CloseUIAbnormalityTip = Config.Bind("关闭异常提示", "CloseUIAbnormalityTip", false);
                 mytexturer = Config.Bind("窗口材质r", "mytexturer", 0f);
                 mytextureg = Config.Bind("窗口材质g", "mytextureg", 0f);
                 mytextureb = Config.Bind("窗口材质b", "mytextureb", 0f);
@@ -345,7 +349,7 @@ namespace Multfunction_mod
                 MainWindow_y_config = Config.Bind("第一窗口y", "xl_SimpleUI_1_y_config", 199.0f);
                 MainWindow_width = Config.Bind("第一窗口宽度", "xl_SimpleUI_1_x_config", 1400.0f);
                 MainWindow_height = Config.Bind("第一窗口高度", "xl_SimpleUI_1_y_config", 1000.0f);
-                CloseUIpanel = Config.Bind("关闭面板", "CloseUIpanel", false);
+                Preventpenetration = Config.Bind("防止穿透", "Preventpenetration", false);
                 WindowQuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt));
             }
             #endregion
@@ -356,6 +360,7 @@ namespace Multfunction_mod
             MainWindow_y = MainWindow_y_config.Value;
             oillowerlimit = (int)(0.1 / VeinData.oilSpeedMultiplier);
             mytexture = new Texture2D(10, 10);
+            BaseSize = Math.Max(5, Math.Min(scale.Value, 35));
             for (int i = 0; i < mytexture.width; i++)
             {
                 for (int j = 0; j < mytexture.height; j++)
@@ -395,6 +400,7 @@ namespace Multfunction_mod
                     Thread.Sleep(1000);
                 }
             });
+            CollectorStation = new List<int>();
         }
 
         void Update()
@@ -426,20 +432,19 @@ namespace Multfunction_mod
         #region GUI处理
         public void OnGUI()
         {
-            heightdis = GUI.skin.button.fontSize * 2;
             if (changescale || firstopen)
             {
                 changescale = false;
                 firstopen = false;
-                GUI.skin.label.fontSize = scale.Value;
-                GUI.skin.button.fontSize = scale.Value;
-                GUI.skin.toggle.fontSize = scale.Value;
-                GUI.skin.textField.fontSize = scale.Value;
-                GUI.skin.textArea.fontSize = scale.Value;
+                GUI.skin.label.fontSize = BaseSize;
+                GUI.skin.button.fontSize = BaseSize;
+                GUI.skin.toggle.fontSize = BaseSize;
+                GUI.skin.textField.fontSize = BaseSize;
+                GUI.skin.textArea.fontSize = BaseSize;
             }
-            else if (!changescale && GUI.skin.toggle.fontSize != scale.Value)
+            else if (!changescale && GUI.skin.toggle.fontSize != BaseSize)
             {
-                scale.Value = GUI.skin.toggle.fontSize;
+                BaseSize = GUI.skin.toggle.fontSize;
             }
             if (firstchangetextcolor)
             {
@@ -648,7 +653,7 @@ namespace Multfunction_mod
             {
                 GUILayout.BeginVertical();
 
-                GUILayout.BeginHorizontal(new[] { GUILayout.Height(heightdis)});
+                GUILayout.BeginHorizontal(new[] { GUILayout.Height(heightdis) });
                 if (GUILayout.Button("人物".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 1; }
                 if (GUILayout.Button("建筑".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 2; }
                 if (GUILayout.Button("星球".getTranslate(), new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) })) { whichpannel = 3; }
@@ -684,7 +689,7 @@ namespace Multfunction_mod
             //左侧UI
             GUILayout.BeginHorizontal();
 
-            GUILayout.BeginVertical(new[] { GUILayout.ExpandWidth(false) ,GUILayout.Width(english?18*heightdis:14*heightdis)});
+            GUILayout.BeginVertical(new[] { GUILayout.ExpandWidth(false), GUILayout.Width(english ? 18 * heightdis : 14 * heightdis) });
             if (player != null)
             {
                 for (int i = 0; i < 20; i++)
@@ -695,14 +700,14 @@ namespace Multfunction_mod
                     float temp = GUILayout.HorizontalSlider(ChangeValueArray[i], left, right, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 6) });
                     string result = "";
                     if (i == 8 && player.mecha != null) result += TGMKinttostring(player.mecha.reactorPowerGen, "W");
-                    else if (i == 0 || i==10 || i==11 || i == 15) result = string.Format("{0:N2}", temp);
+                    else if (i == 0 || i == 10 || i == 11 || i == 15) result = string.Format("{0:N2}", temp);
                     else result = (int)temp + "";
                     if (temp == ChangeValueArray[i] && i != 8)
                     {
                         string t = GUILayout.TextField(result, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 3) });
                         if (result.Contains("."))
                         {
-                            if(!float.TryParse(Regex.Replace(t, @"^[^0-9]+(.[^0-9]{2})?$", ""), out temp))
+                            if (!float.TryParse(Regex.Replace(t, @"^[^0-9]+(.[^0-9]{2})?$", ""), out temp))
                             {
                                 temp = ChangeValueArray[i];
                             }
@@ -736,24 +741,24 @@ namespace Multfunction_mod
                 dismantle_but_nobuild.Value = GUILayout.Toggle(dismantle_but_nobuild.Value, "不往背包放东西".getTranslate(), options);
                 QuickHandcraft.Value = GUILayout.Toggle(QuickHandcraft.Value, "机甲制造MAX".getTranslate(), options);
                 QuickPlayerMine.Value = GUILayout.Toggle(QuickPlayerMine.Value, "机甲采矿MAX".getTranslate(), options);
-                ItemList_bool.Value = GUILayout.Toggle(ItemList_bool.Value, "物品列表(Tab)".getTranslate(), options); 
+                ItemList_bool.Value = GUILayout.Toggle(ItemList_bool.Value, "物品列表(Tab)".getTranslate(), options);
                 noneedwarp.Value = GUILayout.Toggle(noneedwarp.Value, "无需翘曲器曲速飞行".getTranslate(), options);
             }
             {
                 var tempoptions = new[] { GUILayout.ExpandWidth(false), GUILayout.Height(heightdis) };
-                if(GUILayout.Button((ChangePlayerbool ? "停止修改" : "启动修改").getTranslate(), options)) ChangePlayerbool = !ChangePlayerbool;
-                if(GUILayout.Button("清空背包".getTranslate(), options)) Clearpackage();
+                if (GUILayout.Button((ChangePlayerbool ? "停止修改" : "启动修改").getTranslate(), options)) ChangePlayerbool = !ChangePlayerbool;
+                if (GUILayout.Button("清空背包".getTranslate(), options)) Clearpackage();
                 if (GUILayout.Button("初始化玩家".getTranslate(), options)) InitPlayer();
 
                 GUILayout.BeginHorizontal(GUILayout.Height(heightdis * 2), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 7));
-                GUILayout.Button("背包".getTranslate(), new[] { GUILayout.Height(heightdis*2)});
+                GUILayout.Button("背包".getTranslate(), new[] { GUILayout.Height(heightdis * 2) });
                 GUILayout.BeginVertical(new[] { GUILayout.ExpandWidth(false) });
-                if (GUILayout.Button("加一行".getTranslate(), tempoptions)) Operatepackagesize(1,0);
+                if (GUILayout.Button("加一行".getTranslate(), tempoptions)) Operatepackagesize(1, 0);
                 if (GUILayout.Button("加一列".getTranslate(), tempoptions)) Operatepackagesize(0, 1);
                 GUILayout.EndVertical();
                 GUILayout.BeginVertical(new[] { GUILayout.ExpandWidth(false) });
-                if (GUILayout.Button("减一行".getTranslate(), tempoptions)) Operatepackagesize(1, 0,false);
-                if (GUILayout.Button("减一列".getTranslate(), tempoptions)) Operatepackagesize(0, 1,false);
+                if (GUILayout.Button("减一行".getTranslate(), tempoptions)) Operatepackagesize(1, 0, false);
+                if (GUILayout.Button("减一列".getTranslate(), tempoptions)) Operatepackagesize(0, 1, false);
                 GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
 
@@ -768,16 +773,19 @@ namespace Multfunction_mod
 
         }
 
+        /// <summary>
+        /// 建筑面板
+        /// </summary>
         public void BuildPannel()
         {
             bool english = Localization.language != Language.zhCN;
             GUILayout.BeginHorizontal();
             {
-                GUILayout.BeginVertical(new[] {GUILayout.Width(english? heightdis*13:heightdis*10)});
+                GUILayout.BeginVertical(new[] { GUILayout.Width(english ? heightdis * 13 : heightdis * 10) });
                 GUILayoutOption[] options = new[] { GUILayout.Height(heightdis), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 10) };
 
                 GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
-                Buildmaxlen.Value = (int)GUILayout.HorizontalSlider(Buildmaxlen.Value, 15, 100, new[] {GUILayout.Height(heightdis),GUILayout.Width(heightdis * 5), GUILayout.ExpandWidth(false) });
+                Buildmaxlen.Value = (int)GUILayout.HorizontalSlider(Buildmaxlen.Value, 15, 100, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5), GUILayout.ExpandWidth(false) });
                 GUILayout.Label(Buildmaxlen.Value + " " + "建筑数量最大值".getTranslate(), style, GUILayout.ExpandWidth(false));
                 GUILayout.EndHorizontal();
 
@@ -785,21 +793,21 @@ namespace Multfunction_mod
                 StationStoExtra.Value = (int)GUILayout.HorizontalSlider(StationStoExtra.Value, 0, 100, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5), GUILayout.ExpandWidth(false) });
                 GUILayout.Label(StationStoExtra.Value + " " + "运输站存储倍率".getTranslate(), style, GUILayout.ExpandWidth(false));
                 GUILayout.EndHorizontal();
-                RefreshStationStorage           = GUILayout.Toggle(RefreshStationStorage, "实时更改全部运输站存储倍率".getTranslate(), options);
-                Tankcontentall.Value            = GUILayout.Toggle(Tankcontentall.Value, "储液站任意存".getTranslate(), options);
-                Infinitestoragetank.Value       = GUILayout.Toggle(Infinitestoragetank.Value, "无限储液站".getTranslate(), options);
-                TankMaxproliferator.Value       = GUILayout.Toggle(TankMaxproliferator.Value, "储液站无限增产".getTranslate(), options);
-                StationfullCount_bool.Value     = GUILayout.Toggle(StationfullCount_bool.Value, "星球无限供货机".getTranslate(), options);
-                Stationfullenergy.Value         = GUILayout.Toggle(Stationfullenergy.Value, "物流站永久满电".getTranslate(), options);
-                StationfullCount                = GUILayout.Toggle(StationfullCount, "物流站要啥有啥".getTranslate(), options);
-                StationMaxproliferator.Value    = GUILayout.Toggle(StationMaxproliferator.Value, "物流站无限增产".getTranslate(), options);
-                StationSpray.Value              = GUILayout.Toggle(StationSpray.Value, "物流站内置喷涂".getTranslate(), options);
-                StationPowerGen.Value           = GUILayout.Toggle(StationPowerGen.Value, "物流站内置发电".getTranslate(), options);
+                RefreshStationStorage = GUILayout.Toggle(RefreshStationStorage, "实时更改全部运输站存储倍率".getTranslate(), options);
+                Tankcontentall.Value = GUILayout.Toggle(Tankcontentall.Value, "储液站任意存".getTranslate(), options);
+                Infinitestoragetank.Value = GUILayout.Toggle(Infinitestoragetank.Value, "无限储液站".getTranslate(), options);
+                TankMaxproliferator.Value = GUILayout.Toggle(TankMaxproliferator.Value, "储液站无限增产".getTranslate(), options);
+                StationfullCount_bool.Value = GUILayout.Toggle(StationfullCount_bool.Value, "星球无限供货机".getTranslate(), options);
+                Stationfullenergy.Value = GUILayout.Toggle(Stationfullenergy.Value, "物流站永久满电".getTranslate(), options);
+                StationfullCount = GUILayout.Toggle(StationfullCount, "物流站要啥有啥".getTranslate(), options);
+                StationMaxproliferator.Value = GUILayout.Toggle(StationMaxproliferator.Value, "物流站无限增产".getTranslate(), options);
+                StationSpray.Value = GUILayout.Toggle(StationSpray.Value, "物流站内置喷涂".getTranslate(), options);
+                StationPowerGen.Value = GUILayout.Toggle(StationPowerGen.Value, "物流站内置发电".getTranslate(), options);
                 Station_infiniteWarp_bool.Value = GUILayout.Toggle(Station_infiniteWarp_bool.Value, "物流站无限翘曲".getTranslate(), options);
-                build_gascol_noequator.Value    = GUILayout.Toggle(build_gascol_noequator.Value, "无需赤道造采集器".getTranslate(), options);
-                build_tooclose_bool.Value       = GUILayout.Toggle(build_tooclose_bool.Value, "强行近距离建造物流站".getTranslate(), options);
-                InfineteStarPower.Value         = GUILayout.Toggle(InfineteStarPower.Value, "人造恒星无限能源".getTranslate(), options);
-                PlanetPower_bool.Value          = GUILayout.Toggle(PlanetPower_bool.Value, "星球电网(人造恒星)".getTranslate(), options);
+                build_gascol_noequator.Value = GUILayout.Toggle(build_gascol_noequator.Value, "无需赤道造采集器".getTranslate(), options);
+                build_tooclose_bool.Value = GUILayout.Toggle(build_tooclose_bool.Value, "强行近距离建造物流站".getTranslate(), options);
+                InfineteStarPower.Value = GUILayout.Toggle(InfineteStarPower.Value, "人造恒星无限能源".getTranslate(), options);
+                PlanetPower_bool.Value = GUILayout.Toggle(PlanetPower_bool.Value, "星球电网(人造恒星)".getTranslate(), options);
                 if (PlanetPower_bool.Value)
                 {
                     PlanetPower_bool.Value = GUILayout.Toggle(PlanetPower_bool.Value, "    覆盖全球".getTranslate(), options);
@@ -817,7 +825,20 @@ namespace Multfunction_mod
                 Buildingnoconsume.Value = GUILayout.Toggle(Buildingnoconsume.Value, "新建设备不耗电".getTranslate(), new[] { GUILayout.Height(heightdis) });
                 DriftBuildings = GUILayout.Toggle(DriftBuildings, "建筑抬升".getTranslate(), new[] { GUILayout.Height(heightdis) });
                 if (DriftBuildings) GUILayout.Label("抬升层数:" + DriftBuildingLevel, new[] { GUILayout.Height(heightdis) });
-                BeltSignalFunction.Value = GUILayout.Toggle(BeltSignalFunction.Value, "传送带信号功能".getTranslate(), new[] { GUILayout.Height(heightdis) });
+                if (BeltSignalFunction.Value != GUILayout.Toggle(BeltSignalFunction.Value, "传送带信号功能".getTranslate(), new[] { GUILayout.Height(heightdis) }))
+                {
+                    BeltSignalFunction.Value = !BeltSignalFunction.Value;
+                    if (BeltSignalFunction.Value) InitBeltSignalDiction();
+                }
+
+
+                GUILayout.EndVertical();
+
+                if (autochangeQuantumstationname) autochangeQuantumStarstationname = false;
+                if (autochangeQuantumStarstationname) autochangeQuantumstationname = false;
+            }
+            {
+                GUILayout.BeginVertical(GUILayout.ExpandWidth(false));
                 Quantumtransport_bool.Value = GUILayout.Toggle(Quantumtransport_bool.Value, "量子传输站".getTranslate(), new[] { GUILayout.Height(heightdis) });
                 if (Quantumtransport_bool.Value)
                 {
@@ -829,8 +850,12 @@ namespace Multfunction_mod
 
                     if (Quantumtransportbuild_bool.Value)
                     {
-                        options = new[] { GUILayout.Height(heightdis), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 5) };
+                        var options = new[] { GUILayout.Height(heightdis), GUILayout.ExpandWidth(false), GUILayout.MinWidth(heightdis * 5) };
                         GUILayout.BeginVertical();
+                        GUILayout.BeginHorizontal();
+                        QuantumtransportCollectorSupply.Value = GUILayout.Toggle(QuantumtransportCollectorSupply.Value, "采集器拿取", options);
+                        GUILayout.EndHorizontal();
+
                         GUILayout.BeginHorizontal();
                         QuantumtransportstationSupply.Value = GUILayout.Toggle(QuantumtransportstationSupply.Value, "物流站供应", options);
                         QuantumtransportstationDemand.Value = GUILayout.Toggle(QuantumtransportstationDemand.Value, "物流站拿取", options);
@@ -863,17 +888,17 @@ namespace Multfunction_mod
                     }
 
                     GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
-                    int tempplanetquamaxpowerpertick = (int)GUILayout.HorizontalSlider(planetquamaxpowerpertick.Value, 60, 10000, new[] {GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
+                    int tempplanetquamaxpowerpertick = (int)GUILayout.HorizontalSlider(planetquamaxpowerpertick.Value, 60, 10000, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
                     GUILayout.Label(tempplanetquamaxpowerpertick > 1000 ? tempplanetquamaxpowerpertick / 1000 + "G" : tempplanetquamaxpowerpertick + "MW " + "星球量子充电功率".getTranslate(), style, GUILayout.ExpandWidth(false));
                     GUILayout.EndHorizontal();
 
                     GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
-                    int tempstarquamaxpowerpertick = (int)GUILayout.HorizontalSlider( starquamaxpowerpertick.Value, 60, 10000, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
+                    int tempstarquamaxpowerpertick = (int)GUILayout.HorizontalSlider(starquamaxpowerpertick.Value, 60, 10000, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
                     GUILayout.Label(tempstarquamaxpowerpertick > 1000 ? tempstarquamaxpowerpertick / 1000 + "G" : tempstarquamaxpowerpertick + "MW " + "星系量子充电功率".getTranslate(), style, GUILayout.ExpandWidth(false));
                     GUILayout.EndHorizontal();
 
                     GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
-                    Quantumenergy.Value = (int)GUILayout.HorizontalSlider(Quantumenergy.Value, 0, 1000000, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
+                    Quantumenergy.Value = (int)GUILayout.HorizontalSlider(Quantumenergy.Value, 0, 1_000_000, new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 5) });
                     GUILayout.Label(TGMKinttostring(Quantumenergy.Value, "J") + " " + "量子耗能/个".getTranslate(), style, GUILayout.ExpandWidth(false));
                     GUILayout.EndHorizontal();
 
@@ -884,22 +909,21 @@ namespace Multfunction_mod
                         starquamaxpowerpertick.Value = tempstarquamaxpowerpertick;
                     }
                 }
-
                 GUILayout.EndVertical();
-
-                if (BeltSignalFunction.Value) InitBeltSignalDiction();
-                if (autochangeQuantumstationname) autochangeQuantumStarstationname = false;
-                if (autochangeQuantumStarstationname) autochangeQuantumstationname = false;
             }
+            GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
         }
 
+        /// <summary>
+        /// 星球面板
+        /// </summary>
         public void PlanetPannel()
         {
             GUILayout.Label("\"生成矿物\":鼠标左键生成矿物，鼠标右键取消。\n\"删除矿物\"：按x键进入拆除模式可拆除矿物。\n可点击下面的按钮更改矿物，数字框为生成矿数量".getTranslate(), style);
             GUILayout.BeginArea(new Rect(0, heightdis * 2, 24 * heightdis, 20 * heightdis));
             bool english = Localization.language != Language.zhCN;
-            string[] tempstr = new string[13] { "生成矿物", "删除矿物", "移动单矿", "移动矿堆", "不排列", "整理所有矿", "切割矿脉", "还原海洋", Localization.language != Language.zhCN ? "Station_trash" : "垃圾站", "不需要沙土", "星球矿机", "自动改名", "星球矿机无消耗" };
+            string[] tempstr = new string[12] { "生成矿物", "删除矿物", "移动单矿", "移动矿堆", "不排列", "整理所有矿", "切割矿脉", "还原海洋", Localization.language != Language.zhCN ? "Station_trash" : "垃圾站", "不需要沙土", "星球矿机", "自动改名" };
 
             int width = 0;
             for (int i = 0; i < tempstr.Length; i++)
@@ -919,7 +943,6 @@ namespace Multfunction_mod
                     case 9: tempvalue = noneedtrashsand.Value; break;
                     case 10: tempvalue = StationMiner.Value; break;
                     case 11: tempvalue = autochangestationname.Value; break;
-                    case 12: tempvalue = Station_miner_noconsume_bool.Value; break;
                 }
                 tempvalue = GUI.Toggle(new Rect(i == 9 || i == 11 || i == 12 ? 10 : 0, heightdis * (i + width), english ? heightdis * 9 : heightdis * 5, heightdis), tempvalue, tempstr[i].getTranslate());
                 switch (i)
@@ -991,7 +1014,6 @@ namespace Multfunction_mod
                     case 9: noneedtrashsand.Value = tempvalue; break;
                     case 10: StationMiner.Value = tempvalue; break;
                     case 11: autochangestationname.Value = tempvalue; break;
-                    case 12: Station_miner_noconsume_bool.Value = tempvalue; break;
                 }
             }
             int tempheight = width + tempstr.Length;
@@ -1052,10 +1074,13 @@ namespace Multfunction_mod
             GUILayout.EndArea();
         }
 
+        /// <summary>
+        /// 戴森球面板
+        /// </summary>
         public void DysonPannel()
         {
             bool english = Localization.language != Language.zhCN;
-            int line = 0; 
+            int line = 0;
             GUI.Label(new Rect(0, line++ * heightdis, MainWindow_width.Value, heightdis * 2), "注意事项:戴森云和戴森壳不要出现一层轨道都没有的情况(用前存档)".getTranslate());
             if (!(GameMain.localStar == null || GameMain.data.dysonSpheres == null || GameMain.data.dysonSpheres[GameMain.localStar.index] == null))
             {
@@ -1113,16 +1138,16 @@ namespace Multfunction_mod
                 alwaysemission.Value = !alwaysemission.Value;
                 alwaysemissiontemp = alwaysemission.Value;
             }
-            if(RandomEmission.Value != GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), RandomEmission.Value, "间隔发射".getTranslate()))
+            if (RandomEmission.Value != GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), RandomEmission.Value, "间隔发射".getTranslate()))
             {
                 RandomEmission.Value = !RandomEmission.Value;
                 RandomEmissionEjectorSilo();
             }
             var temp = GUI.Toggle(new Rect(0, heightdis * line++, heightdis * 10, heightdis), ChangeDysonradius.Value, "开放戴森壳半径上下限(用前存档)".getTranslate());
             GUI.Label(new Rect(0, heightdis * line++, heightdis * 10, heightdis), "最小半径".getTranslate() + ":100");
-            GUI.Label(new Rect(0, heightdis * line++, heightdis * 10, heightdis), "最大半径".getTranslate() + ":"+TGMKinttostring(MaxOrbitRadiusConfig.Value,""));
-            var tempvalue = Regex.Replace(GUI.TextField(new Rect(0, heightdis * line++, heightdis * 10, heightdis), MaxOrbitRadiusConfig.Value+"", 10), @"[^0-9]", "");
-            if(int.TryParse(tempvalue,out int result))
+            GUI.Label(new Rect(0, heightdis * line++, heightdis * 10, heightdis), "最大半径".getTranslate() + ":" + TGMKinttostring(MaxOrbitRadiusConfig.Value, ""));
+            var tempvalue = Regex.Replace(GUI.TextField(new Rect(0, heightdis * line++, heightdis * 10, heightdis), MaxOrbitRadiusConfig.Value + "", 10), @"[^0-9]", "");
+            if (int.TryParse(tempvalue, out int result))
             {
                 if (result < 100000)
                 {
@@ -1134,7 +1159,7 @@ namespace Multfunction_mod
                 }
                 MaxOrbitRadiusConfig.Value = result;
             }
-            if(temp != ChangeDysonradius.Value)
+            if (temp != ChangeDysonradius.Value)
             {
                 ChangeDysonradius.Value = temp;
                 var selectdyson = UIRoot.instance?.uiGame?.dysonEditor?.selection?.viewDysonSphere;
@@ -1171,6 +1196,9 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 其它面板
+        /// </summary>
         public void OtherPannel()
         {
             bool english = Localization.language != Language.zhCN;
@@ -1192,7 +1220,7 @@ namespace Multfunction_mod
                     player.mecha.buildArea = 80;
                 }
                 Maxproliferator.Value = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), Maxproliferator.Value, "增产点数上限10".getTranslate());
-                incAbility = Maxproliferator.Value?10:4;
+                incAbility = Maxproliferator.Value ? 10 : 4;
                 pasteanyway = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), pasteanyway, "蓝图强制粘贴".getTranslate());
                 PasteBuildAnyWay = GUI.Toggle(RectChanged(t, heightdis * lines++, 2), PasteBuildAnyWay, "建筑铺设无需条件".getTranslate());
                 if (closeallcollider != GUI.Toggle(RectChanged(t, heightdis * lines++, 2), closeallcollider, "关闭所有碰撞体".getTranslate()))
@@ -1240,7 +1268,8 @@ namespace Multfunction_mod
                     {
                         MULTIPELSMELT.Value = 1;
                         multipelsmelt1 = "1";
-                    }else if (MULTIPELSMELT.Value > 100)
+                    }
+                    else if (MULTIPELSMELT.Value > 100)
                     {
                         MULTIPELSMELT.Value = 100;
                         multipelsmelt1 = "100";
@@ -1297,22 +1326,25 @@ namespace Multfunction_mod
                 GUI.skin.toggle.normal.textColor = new Color(textcolorr.Value, textcolorg.Value, textcolorb.Value);
                 GUI.skin.toggle.onNormal.textColor = new Color(textcolorr.Value, textcolorg.Value, textcolorb.Value);
 
-                if (CloseUIpanel.Value != GUI.Toggle(new Rect(0, heightdis * lines++, heightdis * 10, heightdis), CloseUIpanel.Value, "关闭白色面板".getTranslate()))
+                if (Preventpenetration.Value != GUI.Toggle(new Rect(0, heightdis * lines++, heightdis * 10, heightdis), Preventpenetration.Value, "防止面板穿透".getTranslate()))
                 {
-                    CloseUIpanel.Value = !CloseUIpanel.Value;
-                    ui_MultiFunctionPanel.SetActive(!CloseUIpanel.Value);
+                    Preventpenetration.Value = !Preventpenetration.Value;
+                    ui_MultiFunctionPanel.SetActive(Preventpenetration.Value);
                 }
             }
             GUILayout.EndArea();
         }
 
+        /// <summary>
+        /// 机甲物流面板
+        /// </summary>
         public void LogisticsPannel()
         {
             GUILayout.BeginVertical();
             {
                 GUILayout.BeginHorizontal();
                 GUILayoutOption[] options = new[] { GUILayout.Height(heightdis) };
-                if(Mechalogistics_bool.Value != GUILayout.Toggle(Mechalogistics_bool.Value, "强化机甲物流".getTranslate(), options))
+                if (Mechalogistics_bool.Value != GUILayout.Toggle(Mechalogistics_bool.Value, "强化机甲物流".getTranslate(), options))
                 {
                     Mechalogistics_bool.Value = !Mechalogistics_bool.Value;
                     if (Mechalogistics_bool.Value && !player.deliveryPackage.unlocked)
@@ -1339,6 +1371,12 @@ namespace Multfunction_mod
         #endregion
 
         #region 量子传输站
+
+        public static List<int> CollectorStation = new List<int>();
+        public static List<int> SuperStation = new List<int>();
+        public static List<int> StarSuperStation = new List<int>();
+        public static Dictionary<int, int[]> StarSuperStationItemidstore = new Dictionary<int, int[]>();
+        public static Dictionary<int, Dictionary<int, List<int[]>>> PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, List<int[]>>>();
         public void takeitemfromstarsuperstation()
         {
             if (GameMain.data?.galacticTransport?.stationPool == null) return;
@@ -1346,7 +1384,7 @@ namespace Multfunction_mod
             SuperStation = new List<int>();
             StarSuperStationItemidstore = new Dictionary<int, int[]>();
             PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, List<int[]>>>();
-            for(int i=0;i< GameMain.data.galacticTransport.stationPool.Length;i++)
+            for (int i = 0; i < GameMain.data.galacticTransport.stationPool.Length; i++)
             {
                 StationComponent sc = GameMain.data.galacticTransport.stationPool[i];
                 if (sc == null || sc.storage == null || sc.name == null || sc.isVeinCollector || sc.isCollector) continue;
@@ -1355,19 +1393,20 @@ namespace Multfunction_mod
                     StarSuperStation.Add(i);
                     for (int j = 0; j < sc.storage.Length; j++)
                     {
-                        if (sc.storage[j].itemId > 0)
+                        ref StationStore store = ref sc.storage[j];
+                        if (store.itemId > 0)
                         {
-                            if (!StarSuperStationItemidstore.ContainsKey(sc.storage[j].itemId))
+                            if (!StarSuperStationItemidstore.ContainsKey(store.itemId))
                             {
-                                StarSuperStationItemidstore.Add(sc.storage[j].itemId, new int[] { StarSuperStation.Count - 1, j });
+                                StarSuperStationItemidstore.Add(store.itemId, new int[] { StarSuperStation.Count - 1, j });
                             }
-                            if (sc.storage[j].count < 0)
-                                sc.storage[j].count = 0;
-                            if (sc.storage[j].inc < 0)
-                                sc.storage[j].inc = 0;
-                            else if(sc.storage[j].inc > sc.storage[j].count * 4)
+                            if (store.count < 0)
+                                store.count = 0;
+                            if (store.inc < 0)
+                                store.inc = 0;
+                            else if (store.inc > store.count * 4)
                             {
-                                sc.storage[j].inc = sc.storage[j].count * 4;
+                                store.inc = store.count * 4;
                             }
                         }
                     }
@@ -1377,7 +1416,7 @@ namespace Multfunction_mod
                         {
                             GameMain.galaxy.PlanetById(sc.planetId).factory.powerSystem.consumerPool[sc.pcId].workEnergyPerTick = (long)starquamaxpowerpertick.Value * 16667;
                         }
-                        catch{}
+                        catch { }
                     }
                 }
                 if (sc.name == "星球量子传输站")
@@ -1389,7 +1428,7 @@ namespace Multfunction_mod
                         {
                             GameMain.galaxy.PlanetById(sc.planetId).factory.powerSystem.consumerPool[sc.pcId].workEnergyPerTick = (long)planetquamaxpowerpertick.Value * 16667;
                         }
-                        catch{}
+                        catch { }
                     }
 
                 }
@@ -1397,12 +1436,6 @@ namespace Multfunction_mod
             int SuperStationCount = SuperStation.Count;
             int StarSuperStationCount = StarSuperStation.Count;
             if (SuperStationCount == 0 && StarSuperStationCount == 0) return;
-            foreach (StationComponent sc in GameMain.data.galacticTransport.stationPool)
-            {
-                if (sc == null || !sc.isCollector) continue;
-                sc.storage[0].count -= doitemfromStarsuper(sc.storage[0].itemId, sc.storage[0].count, 0, false)[0];
-                sc.storage[1].count -= doitemfromStarsuper(sc.storage[1].itemId, sc.storage[1].count, 0, false)[0];
-            }
             changequapowerpertick = false;
             if (Math.Max(StarSuperStation.Count, SuperStation.Count) > warpstationqua.Length - 50)
                 SetSuperStationCapacity(Math.Max(StarSuperStation.Count, SuperStation.Count) + 50);
@@ -1410,60 +1443,62 @@ namespace Multfunction_mod
             {
                 StationComponent sc = GameMain.data.galacticTransport.stationPool[SuperStation[j]];
                 int pdID = sc.planetId;
-                for (int i = sc.storage.Length-1; i >= 0; i--)
+                for (int i = sc.storage.Length - 1; i >= 0; i--)
                 {
-                    int itemID = sc.storage[i].itemId;
-                    if (itemID > 0)
+                    ref StationStore store = ref sc.storage[i];
+                    int itemID = store.itemId;
+                    if (itemID <= 0) continue;
+                    if (!PlanetSuperStationItemidstore.ContainsKey(pdID))
                     {
-                        if (!PlanetSuperStationItemidstore.ContainsKey(pdID))
-                        {
-                            PlanetSuperStationItemidstore.Add(pdID, new Dictionary<int, List<int[]>>());
-                        }
-                        if (!PlanetSuperStationItemidstore[pdID].ContainsKey(itemID))
-                        {
-                            PlanetSuperStationItemidstore[pdID].Add(itemID, new List<int[]>() { new int[] { j, i } });
-                        }
-                        else
-                        {
-                            PlanetSuperStationItemidstore[pdID][itemID].Add(new int[] { j, i });
-                        }
-                        if (sc.storage[i].remoteLogic == ELogisticStorage.Demand && sc.storage[i].count < sc.storage[i].max)
-                        {
-                            if (sc.storage[i].max > sc.storage[i].count)
-                            {
-                                int[] takeitem = doitemfromStarsuper(itemID, sc.storage[i].max - sc.storage[i].count);
-                                sc.storage[i].count += takeitem[0];
-                                sc.storage[i].inc += takeitem[1];
-                            }
-                            else if (sc.storage[i].max < sc.storage[i].count)
-                            {
-                                int[] takeitem = doitemfromStarsuper(itemID, sc.storage[i].count - sc.storage[i].max, sc.storage[i].inc, false);
-                                sc.storage[i].count -= takeitem[0];
-                                sc.storage[i].inc -= takeitem[1];
-                            }
-                        }
-                        else if(sc.storage[i].remoteLogic == ELogisticStorage.Supply && sc.storage[i].count > 0)
-                        {
-                            int[] putitem=doitemfromStarsuper(itemID, sc.storage[i].count, sc.storage[i].inc, false);
-                            sc.storage[i].count -= putitem[0];
-                            sc.storage[i].inc -= putitem[1];
-                        }
-                        if (sc.storage[i].count < 0)
-                            sc.storage[i].count = 0;
-                        if (sc.storage[i].inc < 0)
-                            sc.storage[i].inc = 0;
+                        PlanetSuperStationItemidstore.Add(pdID, new Dictionary<int, List<int[]>>());
                     }
+                    var PlanetSuperStationstore = PlanetSuperStationItemidstore[pdID];
+                    if (!PlanetSuperStationstore.ContainsKey(itemID))
+                    {
+                        PlanetSuperStationstore.Add(itemID, new List<int[]>() { new int[] { j, i } });
+                    }
+                    else
+                    {
+                        PlanetSuperStationstore[itemID].Add(new int[] { j, i });
+                    }
+                    if (store.remoteLogic == ELogisticStorage.Demand && store.count < store.max)
+                    {
+                        if (store.max > store.count)
+                        {
+                            int[] takeitem = doitemfromStarsuper(itemID, store.max - store.count);
+                            store.count += takeitem[0];
+                            store.inc += takeitem[1];
+                        }
+                        else if (store.max < store.count)
+                        {
+                            int[] takeitem = doitemfromStarsuper(itemID, store.count - store.max, store.inc, false);
+                            store.count -= takeitem[0];
+                            store.inc -= takeitem[1];
+                        }
+                    }
+                    else if (store.remoteLogic == ELogisticStorage.Supply && store.count > 0)
+                    {
+                        int[] putitem = doitemfromStarsuper(itemID, store.count, store.inc, false);
+                        store.count -= putitem[0];
+                        store.inc -= putitem[1];
+                    }
+                    if (store.count < 0)
+                        store.count = 0;
+                    if (store.inc < 0)
+                        store.inc = 0;
                 }
-                if (Quantumtransportpdwarp_bool.Value && sc.warperCount == 0)
+                if (Quantumtransportpdwarp_bool.Value && sc.warperCount <= 5)
                     sc.warperCount += doitemfromStarsuper(1210, 50, 0)[0];
             }
             for (int j = 0; j < StarSuperStationCount; j++)
             {
                 StationComponent sc = GameMain.data.galacticTransport.stationPool[StarSuperStation[j]];
-                if (Quantumtransportstarwarp_bool.Value && sc.warperCount == 0)
+                if (Quantumtransportstarwarp_bool.Value && sc.warperCount <= 5)
                     sc.warperCount += doitemfromStarsuper(1210, 50, 0)[0];
 
             }
+            if (QuantumtransportCollectorSupply.Value)
+                CollectorStationDemand();
             if (Quantumtransportbuild_bool.Value)
                 SuperStationProvide();
 
@@ -1472,47 +1507,30 @@ namespace Multfunction_mod
         {
             foreach (StationComponent sc in fs.factory.transport.stationPool)
             {
-                if (sc == null) continue;
-                if (sc.storage != null  && sc.name != "星球量子传输站")
+                if (sc == null || sc.name == "星球量子传输站") continue;
+                for (int i = 0; i < sc.storage.Length; i++)
                 {
-                    for (int i = 0; i < sc.storage.Length; i++)
+                    ref StationStore store = ref sc.storage[i];
+                    if (store.itemId <= 0)
+                        continue;
+                    if (QuantumtransportstationDemand.Value)
                     {
-                        if (sc.storage[i].itemId > 0)
+                        if (store.localLogic == ELogisticStorage.Supply && store.count > 0 && sc.name != "星系量子传输站")
                         {
-                            if (QuantumtransportstationDemand.Value)
-                            {
-                                if(sc.storage[i].localLogic == ELogisticStorage.Supply)
-                                {
-                                    if (sc.name != "星系量子传输站" && sc.storage[i].count > 0)
-                                    {
-                                        int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].count, pdid, sc.storage[i].inc, false);
-                                        sc.storage[i].count -= takeitem[0];
-                                        sc.storage[i].inc -= takeitem[1];
-                                    }
-                                }
-                                if(sc.storage[i].localLogic == ELogisticStorage.Demand && sc.storage[i].count > sc.storage[i].max)
-                                {
-                                    int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].count - sc.storage[i].max, pdid, sc.storage[i].inc, false);
-                                    sc.storage[i].count -= takeitem[0];
-                                    sc.storage[i].inc -= takeitem[1];
-                                }
-                            }
-                            if (QuantumtransportstationSupply.Value)
-                            {
-                                if (sc.storage[i].localLogic == ELogisticStorage.Demand)
-                                {
-                                    if (sc.storage[i].count <= sc.storage[i].max)
-                                    {
-                                        int[] takeitem = doitemfromPlanetSuper(sc.storage[i].itemId, sc.storage[i].max - sc.storage[i].count, pdid);
-                                        sc.storage[i].count += takeitem[0];
-                                        sc.storage[i].inc += takeitem[1];
-                                    }
-                                }
-                            }
+                            int[] takeitem = doitemfromPlanetSuper(store.itemId, store.count, pdid, store.inc, false);
+                            store.count -= takeitem[0];
+                            store.inc -= takeitem[1];
                         }
                     }
-                }
 
+                    //物流站补货
+                    if (QuantumtransportstationSupply.Value && store.localLogic == ELogisticStorage.Demand && store.count <= store.max)
+                    {
+                        int[] takeitem = doitemfromPlanetSuper(store.itemId, store.max - store.count, pdid);
+                        store.count += takeitem[0];
+                        store.inc += takeitem[1];
+                    }
+                }
             }
         }
         public void MinerSupplyDemand(FactorySystem fs, int pdid)
@@ -1529,7 +1547,7 @@ namespace Multfunction_mod
         {
             foreach (SiloComponent sc in fs.siloPool)
             {
-                if (sc.id > 0 && sc.entityId > 0 && sc.bulletCount<=1)
+                if (sc.id > 0 && sc.entityId > 0 && sc.bulletCount <= 1)
                 {
                     int[] takeitem = doitemfromPlanetSuper(1503, 20, pdid);
                     fs.siloPool[sc.id].bulletCount += takeitem[0];
@@ -1538,7 +1556,7 @@ namespace Multfunction_mod
             }
             foreach (EjectorComponent ec in fs.ejectorPool)
             {
-                if (ec.id > 0 && ec.entityId > 0 && ec.bulletCount<=1)
+                if (ec.id > 0 && ec.entityId > 0 && ec.bulletCount <= 1)
                 {
                     int[] takeitem = doitemfromPlanetSuper(1501, 20, pdid);
                     fs.ejectorPool[ec.id].bulletCount += takeitem[0];
@@ -1631,7 +1649,7 @@ namespace Multfunction_mod
                             fs.factory.powerSystem.genPool[pgc.id].catalystIncPoint += takeitem[1] * 3600;
                         }
                     }
-                    else if(QuantumtransportpowerSupply.Value)
+                    else if (QuantumtransportpowerSupply.Value)
                     {
                         int itemid = 0;
                         switch (pgc.fuelMask)
@@ -1647,6 +1665,17 @@ namespace Multfunction_mod
                         }
                     }
                 }
+            }
+        }
+        public void CollectorStationDemand()
+        {
+            foreach (var gid in CollectorStation)
+            {
+                StationComponent sc = GameMain.data.galacticTransport.stationPool[gid];
+                ref var store1 = ref sc.storage[0];
+                ref var store2 = ref sc.storage[1];
+                store1.count -= doitemfromStarsuper(store1.itemId, store1.count, 0, false)[0];
+                store2.count -= doitemfromStarsuper(store2.itemId, store2.count, 0, false)[0];
             }
         }
         public void SuperStationProvide()
@@ -1685,19 +1714,20 @@ namespace Multfunction_mod
                 }
             }
 
-            int count = itemcount; 
+            int count = itemcount;
+            ref StationStore store = ref sc.storage[i];
             if (take)
             {
-                count = Math.Min(count, sc.storage[i].count);
+                count = Math.Min(count, store.count);
                 if (sc.energy <= count * energycost && sc.energy > 0)
                 {
                     count = Math.Min(count, (int)(sc.energy / energycost));
                     if (count == 0) return new int[2] { 0, 0 };
                 }
-                inc = Math.Min(count * 4, sc.storage[i].inc);
+                inc = Math.Min(count * 4, store.inc);
                 sc.energy -= count * energycost;
-                sc.storage[i].count -= count;
-                sc.storage[i].inc -= inc;
+                store.count -= count;
+                store.inc -= inc;
             }
             else
             {
@@ -1706,35 +1736,35 @@ namespace Multfunction_mod
                     count = Math.Min(count, (int)(sc.energy / energycost));
                     if (count == 0) return new int[2] { 0, 0 };
                 }
-                if (sc.storage[i].count + count <= sc.storage[i].max)
+                if (store.count + count <= store.max)
                 {
                     inc = Math.Min(count * incAbility, inc);
-                    sc.storage[i].count += count;
-                    sc.storage[i].inc += inc;
+                    store.count += count;
+                    store.inc += inc;
                 }
-                else if (sc.storage[i].localLogic==ELogisticStorage.None && sc.storage[i].remoteLogic==ELogisticStorage.None && sc.storage[i].max <int.MaxValue-100)
+                else if (store.localLogic == ELogisticStorage.None && store.remoteLogic == ELogisticStorage.None && store.max < int.MaxValue - 100)
                 {
-                    if (sc.storage[i].count + count <= int.MaxValue - 100)
+                    if (store.count + count <= int.MaxValue - 100)
                     {
                         inc = Math.Min(count * incAbility, inc);
-                        sc.storage[i].max = sc.storage[i].count + count;
-                        sc.storage[i].count = sc.storage[i].max;
-                        sc.storage[i].inc += inc;
+                        store.max = store.count + count;
+                        store.count = store.max;
+                        store.inc += inc;
                     }
                     else
                     {
-                        count = int.MaxValue - 100 - sc.storage[i].count;
-                        sc.storage[i].max = sc.storage[i].count + count;
-                        sc.storage[i].count = sc.storage[i].max;
-                        sc.storage[i].inc += inc;
+                        count = int.MaxValue - 100 - store.count;
+                        store.max = store.count + count;
+                        store.count = store.max;
+                        store.inc += inc;
                     }
                 }
                 else
                 {
-                    count=sc.storage[i].max - sc.storage[i].count;
+                    count = store.max - store.count;
                     inc = Math.Min(count * incAbility, inc);
-                    sc.storage[i].count = sc.storage[i].max;
-                    sc.storage[i].inc += inc;
+                    store.count = store.max;
+                    store.inc += inc;
                 }
                 sc.energy -= count * energycost;
             }
@@ -1751,12 +1781,13 @@ namespace Multfunction_mod
                 int index = PlanetSuperStationItemidstore[planetid][itemid][i][0];
                 int storageindex = PlanetSuperStationItemidstore[planetid][itemid][i][1];
                 StationComponent sc = GameMain.data.galacticTransport.stationPool[SuperStation[index]];
+                ref StationStore store = ref sc.storage[storageindex];
                 if (sc.storage[storageindex].localLogic != ELogisticStorage.None)
                 {
                     if (take && sc.storage[storageindex].localLogic != ELogisticStorage.Supply) continue;
                     if (!take && sc.storage[storageindex].localLogic != ELogisticStorage.Demand) continue;
                 }
-                long energycost = Stationfullenergy.Value ? 0:Quantumenergy.Value;
+                long energycost = Stationfullenergy.Value ? 0 : Quantumenergy.Value;
                 if (energycost != 0)
                 {
                     if (warpstationqua[index] >= Time.time - 5)
@@ -1777,20 +1808,20 @@ namespace Multfunction_mod
                         count = Math.Min(count, (int)(sc.energy / energycost));
                     }
                     if (count == 0) return new int[2] { 0, 0 };
-                    if (count > sc.storage[storageindex].count)
+                    if (count > store.count)
                     {
-                        int download = count - sc.storage[storageindex].count;
+                        int download = count - store.count;
                         int[] downloaded = doitemfromStarsuper(itemid, download);
-                        count = sc.storage[storageindex].count + downloaded[0];
-                        inc = sc.storage[storageindex].inc + downloaded[1];
-                        sc.storage[storageindex].count = 0;
-                        sc.storage[storageindex].inc = 0;
+                        count = store.count + downloaded[0];
+                        inc = store.inc + downloaded[1];
+                        store.count = 0;
+                        store.inc = 0;
                     }
                     else
                     {
-                        inc = Math.Min(count * incAbility, sc.storage[storageindex].inc);
-                        sc.storage[storageindex].count -= count;
-                        sc.storage[storageindex].inc -= inc;
+                        inc = Math.Min(count * incAbility, store.inc);
+                        store.count -= count;
+                        store.inc -= inc;
                     }
                 }
                 else
@@ -1801,19 +1832,19 @@ namespace Multfunction_mod
                         if (count == 0) return new int[2] { 0, 0 };
                     }
                     inc = Math.Min(count * incAbility, inc);
-                    if (sc.storage[storageindex].count + count >= sc.storage[storageindex].max)
+                    if (store.count + count >= store.max)
                     {
-                        int upload = sc.storage[storageindex].count + count - sc.storage[storageindex].max;
+                        int upload = store.count + count - store.max;
                         int[] uploaded = doitemfromStarsuper(itemid, upload, inc, false);
                         count -= upload - uploaded[0];
                         inc = Math.Min(count * incAbility, inc);
-                        sc.storage[storageindex].count = sc.storage[storageindex].max;
-                        sc.storage[storageindex].inc += inc-uploaded[1];
+                        store.count = store.max;
+                        store.inc += inc - uploaded[1];
                     }
                     else
                     {
-                        sc.storage[storageindex].count += count;
-                        sc.storage[storageindex].inc += inc;
+                        store.count += count;
+                        store.inc += inc;
                     }
                 }
                 StationPowerGeneration(sc);
@@ -1878,7 +1909,12 @@ namespace Multfunction_mod
                     OrwatertypePlanetArray = new Dictionary<int, int>();
                     Beltsignal = new Dictionary<int, Dictionary<int, int>>();
                     Beltsignalnumberoutput = new Dictionary<int, Dictionary<int, int>>();
+                    StarSuperStation = new List<int>();
+                    SuperStation = new List<int>();
+                    StarSuperStationItemidstore = new Dictionary<int, int[]>();
+                    PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, List<int[]>>>();
                     productmaxindex = 0;
+                    CollectorStation.Clear();
                     SuperStation = new List<int>();
                     StarSuperStation = new List<int>();
                     warpstationqua = new float[200];
@@ -1891,6 +1927,11 @@ namespace Multfunction_mod
                     if (BeltSignalFunction.Value)
                     {
                         InitBeltSignalDiction();
+                    }
+
+                    if (Quantumtransport_bool.Value)
+                    {
+                        InitQuantumTransport();
                     }
 
                     foreach (KeyValuePair<int, int> wap in watertypePlanetArray)
@@ -1954,9 +1995,16 @@ namespace Multfunction_mod
         }
         #endregion
 
-        #region 取消所有调整
+        /// <summary>
+        /// 取消所有选项
+        /// </summary>
         private void CancelAllToggle()
         {
+            InfiniteSand.Value = false;
+            QuickHandcraft.Value = false;
+            QuickPlayerMine.Value = false;
+            QuickabortSwarm.Value = false;
+            ChangeDysonradius.Value = false;
             NotTidyVein.Value = false;
             InspectDisNoLimit.Value = false;
             RandomEmission.Value = false;
@@ -1997,7 +2045,6 @@ namespace Multfunction_mod
             DroneNoenergy_bool.Value = false;
             BuildNotime_bool.Value = false;
             Station_infiniteWarp_bool.Value = false;
-            Station_miner_noconsume_bool.Value = false;
             StationfullCount_bool.Value = false;
             ItemList_bool.Value = false;
             getallVein_bool = false;
@@ -2012,7 +2059,7 @@ namespace Multfunction_mod
             StationSpray.Value = false;
             Maxproliferator.Value = false;
             StationPowerGen.Value = false;
-            CloseUIpanel.Value = false;
+            Preventpenetration.Value = false;
             CloseUIAbnormalityTip.Value = false;
             QuantumtransportstationSupply.Value = false;
             QuantumtransportlabSupply.Value = false;
@@ -2025,8 +2072,68 @@ namespace Multfunction_mod
             QuantumtransportpowerDemand.Value = false;
             QuantumtransportassembleDemand.Value = false;
         }
+
+        #region 开启窗口
+        public void QuickKeyOpenWindow()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                DisplayingWindow = false;
+                ui_MultiFunctionPanel?.SetActive(DisplayingWindow && Preventpenetration.Value);
+            }
+            if (WindowQuickKey.Value.IsDown() && !ChangingQuickKey)
+            {
+                DisplayingWindow = !DisplayingWindow;
+                if (ui_MultiFunctionPanel == null)
+                {
+                    ui_MultiFunctionPanel = UnityEngine.Object.Instantiate<GameObject>(MultiFunctionPanel, UIRoot.instance.overlayCanvas.transform);
+                }
+                ui_MultiFunctionPanel?.SetActive(DisplayingWindow && !Preventpenetration.Value);
+            }
+            if (DisplayingWindow && Input.GetKey(KeyCode.LeftControl))
+            {
+                int t = (int)(Input.GetAxis("Mouse Wheel") * 10);
+                int temp = BaseSize + t;
+                if (Input.GetKeyDown(KeyCode.UpArrow)) { temp++; }
+                if (Input.GetKeyDown(KeyCode.DownArrow)) { temp--; }
+                temp = Math.Max(5, Math.Min(temp, 35));
+                BaseSize = temp;
+            }
+            if (player != null && player.controller != null && !player.controller.actionBuild.active)
+            {
+                if (ItemList_bool.Value && Input.GetKeyDown(KeyCode.Tab))
+                {
+                    ItemDisplayingWindow = !ItemDisplayingWindow;
+                }
+                if (GameMain.localPlanet == null) ItemDisplayingWindow = false;
+            }
+            else
+            {
+                ItemDisplayingWindow = false;
+            }
+        }
         #endregion
 
+        /// <summary>
+        /// 修改快捷键
+        /// </summary>
+        public void ChangeQuickKeyMethod()
+        {
+            if (ChangeQuickKey)
+            {
+                setQuickKey();
+                ChangingQuickKey = true;
+            }
+            else if (!ChangeQuickKey && ChangingQuickKey)
+            {
+                WindowQuickKey.Value = tempShowWindow;
+                ChangingQuickKey = false;
+            }
+        }
+
+        /// <summary>
+        /// 控制建筑的高度
+        /// </summary>
         public void DriftBuild()
         {
             if (player?.controller != null && player.controller.cmd.type == ECommand.Build && player.controller.actionBuild != null)
@@ -2058,59 +2165,6 @@ namespace Multfunction_mod
             else if (DriftBuildingLevel != 0)
             {
                 DriftBuildingLevel = 0;
-            }
-        }
-
-        #region 开启窗口
-        public void QuickKeyOpenWindow()
-        {
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                DisplayingWindow = false;
-                ui_MultiFunctionPanel?.SetActive(DisplayingWindow && CloseUIpanel.Value);
-            }
-            if (WindowQuickKey.Value.IsDown() && !ChangingQuickKey)
-            {
-                DisplayingWindow = !DisplayingWindow;
-                if (ui_MultiFunctionPanel == null)
-                {
-                    ui_MultiFunctionPanel = UnityEngine.Object.Instantiate<GameObject>(MultiFunctionPanel, UIRoot.instance.overlayCanvas.transform);
-                }
-                ui_MultiFunctionPanel?.SetActive(DisplayingWindow && !CloseUIpanel.Value);
-            }
-            if (DisplayingWindow && Input.GetKey(KeyCode.LeftControl))
-            {
-                if (Input.GetKeyDown(KeyCode.UpArrow)) { scale.Value++; changescale = true; }
-                if (Input.GetKeyDown(KeyCode.DownArrow)) { scale.Value--; changescale = true; }
-                if (scale.Value <= 5) scale.Value = 5;
-                if (scale.Value > 35) scale.Value = 35;
-            }
-            if (player != null && player.controller != null && !player.controller.actionBuild.active)
-            {
-                if (ItemList_bool.Value && Input.GetKeyDown(KeyCode.Tab))
-                {
-                    ItemDisplayingWindow = !ItemDisplayingWindow;
-                }
-                if (GameMain.localPlanet == null) ItemDisplayingWindow = false;
-            }
-            else
-            {
-                ItemDisplayingWindow = false;
-            }
-        }
-        #endregion
-
-        public void ChangeQuickKeyMethod()
-        {
-            if (ChangeQuickKey)
-            {
-                setQuickKey();
-                ChangingQuickKey = true;
-            }
-            else if (!ChangeQuickKey && ChangingQuickKey)
-            {
-                WindowQuickKey.Value = tempShowWindow;
-                ChangingQuickKey = false;
             }
         }
 
@@ -2222,7 +2276,6 @@ namespace Multfunction_mod
             player.package.SetSize(packagesize);
             foreach (TechProto tp in new List<TechProto>(LDB.techs.dataArray))
             {
-                string t = "";
                 if (tp.Level < tp.MaxLevel)
                 {
                     for (int i = tp.Level; i < GameMain.history.techStates[tp.ID].curLevel + (GameMain.history.techStates[tp.ID].curLevel >= tp.MaxLevel ? 1 : 0); i++)
@@ -2247,15 +2300,18 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 物流背包逻辑
+        /// </summary>
         public void MechaLogisticsMethod()
         {
             if (!Mechalogistics_bool.Value || Time.time - MechaLogisticsTime < 1) return;
             MechaLogisticsTime = Time.time;
             StorageComponent package = player.package;
 
-            for(int i=0;i< player.deliveryPackage.grids.Length; i++)
+            for (int i = 0; i < player.deliveryPackage.grids.Length; i++)
             {
-                var item=player.deliveryPackage.grids[i];
+                var item = player.deliveryPackage.grids[i];
                 int itemId = item.itemId;
                 int count = item.count;
                 int packagecount = player.packageUtility.GetPackageItemCount(itemId);
@@ -2270,7 +2326,7 @@ namespace Multfunction_mod
                         else if (package.grids[index].itemId == 0)
                             remain += LDB.items.Select(itemId).StackSize;
                     }
-                    int need = Math.Min(item.requireCount - exsitcount,remain);
+                    int need = Math.Min(item.requireCount - exsitcount, remain);
                     int getcount = 0;
                     int inc = 0;
                     foreach (StarData sd in GameMain.galaxy.stars)
@@ -2329,12 +2385,12 @@ namespace Multfunction_mod
                         }
                         if (getcount >= need) break;
                     }
-                    player.packageUtility.AddItemToAllPackages(itemId, getcount,i, inc, out _);
+                    player.packageUtility.AddItemToAllPackages(itemId, getcount, i, inc, out _);
                 }
                 if (item.recycleCount < exsitcount)
                 {
-                    int recyclenum = exsitcount-item.recycleCount;
-                    player.packageUtility.TakeItemFromAllPackages(i,ref itemId,ref recyclenum, out int inc1);
+                    int recyclenum = exsitcount - item.recycleCount;
+                    player.packageUtility.TakeItemFromAllPackages(i, ref itemId, ref recyclenum, out int inc1);
                     if (itemId == 0 || recyclenum == 0) continue;
                     foreach (StarData sd in GameMain.galaxy.stars)
                     {
@@ -2423,6 +2479,18 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 量子站初始化
+        /// </summary>
+        private void InitQuantumTransport()
+        {
+            foreach (StationComponent sc in GameMain.data.galacticTransport.stationPool)
+            {
+                if (sc == null || !sc.isCollector) continue;
+                CollectorStation.Add(sc.gid);
+            }
+        }
+
         public static void AddComsumeItemtoTotal(int itemid, int count)
         {
             List<int> readytocompute = new List<int>();
@@ -2454,18 +2522,10 @@ namespace Multfunction_mod
                     if (itemid == 1503 && readytocompute[i] == 1404) countList[i] *= 12;
                     while (countList[i] > 0)
                     {
-                        if (countList[i] > int.MaxValue)
-                        {
-                            GameMain.data.statistics.production.factoryStatPool[GameMain.localPlanet.factory.index].AddProductionToTotalArray(readytocompute[i], int.MaxValue);
-                            GameMain.data.statistics.production.factoryStatPool[GameMain.localPlanet.factory.index].AddConsumptionToTotalArray(readytocompute[i], int.MaxValue);
-                            countList[i] -= int.MaxValue;
-                        }
-                        else
-                        {
-                            GameMain.data.statistics.production.factoryStatPool[GameMain.localPlanet.factory.index].AddProductionToTotalArray(readytocompute[i], (int)countList[i]);
-                            GameMain.data.statistics.production.factoryStatPool[GameMain.localPlanet.factory.index].AddConsumptionToTotalArray(readytocompute[i], (int)countList[i]);
-                            countList[i] = 0;
-                        }
+                        int num = countList[i] > int.MaxValue ? int.MaxValue : (int)countList[i];
+                        GameMain.data.statistics.production.factoryStatPool[GameMain.localPlanet.factory.index].AddProductionToTotalArray(readytocompute[i], num);
+                        GameMain.data.statistics.production.factoryStatPool[GameMain.localPlanet.factory.index].AddConsumptionToTotalArray(readytocompute[i], num);
+                        countList[i] -= num;
                     }
                 }
                 catch
@@ -2473,9 +2533,12 @@ namespace Multfunction_mod
 
                 }
             }
+
         }
 
-        //初始化玩家数据
+        /// <summary>
+        /// 初始化玩家数据
+        /// </summary>
         public void PlayerDataInit()
         {
             if (refreshPlayerData || player == null || GameMain.mainPlayer != player)
@@ -2515,7 +2578,13 @@ namespace Multfunction_mod
 
         }
 
-        //设置滑动条的上下限和名称
+        /// <summary>
+        /// 设置滑动条的上下限和名称
+        /// </summary>
+        /// <param name="i"></param>
+        /// <param name="left"></param>
+        /// <param name="right"></param>
+        /// <param name="str"></param>
         public void getLRstrValue(int i, out float left, out float right, out string str)
         {
             if (i == 0)
@@ -2663,7 +2732,11 @@ namespace Multfunction_mod
             str = "";
         }
 
-        //当数据变动时调用相应id的操作
+        /// <summary>
+        /// 当数据变动时调用相应id的操作
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="valueId"></param>
         public void OnChangeValue(float value, int valueId)
         {
             if (value != ChangeValueArray[valueId] && ChangePlayerbool)
@@ -2704,6 +2777,9 @@ namespace Multfunction_mod
 
         }
 
+        /// <summary>
+        /// 蓝图建筑无需资源
+        /// </summary>
         public void BluePrintpasteNoneed()
         {
             if (!blueprintpastenoneed_bool.Value || GameMain.localPlanet?.factory == null) return;
@@ -2717,160 +2793,27 @@ namespace Multfunction_mod
             }
         }
 
-        #region 星际物流站设置及星球矿机
-        public void StationComponentSet()
-        {
-            if (GameMain.data.galacticTransport == null || GameMain.data.galacticTransport.stationPool == null) return;
-            foreach (StarData sd in GameMain.galaxy.stars)
-            {
-                foreach (PlanetData pd in sd.planets)
-                {
-                    if (pd.factory == null || pd.factory.transport == null) continue;
-                    int pdId = pd.id;
-                    foreach (StationComponent sc in pd.factory.transport.stationPool)
-                    {
-                        if (sc != null && sc.storage != null)
-                        {
-                            if(!sc.isCollector && !sc.isVeinCollector)
-                            {
-                                if (StationSpray.Value)
-                                {
-                                    StationSprayInc(sc);
-                                }
-                                if (StationPowerGen.Value || (sc.name!=null && sc.name== "星球矿机"))
-                                {
-                                    StationPowerGeneration(sc,pdId);
-                                }
-                                if (sc.isStellar && Station_infiniteWarp_bool.Value)
-                                    sc.warperCount = 50;
-                            }
-                            for (int i = 0; i < sc.storage.Length; i++)
-                            {
-                                int itemID = sc.storage[i].itemId;
-                                int basemax = sc.isStellar ? 10000 : 5000;
-                                int extramax = sc.isStellar ? GameMain.history.remoteStationExtraStorage : GameMain.history.localStationExtraStorage;
-                                if (StationfullCount && itemID > 0)
-                                {
-                                    sc.storage[i].count = sc.storage[i].max;
-                                }
-                                if (StationStoExtra.Value >= 0)
-                                {
-                                    
-                                    if (sc.storage[i].max == basemax + extramax)
-                                    {
-                                        sc.storage[i].max += StationStoExtra.Value * basemax;
-                                    }
-                                    if (RefreshStationStorage && sc.storage[i].max % basemax == 0 && sc.storage[i].max != 0)
-                                    {
-                                        sc.storage[i].max = basemax + extramax + StationStoExtra.Value * basemax;
-                                    }
-                                }
-                            }
-                            if (sc.name != null)
-                            {
-                                if (StationfullCount_bool.Value && sc.name== "星球无限供货机")
-                                {
-                                    for (int i = 0; i < sc.storage.Length; i++)
-                                    {
-                                        int itemID = sc.storage[i].itemId;
-                                        if (itemID > 0)
-                                        {
-                                            sc.storage[i].count = sc.storage[i].max;
-                                        }
-                                    }
-                                }
-                                if (StationMiner.Value&& !sc.isVeinCollector && (sc.name == "Station_miner" || sc.name == "星球矿机"))
-                                {
-                                    if ((Time.time - StationMinerTime) > 1)
-                                    {
-                                        for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
-                                        {
-                                            int itemID = sc.storage[i].itemId;
-                                            if (itemID > 0 && sc.storage[i].count <= sc.storage[i].max)
-                                            {
-                                                int veinNumbers = GetNumberOfVein(itemID, pdId);
-                                                int pointminenum = veinNumbers * Stationminenumber.Value;
-                                                if (veinNumbers > 0 && pointminenum == 0) pointminenum = 1;
-                                                else if (veinNumbers == 0 && itemID != GameMain.galaxy.PlanetById(pdId).waterItemId) continue;
-
-                                                if (Stationfullenergy.Value || sc.energy - pointminenum * GameMain.history.miningSpeedScale * 5000 > 0)
-                                                {
-                                                    int minenum = StationMine(itemID, pointminenum, pdId);
-                                                    if(minenum > 0)
-                                                    {
-                                                        AddStatInfo(pdId, itemID, minenum);
-                                                        sc.AddItem(itemID, minenum, 0);
-                                                        if (!Stationfullenergy.Value)
-                                                            sc.energy -= minenum * 5000;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (StationTrash.Value && (sc.name == "垃圾站" || sc.name == "Station_trash"))
-                                {
-                                    for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
-                                    {
-                                        int itemID = sc.storage[i].itemId;
-                                        if (itemID > 0)
-                                        {
-                                            int trashnum = sc.storage[i].count;
-                                            if (sc.energy - trashnum * 10000 > 0)
-                                            {
-                                                AddStatInfo(pdId, itemID, trashnum, false);
-                                                sc.storage[i].count -= trashnum;
-                                                if (!Stationfullenergy.Value)
-                                                    sc.energy -= trashnum * 10000;
-                                                if (!noneedtrashsand.Value)
-                                                    player.SetSandCount(player.sandCount + trashnum * 100);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if ((Time.time - StationMinerTime) > 1)
-            {
-                StationMinerTime = Time.time;
-            }
-        }
-        #endregion
-
         /// <summary>
         /// 获取目标星球目标矿脉数量
         /// </summary>
         /// <param name="itemid" ></param>
         /// <param name="pdid"></param>
         /// <returns></returns>
-        public int GetNumberOfVein(int itemid, int pdid)
+        public int GetNumberOfVein(int itemid, PlanetData pd)
         {
-            int number = 0;
-            EVeinType evt = LDB.veins.GetVeinTypeByItemId(itemid);// ItemIdtoVeintype(itemid);
-            PlanetData pd = GameMain.galaxy.PlanetById(pdid);
-            long[] veinAmounts = new long[64];
-            pd.CalcVeinAmounts(ref veinAmounts,new HashSet<int>(), UIRoot.instance.uiGame.veinAmountDisplayFilter);
-            if (evt == EVeinType.Oil)
-            {
-                int collectspeed = (int)(veinAmounts[7] * VeinData.oilSpeedMultiplier + 0.5);
-                if (collectspeed > 1) return collectspeed;
-            }
-            if (pd == null || evt == EVeinType.None)
+            EVeinType evt = LDB.veins.GetVeinTypeByItemId(itemid);
+            if (evt == EVeinType.None)
             {
                 return 0;
             }
-            foreach (VeinData vd in pd.factory.veinPool)
+            if (evt == EVeinType.Oil)
             {
-                if (vd.type == evt)
-                {
-                    number++;
-                }
+                long[] veinAmounts = new long[64];
+                pd.CalcVeinAmounts(ref veinAmounts, new HashSet<int>(), UIRoot.instance.uiGame.veinAmountDisplayFilter);
+                int collectspeed = (int)(veinAmounts[7] * VeinData.oilSpeedMultiplier + 0.5);
+                if (collectspeed > 1) return collectspeed;
             }
-            return number;
+            return pd.factory.veinPool.Count(x => x.type == evt);
         }
 
         /// <summary>
@@ -2885,7 +2828,7 @@ namespace Multfunction_mod
             if (addStatDic == null || consumeStatDic == null) return;
             if (produce)
             {
-                if(planetId==0) return;
+                if (planetId == 0) return;
                 if (!addStatDic.ContainsKey(planetId))
                 {
                     addStatDic.Add(planetId, new Dictionary<int, long>());
@@ -2911,12 +2854,15 @@ namespace Multfunction_mod
                 }
                 else
                 {
-                    consumeStatDic[planetId][itemId]+=itemNum;
+                    consumeStatDic[planetId][itemId] += itemNum;
                 }
             }
-            
+
         }
 
+        /// <summary>
+        /// 让弹射器和发射井不在同一时刻发射
+        /// </summary>
         public void RandomEmissionEjectorSilo()
         {
             EjectorNumber = 0;
@@ -2950,7 +2896,6 @@ namespace Multfunction_mod
             TempEjectorRandomEmission = true;
             TempSiloRandomEmission = true;
         }
-
 
         #region 矿脉管理
         public void ControlVein()
@@ -3425,6 +3370,9 @@ namespace Multfunction_mod
 
         #endregion
 
+        /// <summary>
+        /// 修改海洋类型
+        /// </summary>
         public void Changewatertype()
         {
             foreach (ItemProto ip in itemProtos)
@@ -3618,7 +3566,7 @@ namespace Multfunction_mod
                     planet.factory.platformSystem.EnsureReformData();
                     //GameMain.data.statistics.production.CreateFactoryStat(index);
                     planet.LoadFactory();
-                    ui_MultiFunctionPanel.SetActive(DisplayingWindow && CloseUIpanel.Value);
+                    ui_MultiFunctionPanel.SetActive(DisplayingWindow && Preventpenetration.Value);
                     return;
                 }
                 if (type == 1) entityitemnoneed = true;
@@ -3650,64 +3598,10 @@ namespace Multfunction_mod
 
         }
 
-        public int StationMine(int itemid, int minenumber, int pdid)
-        {
-            int getmine = 0;
-            PlanetData pd = GameMain.galaxy.PlanetById(pdid);
-            if (pd.waterItemId == itemid)
-            {
-                return (int)(30 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
-            }
-            if (Station_miner_noconsume_bool.Value)
-                return itemid != 1007 ? (int)(minenumber * GameMain.history.miningSpeedScale / 2) : (int)(minenumber * GameMain.history.miningSpeedScale);
-            if (LDB.veins.GetVeinTypeByItemId(itemid) == EVeinType.None || pd == null)
-            {
-                return 0;
-            }
-            int neednumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningCostRate / 2) : (int)(minenumber * GameMain.history.miningCostRate);
-            if (minenumber > 0 && neednumber == 0) neednumber = 1;
-            foreach (VeinData i in pd.factory.veinPool)
-            {
-                if (i.type == LDB.veins.GetVeinTypeByItemId(itemid))
-                {
-                    if (i.amount > neednumber - getmine)
-                    {
-                        if (itemid == 1007 && i.amount * VeinData.oilSpeedMultiplier <= 0.1)
-                        {
-                            int dis = oillowerlimit - pd.factory.veinPool[i.id].amount;
-                            pd.factory.veinPool[i.id].amount += dis;
-                            pd.factory.veinGroups[i.groupIndex].amount += dis;
-                            getmine += (int)(0.1 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
-                        }
-                        else
-                        {
-                            pd.factory.veinPool[i.id].amount -= neednumber;
-                            pd.factory.veinGroups[i.groupIndex].amount -= neednumber;
-                            getmine = minenumber;
-                        }
-                    }
-                    else
-                    {
-                        if (itemid != 1007)
-                        {
-                            pd.factory.veinGroups[i.groupIndex].count--;
-                            pd.factory.veinGroups[i.groupIndex].amount -= i.amount;
-                            pd.factory.RemoveVeinWithComponents(i.id);
-                            getmine += i.amount;
-                        }
-                    }
-                    if (pd.factory.veinGroups[i.groupIndex].count == 0)
-                    {
-                        pd.factory.veinGroups[i.groupIndex].type = 0;
-                        pd.factory.veinGroups[i.groupIndex].amount = 0;
-                        pd.factory.veinGroups[i.groupIndex].pos = Vector3.zero;
-                    }
-                    if (getmine == minenumber) break;
-                }
-            }
-            return itemid != 1007 ? (int)(getmine * GameMain.history.miningSpeedScale / 2) : (int)(getmine * GameMain.history.miningSpeedScale);
-        }
-
+        /// <summary>
+        /// 设置地基
+        /// </summary>
+        /// <param name="type"></param>
         public void OnSetBase(int type)
         {
             if (restorewater && type != 0) return;
@@ -3737,6 +3631,9 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 清空背包
+        /// </summary>
         public void Clearpackage()
         {
             if (player == null) return;
@@ -3747,6 +3644,9 @@ namespace Multfunction_mod
             player.package.NotifyStorageChange();
         }
 
+        /// <summary>
+        /// 锁定背包
+        /// </summary>
         public void LockPlayerPackage()
         {
             if (player == null || player.package == null) return;
@@ -3777,16 +3677,22 @@ namespace Multfunction_mod
             }
         }
 
-        public void Operatepackagesize(int rownum,int colnum,bool add=true)
+        /// <summary>
+        /// 控制背包大小和物流背包大小
+        /// </summary>
+        /// <param name="rownum"></param>
+        /// <param name="colnum"></param>
+        /// <param name="add"></param>
+        public void Operatepackagesize(int rownum, int colnum, bool add = true)
         {
             if (player == null) return;
             if (add)
             {
                 if (rownum > 0)
                 {
-                    player.package.SetSize(player.package.size / 10 * 10 + 10*rownum);
+                    player.package.SetSize(player.package.size / 10 * 10 + 10 * rownum);
                 }
-                if (colnum>0)
+                if (colnum > 0)
                 {
                     player.deliveryPackage.unlocked = true;
                     player.deliveryPackage.colCount += colnum;
@@ -3799,7 +3705,7 @@ namespace Multfunction_mod
                 {
                     player.package.SetSize(player.package.size / 10 * 10 - 10 * rownum);
                 }
-                if (colnum > 0 && player.deliveryPackage.colCount>colnum)
+                if (colnum > 0 && player.deliveryPackage.colCount > colnum)
                 {
                     player.deliveryPackage.unlocked = true;
                     player.deliveryPackage.colCount -= colnum;
@@ -3808,9 +3714,12 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 解锁全部科技
+        /// </summary>
         public void UnlockallTech()
         {
-            if (player == null) return; 
+            if (player == null) return;
             bool end = true;
             while (end)
             {
@@ -3833,7 +3742,7 @@ namespace Multfunction_mod
                             {
                                 if (techProto.UnlockFunctions[index] == 7)
                                 {
-                                    Debug.Log(techProto.Name);
+                                    //Debug.Log(techProto.Name);
                                 }
                                 GameMain.history.UnlockTechFunction(techProto.UnlockFunctions[index], techProto.UnlockValues[index], level);
                             }
@@ -3849,7 +3758,7 @@ namespace Multfunction_mod
                         {
                             if (techProto.UnlockFunctions[index] == 7)
                             {
-                                Debug.Log(techProto.Name);
+                                //Debug.Log(techProto.Name);
                             }
                         }
                         GameMain.history.UnlockTech(techProto.ID);
@@ -3859,6 +3768,9 @@ namespace Multfunction_mod
             }
         }
 
+        /// <summary>
+        /// 回退无穷科技
+        /// </summary>
         public void lockTech()
         {
             TechProto[] dataArray = LDB.techs.dataArray;
@@ -3915,7 +3827,7 @@ namespace Multfunction_mod
                 {
                     LDB.recipes.dataArray[i].TimeSpend = 1;
                 }
-                if (MULTIPELSMELT.Value!=1 && needMulti && LDB.recipes.dataArray[i].Type == ERecipeType.Smelt)
+                if (MULTIPELSMELT.Value != 1 && needMulti && LDB.recipes.dataArray[i].Type == ERecipeType.Smelt)
                 {
                     for (int j = 0; j < LDB.recipes.dataArray[i].ItemCounts.Length; ++j)
                         LDB.recipes.dataArray[i].ItemCounts[j] *= MULTIPELSMELT.Value;
@@ -3993,9 +3905,12 @@ namespace Multfunction_mod
         }
         #endregion
 
+        /// <summary>
+        /// 背包无限物品
+        /// </summary>
         public void InfiniteAllThingInPackage()
         {
-            if (!Infinitething.Value || Time.time - InfiniteAllThingTime<1) return;
+            if (!Infinitething.Value || Time.time - InfiniteAllThingTime < 1) return;
             InfiniteAllThingTime = Time.time;
             if (player.package.grids.Length < itemProtos.Length)
             {
@@ -4016,19 +3931,24 @@ namespace Multfunction_mod
 
         public void Sunlightset()
         {
-            if (GameMain.universeSimulator == null || GameMain.universeSimulator.LocalStarSimulator() == null || GameMain.universeSimulator.LocalStarSimulator().sunLight == null) return;
+            if (GameMain.universeSimulator == null || GameMain.universeSimulator.LocalStarSimulator() == null || GameMain.universeSimulator.LocalStarSimulator().sunLight == null)
+            {
+                SunLight = null;
+                lighton = false;
+                return;
+            }
             if (sunlight_bool.Value)
             {
                 if (SunLight == null)
                     SunLight = GameMain.universeSimulator.LocalStarSimulator().sunLight;
                 if (SunLight != null)
                     SunLight.transform.rotation = Quaternion.LookRotation(-player.transform.up);
-                lighton = false;
-            }
-            else if (!sunlight_bool.Value && SunLight != null && !lighton)
-            {
-                SunLight.transform.localEulerAngles = new Vector3(0.0f, 180f);
                 lighton = true;
+            }
+            else if (!sunlight_bool.Value && SunLight != null && lighton)
+            {
+                SunLight = null;
+                lighton = false;
             }
         }
 
@@ -4186,73 +4106,240 @@ namespace Multfunction_mod
         }
         #endregion
 
-        public static void StationPowerGeneration(StationComponent sc,int planetID=0)
-        {
-            if(sc == null || sc.storage == null || sc.energy >= sc.energyMax -1000000) return;
-            planetID = sc.planetId > 0 ? sc.planetId : planetID;
-            if (planetID == 0) return;
-            int lastIndex = sc.storage.Length - 1;
-            if (sc.storage[lastIndex].itemId > 0 && sc.storage[lastIndex].count > 0)
-            {
-                ItemProto ip = LDB.items.Select(sc.storage[lastIndex].itemId);
-                if (ip.HeatValue > 0 && sc.energy+ip.HeatValue<sc.energyMax)
-                {
-                    int num = Math.Min(sc.storage[lastIndex].count, (int)((sc.energyMax - sc.energy) / ip.HeatValue));
-                    sc.energy += num * ip.HeatValue;
-                    sc.storage[lastIndex].count -= num;
-                    if (num > 0)
-                    {
-                        AddStatInfo(planetID, ip.ID, num);
-                    }
-                }
-            }
-        }
 
-        public static void StationAssembler(StationComponent sc)
+        #region 星际物流站设置及星球矿机
+        public void StationComponentSet()
         {
-            if (sc == null || sc.storage==null) return;
-            int itemId = sc.storage[0].itemId;
-            if (itemId > 0)
+            if (GameMain.data.galacticTransport == null || GameMain.data.galacticTransport.stationPool == null) return;
+            foreach (StarData sd in GameMain.galaxy.stars)
             {
-                var item = LDB.items.Select(itemId);
-                if (item.recipes.Count > 0)
+                foreach (PlanetData pd in sd.planets)
                 {
-                    foreach (var rp in item.recipes)
+                    if (pd.factory == null || pd.factory.transport == null) continue;
+                    int pdId = pd.id;
+                    foreach (StationComponent sc in pd.factory.transport.stationPool)
                     {
-                        if(rp.Type == ERecipeType.Smelt && rp.Items.Length==1)
+                        if (sc == null || sc.storage == null) continue;
+                        if (!sc.isCollector && !sc.isVeinCollector)
                         {
-                            float mult = rp.ItemCounts[0] / rp.ResultCounts[0];
+                            if (StationSpray.Value)
+                            {
+                                StationSprayInc(sc);
+                            }
+                            if (StationPowerGen.Value || sc?.name == "星球矿机")
+                            {
+                                StationPowerGeneration(sc, pdId);
+                            }
+                            if (sc.isStellar && Station_infiniteWarp_bool.Value)
+                                sc.warperCount = 50;
+                        }
+                        if (StationfullCount)
+                        {
+                            StationFullItemCount(sc);
+                        }
+                        switch (sc.name)
+                        {
+                            case "星球无限供货机":
+                                if (!StationfullCount_bool.Value)
+                                    continue;
+                                StationFullItemCount(sc);
+                                break;
+                            case "星球矿机":
+                            case "Station_miner":
+                                if (StationMiner.Value && !sc.isCollector && !sc.isVeinCollector && Time.time > StationMinerTime + 1)
+                                {
+                                    for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
+                                    {
+                                        int itemID = sc.storage[i].itemId;
+                                        if (itemID <= 0 || sc.storage[i].count >= sc.storage[i].max)
+                                            continue;
+
+                                        int veinNumbers = GetNumberOfVein(itemID, pd);
+                                        int pointminenum = veinNumbers * Stationminenumber.Value;
+                                        if (veinNumbers > 0 && pointminenum == 0) pointminenum = 1;
+                                        else if (veinNumbers == 0 && itemID != GameMain.galaxy.PlanetById(pdId).waterItemId) continue;
+
+                                        if (Stationfullenergy.Value || sc.energy > pointminenum * GameMain.history.miningSpeedScale * 5000)
+                                        {
+                                            int minenum = StationMine(itemID, pointminenum, pdId);
+                                            if (minenum > 0)
+                                            {
+                                                AddStatInfo(pdId, itemID, minenum);
+                                                sc.AddItem(itemID, minenum, 0);
+                                                if (!Stationfullenergy.Value)
+                                                    sc.energy -= minenum * 5000;
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                            case "垃圾站":
+                            case "Station_trash":
+                                if (!StationTrash.Value)
+                                    continue;
+                                StationTrashMethod(sc, pdId);
+                                break;
                         }
                     }
                 }
             }
+            if ((Time.time - StationMinerTime) > 1)
+            {
+                StationMinerTime = Time.time;
+            }
         }
 
+        /// <summary>
+        /// 物流站采矿
+        /// </summary>
+        /// <param name="itemid"></param>
+        /// <param name="minenumber"></param>
+        /// <param name="pdid"></param>
+        /// <returns></returns>
+        public int StationMine(int itemid, int minenumber, int pdid)
+        {
+            int getmine = 0;
+            PlanetData pd = GameMain.galaxy.PlanetById(pdid);
+            if (pd.waterItemId == itemid)
+            {
+                return (int)(30 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
+            }
+            if (GameMain.data.gameDesc.isInfiniteResource)
+                return itemid != 1007 ? (int)(minenumber * GameMain.history.miningSpeedScale / 2) : (int)(minenumber * GameMain.history.miningSpeedScale);
+            if (LDB.veins.GetVeinTypeByItemId(itemid) == EVeinType.None || pd == null)
+            {
+                return 0;
+            }
+            int neednumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningCostRate / 2) : (int)(minenumber * GameMain.history.miningCostRate);
+            if (minenumber > 0 && neednumber == 0) neednumber = 1;
+            foreach (VeinData i in pd.factory.veinPool)
+            {
+                if (i.type != LDB.veins.GetVeinTypeByItemId(itemid))
+                    continue;
+                if (i.amount > neednumber - getmine)
+                {
+                    if (itemid == 1007 && i.amount * VeinData.oilSpeedMultiplier <= 0.1)
+                    {
+                        int dis = oillowerlimit - pd.factory.veinPool[i.id].amount;
+                        pd.factory.veinPool[i.id].amount += dis;
+                        pd.factory.veinGroups[i.groupIndex].amount += dis;
+                        getmine += (int)(0.1 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
+                    }
+                    else
+                    {
+                        pd.factory.veinPool[i.id].amount -= neednumber;
+                        pd.factory.veinGroups[i.groupIndex].amount -= neednumber;
+                        getmine = minenumber;
+                    }
+                }
+                else
+                {
+                    if (itemid != 1007)
+                    {
+                        pd.factory.veinGroups[i.groupIndex].count--;
+                        pd.factory.veinGroups[i.groupIndex].amount -= i.amount;
+                        pd.factory.RemoveVeinWithComponents(i.id);
+                        getmine += i.amount;
+                    }
+                }
+                if (pd.factory.veinGroups[i.groupIndex].count == 0)
+                {
+                    pd.factory.veinGroups[i.groupIndex].type = 0;
+                    pd.factory.veinGroups[i.groupIndex].amount = 0;
+                    pd.factory.veinGroups[i.groupIndex].pos = Vector3.zero;
+                }
+                if (getmine == minenumber) break;
+            }
+            return itemid != 1007 ? (int)(getmine * GameMain.history.miningSpeedScale / 2) : (int)(getmine * GameMain.history.miningSpeedScale);
+        }
+
+        /// <summary>
+        /// 物流站内置发电
+        /// </summary>
+        /// <param name="sc"></param>
+        /// <param name="planetID"></param>
+        public static void StationPowerGeneration(StationComponent sc, int planetID = 0)
+        {
+            if (sc == null || sc.storage == null || sc.energy >= sc.energyMax - 1000000) return;
+            planetID = sc.planetId > 0 ? sc.planetId : planetID;
+            if (planetID == 0) return;
+            ref StationStore store = ref sc.storage[sc.storage.Length - 1];
+            if (store.itemId <= 0 || store.count <= 0)
+                return;
+            ItemProto ip = LDB.items.Select(store.itemId);
+            if (ip.HeatValue > 0 && sc.energy + ip.HeatValue < sc.energyMax)
+            {
+                int num = Math.Min(store.count, (int)((sc.energyMax - sc.energy) / ip.HeatValue));
+                sc.energy += num * ip.HeatValue;
+                store.count -= num;
+                if (num > 0)
+                {
+                    AddStatInfo(planetID, ip.ID, num);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 物流站内置喷涂
+        /// </summary>
+        /// <param name="sc"></param>
         public static void StationSprayInc(StationComponent sc)
+        {
+            var incstore = sc.storage.FirstOrDefault(x => x.itemId == 1143 && x.count > 0 && x.localLogic != ELogisticStorage.None);
+            if (incstore.itemId <= 0)
+                return;
+            for (int i = 0; i < sc.storage.Length && incstore.count <= 0; i++)
+            {
+                ref StationStore store = ref sc.storage[i];
+                if (store.itemId == 1143 || store.itemId <= 0 || store.count <= 0) continue;
+
+                int needinc = store.count * incAbility - store.inc;
+                int needNumber = Math.Min((int)Math.Ceiling(needinc / 296.0), incstore.count);
+                store.inc += incstore.count >= needNumber ? needinc : incstore.count * 296;
+                incstore.count -= needNumber;
+                incstore.inc = Math.Min(incstore.count * incAbility, incstore.inc);
+            }
+        }
+
+        /// <summary>
+        /// 物流站满货物
+        /// </summary>
+        /// <param name="sc"></param>
+        private static void StationFullItemCount(StationComponent sc)
         {
             for (int i = 0; i < sc.storage.Length; i++)
             {
-                if (sc.storage[i].itemId == 1143 && sc.storage[i].count > 0 )
+                if (sc.storage[i].itemId <= 0)
+                    continue;
+                sc.storage[i].count = sc.storage[i].max;
+            }
+        }
+
+        /// <summary>
+        /// 物流站垃圾站
+        /// </summary>
+        /// <param name="sc"></param>
+        /// <param name="pdId"></param>
+        private static void StationTrashMethod(StationComponent sc, int pdId)
+        {
+            for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
+            {
+                ref StationStore store = ref sc.storage[i];
+                int itemID = store.itemId;
+                if (itemID <= 0) continue;
+                int trashnum = store.count;
+                if (sc.energy > trashnum * 10000)
                 {
-                    if(sc.storage[i].localLogic != ELogisticStorage.None)
-                    {
-                        int incAbility = Maxproliferator.Value ? 10 : 4;
-                        for (int j = 0; j < sc.storage.Length; j++)
-                        {
-                            if (j != i && sc.storage[j].itemId > 0 && sc.storage[j].count > 0 && sc.storage[i].count > 0)
-                            {
-                                int needinc = sc.storage[j].count * incAbility - sc.storage[j].inc;
-                                int needNumber = Math.Min((int)Math.Ceiling(needinc / 296.0), sc.storage[i].count);
-                                sc.storage[j].inc += sc.storage[i].count >= needNumber ? needinc : sc.storage[i].count * 296;
-                                sc.storage[i].count -= needNumber;
-                                sc.storage[i].inc = Math.Min(sc.storage[i].count * incAbility, sc.storage[i].inc);
-                            }
-                        }
-                    }
-                    return;
+                    AddStatInfo(pdId, itemID, trashnum, false);
+                    sc.storage[i].count -= trashnum;
+                    if (!Stationfullenergy.Value)
+                        sc.energy -= trashnum * 10000;
+                    if (!noneedtrashsand.Value)
+                        player.SetSandCount(player.sandCount + trashnum * 100);
                 }
             }
         }
+        #endregion
 
         /// <summary>
         /// 设置快捷键

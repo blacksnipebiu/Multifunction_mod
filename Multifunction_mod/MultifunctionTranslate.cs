@@ -21,7 +21,7 @@ namespace Multfunction_mod
             TranslateDict.Add("戴森球", "DysonSphere");
             TranslateDict.Add("其它功能", "Other");
             TranslateDict.Add("机甲物流", "Mechalogistics");
-            TranslateDict.Add("关闭白色面板", "ClosePanel");
+            TranslateDict.Add("防止面板穿透", "ClosePanel");
 
             TranslateDict.Add("走路速度", "Move speed");
             TranslateDict.Add("研发速度", "Research speed");

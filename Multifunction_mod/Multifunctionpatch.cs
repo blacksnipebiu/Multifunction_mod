@@ -1,12 +1,7 @@
-﻿using System;
-using System.Text.RegularExpressions;
-using BepInEx;
-using BepInEx.Configuration;
-using UnityEngine;
-using HarmonyLib;
+﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
-using System.IO;
-using ABN;
+using UnityEngine;
 using static Multfunction_mod.Multifunction;
 
 namespace Multfunction_mod
@@ -51,6 +46,7 @@ namespace Multfunction_mod
                     break;
                 }
             }
+            m = typeof(FactorySystem).GetMethods();
             harmony.PatchAll(typeof(Multifunctionpatch));
         }
 
@@ -64,7 +60,7 @@ namespace Multfunction_mod
             }
             return true;
         }
-        
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DysonSwarm), "AbsorbSail")]
         public static bool DysonSwarmPatch1(ref DysonSwarm __instance, ref bool __result, DysonNode node)
@@ -489,7 +485,7 @@ namespace Multfunction_mod
             if (DisplayingWindow)
             {
                 DisplayingWindow = false;
-                ui_MultiFunctionPanel?.SetActive(DisplayingWindow && !CloseUIpanel.Value);
+                ui_MultiFunctionPanel?.SetActive(DisplayingWindow && !Preventpenetration.Value);
                 return false;
             }
             return true;
@@ -512,30 +508,46 @@ namespace Multfunction_mod
         [HarmonyPatch(typeof(PlanetTransport), "NewStationComponent")]
         public static void PlanetTransportNewStationComponent(ref StationComponent __result)
         {
-            if (!__result.isCollector)
+            if (__result.isCollector)
             {
-                if (autochangeQuantumstationname && Quantumtransport_bool.Value)
+                CollectorStation.Add(__result.gid);
+                return;
+            }
+            else if (__result.isVeinCollector)
+            {
+                return;
+            }
+            if (Quantumtransport_bool.Value)
+            {
+                if (autochangeQuantumstationname)
                 {
                     __result.name = "星球量子传输站";
                 }
-                else if (autochangeQuantumStarstationname && Quantumtransport_bool.Value)
+                if (autochangeQuantumStarstationname)
                 {
                     __result.name = "星系量子传输站";
                 }
-                else if (autochangestationname.Value)
-                {
-                    __result.name = Localization.language != Language.zhCN ? "Station_miner" : "星球矿机";
-                }
-                if (Buildingnoconsume.Value)
-                {
-                    if (__result.isVeinCollector)
-                    {
+            }
+            else if (autochangestationname.Value)
+            {
+                __result.name = Localization.language != Language.zhCN ? "Station_miner" : "星球矿机";
+            }
+            if (Buildingnoconsume.Value)
+            {
+                GameMain.localPlanet.factory.powerSystem.consumerPool[__result.pcId].idleEnergyPerTick = 1000;
+            }
+        }
 
-                    }
-                    else
-                    {
-                        GameMain.localPlanet.factory.powerSystem.consumerPool[__result.pcId].idleEnergyPerTick = 1000;
-                    }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PlanetTransport), "RemoveStationComponent")]
+        public static void PlanetTransportRemoveStationComponent(PlanetTransport __instance, int id)
+        {
+            if (__instance.stationPool[id] != null && __instance.stationPool[id].id != 0 && __instance.stationPool[id].isCollector)
+            {
+                int gid = __instance.stationPool[id].gid;
+                if (CollectorStation.Contains(gid))
+                {
+                    CollectorStation.Remove(gid);
                 }
             }
         }
@@ -708,19 +720,13 @@ namespace Multfunction_mod
                 }
                 else
                 {
-                    Transform transform1 = GameCamera.instance.camLight.transform;
-                    Transform transform2 = transform1;
-                    Vector3 vector3_1 = GameMain.mainPlayer.position * 0.75f - transform1.position;
-                    Vector3 normalized1 = vector3_1.normalized;
-                    vector3_1 = transform1.position;
-                    Vector3 normalized2 = vector3_1.normalized;
-                    Quaternion quaternion = Quaternion.LookRotation(normalized1, normalized2);
-                    transform2.rotation = quaternion;
-                    Vector3 vector3_2 = -GameCamera.instance.camLight.transform.forward;
-                    Shader.SetGlobalVector("_Global_SunDir", new Vector4(vector3_2.x, vector3_2.y, vector3_2.z, 0.0f));
-                    Shader.SetGlobalColor("_Global_SunsetColor0", Color.red);
-                    Shader.SetGlobalColor("_Global_SunsetColor1", Color.red);
-                    Shader.SetGlobalColor("_Global_SunsetColor2", Color.red);
+                    Transform transform = GameCamera.instance.camLight.transform;
+                    transform.rotation = Quaternion.LookRotation((GameMain.mainPlayer.position * 0.75f - transform.position).normalized, transform.position.normalized);
+                    Vector3 vector = -GameCamera.instance.camLight.transform.forward;
+                    Shader.SetGlobalVector("_Global_SunDir", new Vector4(vector.x, vector.y, vector.z, 0f));
+                    Shader.SetGlobalColor("_Global_SunsetColor0", Color.white);
+                    Shader.SetGlobalColor("_Global_SunsetColor1", Color.white);
+                    Shader.SetGlobalColor("_Global_SunsetColor2", Color.white);
                 }
             }
             ___bodyMaterial.renderQueue = GameMain.localStar == __instance.starData ? 2981 : 2979;
@@ -736,7 +742,8 @@ namespace Multfunction_mod
             PlanetData localPlanet = GameMain.localPlanet;
             if (localPlanet == __instance.planetData && localPlanet != null)
             {
-                Vector3 vector3 = sunlight_bool.Value ? GameMain.mainPlayer.transform.up : Quaternion.Inverse(localPlanet.runtimeRotation) * (__instance.planetData.star.uPosition - __instance.planetData.uPosition).normalized;
+                Vector3 vector3 = Quaternion.Inverse(localPlanet.runtimeRotation) * (__instance.planetData.star.uPosition - __instance.planetData.uPosition).normalized;
+                vector3 = sunlight_bool.Value ? GameMain.mainPlayer.transform.up : vector3;
                 if (FactoryModel.whiteMode0)
                     vector3 = -GameCamera.instance.camLight.transform.forward;
                 if (__instance.surfaceRenderer != null && __instance.surfaceRenderer.Length != 0)
@@ -848,7 +855,7 @@ namespace Multfunction_mod
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
-        public static void ComputeFlattenTerrainReformPatch(PlanetFactory __instance, Vector3[] points, Vector3 center, float radius, int pointsCount, float fade0 = 3f, float fade1 = 1f)
+        public static void ComputeFlattenTerrainReformPatch(PlanetFactory __instance, Vector3[] points, Vector3 center, float radius, int pointsCount, float fade0 = 3f)
         {
             if (!restorewater) return;
             PlanetRawData data = __instance.planet.data;
@@ -1193,7 +1200,7 @@ namespace Multfunction_mod
             if (StationMaxproliferator.Value)
             {
                 for (int i = 0; i < __instance.storage.Length; i++)
-                    if(__instance.storage[i].itemId > 0)
+                    if (__instance.storage[i].itemId > 0)
                         __instance.storage[i].inc = __instance.storage[i].count * incAbility + 100;
             }
         }
@@ -1762,5 +1769,148 @@ namespace Multfunction_mod
             }
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UIStationStorage), "GetAdditionStorage")]
+        public static void UIStationWindow_OnOpen(UIStationStorage __instance, ref int __result)
+        {
+            if (StationStoExtra.Value >= 0)
+            {
+                int basemax = __instance.station.isStellar ? 10000 : 5000;
+                __result += StationStoExtra.Value * basemax;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PlanetTransport), "SetStationStorage")]
+        public static bool UIStationWindow_SetStationStorage(PlanetTransport __instance, int stationId, int storageIdx, int itemId, int itemCountMax, ELogisticStorage localLogic, ELogisticStorage remoteLogic, Player player)
+        {
+            if (StationStoExtra.Value <= 0)
+            {
+                return true;
+            }
+            if (itemId != 0 && LDB.items.Select(itemId) == null)
+            {
+                itemId = 0;
+            }
+            bool flag = false;
+            bool flag2 = false;
+            StationComponent stationComponent = __instance.GetStationComponent(stationId);
+            if (stationComponent != null)
+            {
+                if (!stationComponent.isStellar)
+                {
+                    remoteLogic = ELogisticStorage.None;
+                }
+                if (itemId <= 0)
+                {
+                    itemId = 0;
+                    itemCountMax = 0;
+                    localLogic = ELogisticStorage.None;
+                    remoteLogic = ELogisticStorage.None;
+                }
+                int modelIndex = __instance.factory.entityPool[stationComponent.entityId].modelIndex;
+                ModelProto modelProto = LDB.models.Select(modelIndex);
+                int num = 0;
+                if (modelProto != null)
+                {
+                    num = modelProto.prefabDesc.stationMaxItemCount;
+                }
+                int num2;
+                if (stationComponent.isCollector)
+                {
+                    num2 = GameMain.history.localStationExtraStorage;
+                }
+                else if (stationComponent.isVeinCollector)
+                {
+                    num2 = GameMain.history.localStationExtraStorage;
+                }
+                else if (stationComponent.isStellar)
+                {
+                    num2 = GameMain.history.remoteStationExtraStorage;
+                }
+                else
+                {
+                    num2 = GameMain.history.localStationExtraStorage;
+                }
+                int basemax = stationComponent.isStellar ? 10000 : 5000;
+                int maxvalue = num + num2 + StationStoExtra.Value * basemax;
+                if (itemCountMax > maxvalue)
+                {
+                    itemCountMax = maxvalue;
+                }
+                if (storageIdx >= 0 && storageIdx < stationComponent.storage.Length)
+                {
+                    StationStore stationStore = stationComponent.storage[storageIdx];
+                    if (stationStore.localLogic != localLogic)
+                    {
+                        flag = true;
+                    }
+                    if (stationStore.remoteLogic != remoteLogic)
+                    {
+                        flag2 = true;
+                    }
+                    if (stationStore.itemId == itemId)
+                    {
+                        stationComponent.storage[storageIdx].max = itemCountMax;
+                        stationComponent.storage[storageIdx].localLogic = localLogic;
+                        stationComponent.storage[storageIdx].remoteLogic = remoteLogic;
+                    }
+                    else
+                    {
+                        if (stationStore.localLogic != ELogisticStorage.None || localLogic != ELogisticStorage.None)
+                        {
+                            flag = true;
+                        }
+                        if (stationStore.remoteLogic != ELogisticStorage.None || remoteLogic != ELogisticStorage.None)
+                        {
+                            flag2 = true;
+                        }
+                        if (stationStore.count > 0 && stationStore.itemId > 0 && player != null)
+                        {
+                            int num3 = player.TryAddItemToPackage(stationStore.itemId, stationStore.count, stationStore.inc, true, 0);
+                            UIItemup.Up(stationStore.itemId, num3);
+                            if (num3 < stationStore.count)
+                            {
+                                UIRealtimeTip.Popup("无法收回仓储物品".Translate(), true, 0);
+                            }
+                        }
+                        stationComponent.storage[storageIdx].itemId = itemId;
+                        stationComponent.storage[storageIdx].count = 0;
+                        stationComponent.storage[storageIdx].inc = 0;
+                        stationComponent.storage[storageIdx].localOrder = 0;
+                        stationComponent.storage[storageIdx].remoteOrder = 0;
+                        stationComponent.storage[storageIdx].max = itemCountMax;
+                        stationComponent.storage[storageIdx].localLogic = localLogic;
+                        stationComponent.storage[storageIdx].remoteLogic = remoteLogic;
+                    }
+                    if (itemId == 0)
+                    {
+                        stationComponent.storage[storageIdx] = default(StationStore);
+                        for (int i = 0; i < stationComponent.slots.Length; i++)
+                        {
+                            if (stationComponent.slots[i].dir == IODir.Output && stationComponent.slots[i].storageIdx - 1 == storageIdx)
+                            {
+                                stationComponent.slots[i].counter = 0;
+                                stationComponent.slots[i].storageIdx = 0;
+                                stationComponent.slots[i].dir = IODir.Output;
+                            }
+                        }
+                    }
+                }
+                if (!stationComponent.isStellar)
+                {
+                    flag2 = false;
+                }
+            }
+            if (flag)
+            {
+                __instance.RefreshStationTraffic(stationId);
+            }
+            if (flag2)
+            {
+                __instance.gameData.galacticTransport.RefreshTraffic(stationComponent.gid);
+            }
+            return false;
+        }
     }
 }
