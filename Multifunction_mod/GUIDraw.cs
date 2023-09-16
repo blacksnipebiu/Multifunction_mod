@@ -18,7 +18,6 @@ namespace Multfunction_mod
         private Vector2 TabscrollPosition;
         private GameObject ui_MultiFunctionPanel;
         private bool firstopen;
-        private bool panelShow;
         private bool englishShow;
         private bool ChangePlayerbool;
         private int baseSize;
@@ -79,16 +78,6 @@ namespace Multfunction_mod
                 Multifunction.MainWindow_height.Value = value;
             }
         }
-        public bool PanelShow
-        {
-            get => panelShow;
-            set
-            {
-                panelShow = value;
-                Multifunction.Preventpenetration.Value = value;
-                ui_MultiFunctionPanel.SetActive(value && DisplayingWindow);
-            }
-        }
         public bool DisplayingWindow { get; private set; }
         public bool TabDisplayingWindow { get; private set; }
         public Color TextColor
@@ -125,14 +114,15 @@ namespace Multfunction_mod
         private GUILayoutOption[] slideroptions;
         private GUILayoutOption[] textfieldoptions;
         private GUILayoutOption[] menusbuttonoptions;
+        private GUILayoutOption[] iconbuttonoptions;
         private float MainWindow_x_move;
         private float MainWindow_y_move;
         private float temp_MainWindow_x;
         private float temp_MainWindow_y;
-        private static bool moving;
-        private static bool leftscaling;
-        private static bool rightscaling;
-        private static bool bottomscaling;
+        private bool moving;
+        private bool leftscaling;
+        private bool rightscaling;
+        private bool bottomscaling;
 
         public GUIDraw(int baseSize, GameObject panel, Multifunction multifunction)
         {
@@ -159,7 +149,6 @@ namespace Multfunction_mod
             mainWindowTexture.Apply();
             mainWindowWidth = MainWindow_width.Value;
             mainWindowHeight = MainWindow_height.Value;
-            panelShow = Preventpenetration.Value;
             textColor = Textcolor.Value;
             MainWindow_x = MainWindow_x_config.Value;
             MainWindow_y = MainWindow_y_config.Value;
@@ -168,7 +157,11 @@ namespace Multfunction_mod
         public void MainWindowKeyInvoke()
         {
             DisplayingWindow = !DisplayingWindow;
-            ui_MultiFunctionPanel.SetActive(DisplayingWindow && PanelShow);
+            if (DisplayingWindow)
+            {
+                firstDraw = true;
+            }
+            ui_MultiFunctionPanel.SetActive(DisplayingWindow);
         }
 
         public void TabWindowKeyInvoke()
@@ -179,17 +172,23 @@ namespace Multfunction_mod
         public void OpenMainWindow()
         {
             DisplayingWindow = true;
-            ui_MultiFunctionPanel.SetActive(DisplayingWindow && PanelShow);
+            ui_MultiFunctionPanel.SetActive(true);
         }
 
         public void CloseMainWindow()
         {
             DisplayingWindow = false;
-            ui_MultiFunctionPanel.SetActive(DisplayingWindow && PanelShow);
+            ui_MultiFunctionPanel.SetActive(false);
         }
 
+        private bool firstDraw;
         public void Draw()
         {
+            if (firstDraw)
+            {
+                firstDraw = false;
+                BaseSize = GUI.skin.label.fontSize;
+            }
             englishShow = Localization.language != Language.zhCN;
             bool changesize = false;
             if (DisplayingWindow || TabDisplayingWindow)
@@ -225,6 +224,7 @@ namespace Multfunction_mod
                 slideroptions = new[] { GUILayout.Width(heightdis * 6) };
                 textfieldoptions = new[] { GUILayout.Width(heightdis * 3) };
                 menusbuttonoptions = new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) };
+                iconbuttonoptions = new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis) };
             }
             if (ColorChanged)
             {
@@ -243,17 +243,11 @@ namespace Multfunction_mod
             }
             if (DisplayingWindow)
             {
-                var rt = ui_MultiFunctionPanel.GetComponent<RectTransform>();
-                rt.sizeDelta = new Vector2(MainWindowWidth, MainWindowHeight);
-                rt.localPosition = new Vector2(-Screen.width / 2 + MainWindow_x, Screen.height / 2 - MainWindow_y - MainWindowHeight);
+                UIPanelSet();
+                MoveWindow();
+                Scaling_window();
                 Rect windowRect1 = new Rect(MainWindow_x, MainWindow_y, MainWindowWidth, MainWindowHeight);
-                if (leftscaling || rightscaling || topscaling || bottomscaling) { }
-                else
-                {
-                    moveWindow();
-                }
-                scaling_window();
-                GUI.DrawTexture(new Rect(MainWindow_x, MainWindow_y, MainWindowWidth, MainWindowHeight), mainWindowTexture);
+                GUI.DrawTexture(windowRect1, mainWindowTexture);
                 GUI.Window(20210218, windowRect1, MainWindow, "OP面板".getTranslate() + "(" + VERSION + ")" + "ps:ctrl+↑↓");
                 if (MainWindow_x < 0 || MainWindow_x > Screen.width)
                 {
@@ -268,6 +262,16 @@ namespace Multfunction_mod
             {
                 TabItemWindow();
             }
+        }
+
+        private void UIPanelSet()
+        {
+            var rt = ui_MultiFunctionPanel.GetComponent<RectTransform>();
+            var Canvasrt = UIRoot.instance.overlayCanvas.GetComponent<RectTransform>();
+            float CanvaswidthMultiple = Canvasrt.sizeDelta.x * 1.0f / Screen.width;
+            float CanvasheightMultiple = Canvasrt.sizeDelta.y * 1.0f / Screen.height;
+            rt.sizeDelta = new Vector2(CanvaswidthMultiple * MainWindowWidth, CanvasheightMultiple * MainWindowHeight);
+            rt.localPosition = new Vector2(-Canvasrt.sizeDelta.x / 2 + MainWindow_x * CanvaswidthMultiple, Canvasrt.sizeDelta.y / 2 - MainWindow_y * CanvasheightMultiple - rt.sizeDelta.y);
         }
 
         #region 窗口UI
@@ -298,7 +302,7 @@ namespace Multfunction_mod
                     int index = i * lineNum + j;
                     if (index == itemsNum) break;
                     var item = LDB.items.dataArray[index];
-                    if (GUILayout.Button(item.iconSprite.texture, tempbuttonstyle, new[] { GUILayout.Width(buttonsize), GUILayout.Height(buttonsize) }))
+                    if (GUILayout.Button(item.iconSprite.texture, tempbuttonstyle, iconbuttonoptions))
                     {
                         Itemdelete_bool = false;
                         if (Input.GetKey(KeyCode.LeftControl))
@@ -502,7 +506,7 @@ namespace Multfunction_mod
                 if (GUILayout.Button("初始化玩家".getTranslate())) MainFunction.InitPlayer();
 
                 GUILayout.BeginHorizontal();
-                GUILayout.Button("背包".getTranslate(), new[] { GUILayout.Height(heightdis * 2) });
+                GUILayout.Button("背包".getTranslate(), GUILayout.Height(heightdis * 2));
                 GUILayout.BeginVertical();
                 if (GUILayout.Button("加一行".getTranslate(), GUILayout.Height(heightdis))) MainFunction.Operatepackagesize(1, 0);
                 if (GUILayout.Button("加一列".getTranslate(), GUILayout.Height(heightdis))) MainFunction.Operatepackagesize(0, 1);
@@ -605,7 +609,7 @@ namespace Multfunction_mod
                     GUILayout.Space(BaseSize);
 
                     GUILayout.BeginVertical();
-                    Buildmaxlen.Value = (int)GUILayout.HorizontalSlider(Buildmaxlen.Value, 15, 100, new[] { GUILayout.Width(heightdis * 4) });
+                    Buildmaxlen.Value = (int)GUILayout.HorizontalSlider(Buildmaxlen.Value, 15, 100, GUILayout.Width(heightdis * 4));
                     GUILayout.Label(Buildmaxlen.Value + " " + "建造数量最大值".getTranslate(), style);
                     BuildNotime_bool.Value = GUILayout.Toggle(BuildNotime_bool.Value, "建筑秒完成".getTranslate());
                     blueprintpastenoneed_bool.Value = GUILayout.Toggle(blueprintpastenoneed_bool.Value, "蓝图建造无需材料".getTranslate());
@@ -849,10 +853,6 @@ namespace Multfunction_mod
             {
                 if (GUILayout.Button(tempstr[i].getTranslate(), GUILayout.Height(heightdis)))
                 {
-                    if (i >= 6 && i <= 9)
-                    {
-                        ui_MultiFunctionPanel.SetActive(true);
-                    }
                     switch (i)
                     {
                         case 0: MainFunction.OnSetBase(0); break;
@@ -865,10 +865,6 @@ namespace Multfunction_mod
                         case 7: MainFunction.RemoveAllBuild(1); break;
                         case 8: MainFunction.RemoveAllBuild(2); break;
                         case 9: MainFunction.RemoveAllBuild(3); break;
-                    }
-                    if (i >= 6 && i <= 9)
-                    {
-                        ui_MultiFunctionPanel.SetActive(false);
                     }
                 }
             }
@@ -885,8 +881,6 @@ namespace Multfunction_mod
             GUILayout.Label("注意事项:戴森云和戴森壳不要出现一层轨道都没有的情况(用前存档)".getTranslate(), style);
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical();
-            GUILayoutOption[] heightOptions = new[] { GUILayout.Height(heightdis) };
-            GUILayoutOption[] squareOptions = new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis) };
             if (!(GameMain.localStar == null || GameMain.data.dysonSpheres == null || GameMain.data.dysonSpheres[GameMain.localStar.index] == null))
             {
                 DysonSphere ds = GameMain.data.dysonSpheres[GameMain.localStar.index];
@@ -901,7 +895,7 @@ namespace Multfunction_mod
                 for (int i = 1; i <= 5; i++)
                 {
                     bool contain = layerlist.Contains(i);
-                    bool buttonclick = GUILayout.Button(contain ? i.ToString() : "", squareOptions);
+                    bool buttonclick = GUILayout.Button(contain ? i.ToString() : "", iconbuttonoptions);
                     if (buttonclick && contain)
                     {
                         for (int id = 1; id < ds.rocketCursor; ++id)
@@ -919,7 +913,7 @@ namespace Multfunction_mod
                 for (int i = 6; i <= 10; i++)
                 {
                     bool contain = layerlist.Contains(i);
-                    bool buttonclick = GUILayout.Button(contain ? i.ToString() : "", squareOptions);
+                    bool buttonclick = GUILayout.Button(contain ? i.ToString() : "", iconbuttonoptions);
                     if (buttonclick && contain)
                     {
                         for (int id = 1; id < ds.rocketCursor; ++id)
@@ -933,7 +927,7 @@ namespace Multfunction_mod
                     }
                 }
                 GUILayout.EndHorizontal();
-                if (GUILayout.Button("初始化当前戴森球".getTranslate(), heightOptions))
+                if (GUILayout.Button("初始化当前戴森球".getTranslate(), GUILayout.Height(heightdis)))
                 {
                     if (GameMain.localStar != null && GameMain.data.dysonSpheres[GameMain.localStar.index] != null)
                     {
@@ -943,7 +937,7 @@ namespace Multfunction_mod
                         GameMain.data.dysonSpheres[index].ResetNew();
                     }
                 }
-                if (GUILayout.Button("瞬间完成戴森球(用前存档)".getTranslate(), heightOptions))
+                if (GUILayout.Button("瞬间完成戴森球(用前存档)".getTranslate(), GUILayout.Height(heightdis)))
                 {
                     MainFunction.FinishDysonShell();
                 }
@@ -978,32 +972,31 @@ namespace Multfunction_mod
                 var selectdyson = UIRoot.instance?.uiGame?.dysonEditor?.selection?.viewDysonSphere;
                 foreach (var dyson in GameMain.data?.dysonSpheres)
                 {
-                    if (dyson != null)
+                    if (dyson == null)
+                        continue;
+                    if (temp)
                     {
-                        if (temp)
+                        dyson.maxOrbitRadius = MaxOrbitRadiusConfig.Value;
+                        dyson.minOrbitRadius = 100;
+                    }
+                    else
+                    {
+                        dyson.minOrbitRadius = dyson.starData.physicsRadius * 1.5f;
+                        if (dyson.minOrbitRadius < 4000f)
                         {
-                            dyson.maxOrbitRadius = MaxOrbitRadiusConfig.Value;
-                            dyson.minOrbitRadius = 100;
+                            dyson.minOrbitRadius = 4000f;
                         }
-                        else
+                        dyson.maxOrbitRadius = dyson.defOrbitRadius * 2f;
+                        if (dyson.starData.type == EStarType.GiantStar)
                         {
-                            dyson.minOrbitRadius = dyson.starData.physicsRadius * 1.5f;
-                            if (dyson.minOrbitRadius < 4000f)
-                            {
-                                dyson.minOrbitRadius = 4000f;
-                            }
-                            dyson.maxOrbitRadius = dyson.defOrbitRadius * 2f;
-                            if (dyson.starData.type == EStarType.GiantStar)
-                            {
-                                dyson.minOrbitRadius *= 0.6f;
-                            }
-                            dyson.minOrbitRadius = Mathf.Ceil(dyson.minOrbitRadius / 100f) * 100f;
-                            dyson.maxOrbitRadius = Mathf.Round(dyson.maxOrbitRadius / 100f) * 100f;
+                            dyson.minOrbitRadius *= 0.6f;
                         }
-                        if (selectdyson == dyson)
-                        {
-                            UIRoot.instance.uiGame.dysonEditor.controlPanel.OnViewStarChange(dyson);
-                        }
+                        dyson.minOrbitRadius = Mathf.Ceil(dyson.minOrbitRadius / 100f) * 100f;
+                        dyson.maxOrbitRadius = Mathf.Round(dyson.maxOrbitRadius / 100f) * 100f;
+                    }
+                    if (selectdyson == dyson)
+                    {
+                        UIRoot.instance.uiGame.dysonEditor.controlPanel.OnViewStarChange(dyson);
                     }
                 }
             }
@@ -1142,11 +1135,6 @@ namespace Multfunction_mod
                 }
                 ChangeQuickKey = GUILayout.Toggle(ChangeQuickKey, !ChangeQuickKey ? "改变窗口快捷键".getTranslate() : "点击确认".getTranslate());
                 GUILayout.Label("快捷键".getTranslate() + ":" + tempShowWindow.ToString());
-
-                if (PanelShow != GUILayout.Toggle(PanelShow, "防止面板穿透".getTranslate()))
-                {
-                    PanelShow = !PanelShow;
-                }
             }
             GUILayout.EndVertical();
             GUILayout.FlexibleSpace();
@@ -1212,8 +1200,9 @@ namespace Multfunction_mod
         /// <summary>
         /// 移动窗口
         /// </summary>
-        public void moveWindow()
+        private void MoveWindow()
         {
+            if (leftscaling || rightscaling || bottomscaling) return;
             Vector2 temp = Input.mousePosition;
             if (temp.x > MainWindow_x && temp.x < MainWindow_x + MainWindowWidth && Screen.height - temp.y > MainWindow_y && Screen.height - temp.y < MainWindow_y + 20)
             {
@@ -1243,6 +1232,8 @@ namespace Multfunction_mod
                 MainWindow_x = MainWindow_x_move + temp.x - temp_MainWindow_x;
                 MainWindow_y = MainWindow_y_move + (Screen.height - temp.y) - temp_MainWindow_y;
             }
+            MainWindow_y = Math.Max(10, Math.Min(Screen.height - 10, MainWindow_y));
+            MainWindow_x = Math.Max(10, Math.Min(Screen.width - 10, MainWindow_x));
         }
 
         /// <summary>
@@ -1252,7 +1243,7 @@ namespace Multfunction_mod
         /// <param name="y"></param>
         /// <param name="window_x"></param>
         /// <param name="window_y"></param>
-        public void scaling_window()
+        private void Scaling_window()
         {
             Vector2 temp = Input.mousePosition;
             float x = MainWindowWidth;
@@ -1277,22 +1268,12 @@ namespace Multfunction_mod
                     y += Screen.height - temp.y - (MainWindow_y + y);
                     bottomscaling = true;
                 }
-                //if (rightscaling || leftscaling)
-                //{
-                //    if ((Screen.height - temp.y + 10 > MainWindow_y && Screen.height - temp.y - 10 < MainWindow_y) && (temp.x >= MainWindow_x && temp.x <= MainWindow_x + x) || topscaling)
-                //    {
-                //        y -= Screen.height - temp.y - MainWindow_y;
-                //        MainWindow_y = Screen.height - temp.y;
-                //        topscaling = true;
-                //    }
-                //}
             }
             if (Input.GetMouseButtonUp(0))
             {
                 rightscaling = false;
                 leftscaling = false;
                 bottomscaling = false;
-                topscaling = false;
             }
             MainWindowWidth = x;
             MainWindowHeight = y;

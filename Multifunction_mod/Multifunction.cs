@@ -17,7 +17,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.7.9";
+        public const string VERSION = "2.8.0";
 
         #region 临时变量
 
@@ -61,7 +61,6 @@ namespace Multfunction_mod
         public static bool ChangingQuickKey;
         public static bool leftscaling;
         public static bool rightscaling;
-        public static bool topscaling;
         public static bool bottomscaling;
         public static bool dropdownbutton;
         public static bool addveinbool;
@@ -181,7 +180,6 @@ namespace Multfunction_mod
         public static ConfigEntry<bool> Maxproliferator;
         public static ConfigEntry<bool> StationPowerGen;
         public static ConfigEntry<bool> ChangeDysonradius;
-        public static ConfigEntry<bool> Preventpenetration;
         public static ConfigEntry<bool> CloseUIAbnormalityTip;
         public static ConfigEntry<bool> QuantumtransportstationSupply;
         public static ConfigEntry<bool> QuantumtransportCollectorSupply;
@@ -299,7 +297,6 @@ namespace Multfunction_mod
                 MainWindow_y_config = Config.Bind("第一窗口y", "xl_SimpleUI_1_y_config", 199.0f);
                 MainWindow_width = Config.Bind("第一窗口宽度", "xl_SimpleUI_1_x_config", 1400.0f);
                 MainWindow_height = Config.Bind("第一窗口高度", "xl_SimpleUI_1_y_config", 1000.0f);
-                Preventpenetration = Config.Bind("防止穿透", "Preventpenetration", false);
                 WindowQuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt));
             }
             #endregion
@@ -1052,7 +1049,6 @@ namespace Multfunction_mod
             StationSpray.Value = false;
             Maxproliferator.Value = false;
             StationPowerGen.Value = false;
-            Preventpenetration.Value = false;
             CloseUIAbnormalityTip.Value = false;
             QuantumtransportstationSupply.Value = false;
             QuantumtransportlabSupply.Value = false;
