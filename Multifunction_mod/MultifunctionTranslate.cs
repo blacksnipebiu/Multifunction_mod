@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using HarmonyLib;
+﻿using System.Collections.Generic;
 
 namespace Multfunction_mod
 {
     public static class MultifunctionTranslate
     {
         private static Dictionary<string, string> TranslateDict = new Dictionary<string, string>();
-        public static string getTranslate(this string s) => Localization.language != Language.zhCN && TranslateDict.ContainsKey(s)&&TranslateDict[s].Length>0 ? TranslateDict[s] : s;
+        public static string getTranslate(this string s) => Localization.language != Language.zhCN && TranslateDict.ContainsKey(s) && TranslateDict[s].Length > 0 ? TranslateDict[s] : s;
         public static void regallTranslate()
         {
             TranslateDict.Clear();
@@ -33,7 +28,7 @@ namespace Multfunction_mod
             TranslateDict.Add("最大航行速度", "Max sail speed");
             TranslateDict.Add("最大曲速", "Max warp speed");
             TranslateDict.Add("跳跃速度", "Jump speed");
-            TranslateDict.Add("建造范围", "Building range"); 
+            TranslateDict.Add("建造范围", "Building range");
             TranslateDict.Add("核心功率", "Core Generation");
             TranslateDict.Add("运输机速度", "Logistics drone flight speed");
             TranslateDict.Add("运输船速度", "Logistics vessel navigate speed");
@@ -48,14 +43,15 @@ namespace Multfunction_mod
             TranslateDict.Add("无限物品", "Infinite item");
             TranslateDict.Add("锁定背包", "Lock the package");
             TranslateDict.Add("建筑师模式", "ArchitectMode");
-            TranslateDict.Add("无限机甲能量", "Infinite mecha energy"); 
+            TranslateDict.Add("无限机甲能量", "Infinite mecha energy");
             TranslateDict.Add("不往背包放东西", "Don't put things in the player's package");
             TranslateDict.Add("建筑秒完成", "Construction completed in seconds");
             TranslateDict.Add("蓝图建造无需材料", "No materials required for blueprint construction");
-            TranslateDict.Add("科技点击解锁", "Technology click to unlock"); 
+            TranslateDict.Add("科技点击解锁", "Technology click to unlock");
             TranslateDict.Add("物品列表(Tab)", "ItemList(Tab)");
             TranslateDict.Add("物流背包堆叠倍率", "Delivery Package Stack Size");
-            
+
+            TranslateDict.Add("以下功能需改名", "The following features need to be renamed");
             TranslateDict.Add("无限元数据", "Infinite Property");
             TranslateDict.Add("无限沙土", "Infinite Sand");
             TranslateDict.Add("停止修改", "Stop change value");
@@ -70,24 +66,29 @@ namespace Multfunction_mod
             TranslateDict.Add("点击删除下列戴森壳层级", "Click to delete the following Dyson shell layers");
             TranslateDict.Add("注意事项:戴森云和戴森壳不要出现一层轨道都没有的情况(用前存档)", "Note: The Dyson cloud and Dyson shell do not have a layer of orbits (save before use)");
 
-            TranslateDict.Add("建筑数量最大值", "Max buildings num");
-            TranslateDict.Add("运输站存储倍率", "Station storage extra multiply");
-            TranslateDict.Add("实时更改全部运输站存储倍率", "Real-time changes Station storage max"); 
+            TranslateDict.Add("建造数量最大值", "Max buildings num");
+            TranslateDict.Add("额外存储倍率", "Station storage extra multiply");
+            TranslateDict.Add("物流站功能", "Station storage functions");
+            TranslateDict.Add("储液站功能", "Storage tank functions");
+            TranslateDict.Add("其它建筑功能", "Other building functions");
+            TranslateDict.Add("实时更改全部物流站存储倍率", "Real-time changes Station storage max");
             TranslateDict.Add("无限储液站", "Infinite storage tank");
             TranslateDict.Add("星球无限供货机", "Planet infinite item station");
-            TranslateDict.Add("物流站要啥有啥", "All stations infinite item");
+            TranslateDict.Add("要啥有啥", "All stations infinite item");
             TranslateDict.Add("无需赤道造采集器", "Collector no equatorial condition");
             TranslateDict.Add("强行近距离建造物流站", "Station no too close condition");
-            TranslateDict.Add("物流站无限翘曲", "Station infinite space warpers");
+            TranslateDict.Add("无限翘曲", "Station infinite space warpers");
             TranslateDict.Add("人造恒星无限能源", "Artificial star infinite power");
+            TranslateDict.Add("风力涡轮机无限能源", "Wind Turbines Unlimited Energy");
             TranslateDict.Add("极速轨道弹射器(慎用)", "Extremely quick Ejector(Danger)");
             TranslateDict.Add("极速垂直发射井(慎用)", "Extremely quick Silo(Danger");
             TranslateDict.Add("星球电网(人造恒星)", "Plnaet Power(Artificial star)");
-            TranslateDict.Add("    覆盖全球", "    Global coverage");
-            TranslateDict.Add("    超长连接", "    Long connection");
-            TranslateDict.Add("新建设备不耗电", "New buildings dont't require power"); 
-            TranslateDict.Add("物流站永久满电", "Stations full energy");
-            TranslateDict.Add("物流站无限增产", "Station Max proliferator");
+            TranslateDict.Add("电力设备", "Electrical equipment");
+            TranslateDict.Add("覆盖全球", "Global coverage");
+            TranslateDict.Add("超长连接", "Long connection");
+            TranslateDict.Add("新建设备不耗电", "New buildings dont't require power");
+            TranslateDict.Add("永久满电", "Stations full energy");
+            TranslateDict.Add("无限增产", "Station Max proliferator");
             TranslateDict.Add("传送带信号功能", "BeltSignal Function");
             TranslateDict.Add("储液站任意存", "Anything can store in water tank");
             TranslateDict.Add("量子耗能/个", "Quantum comsume energy each");
@@ -106,8 +107,8 @@ namespace Multfunction_mod
             TranslateDict.Add("星系量子不突破上限", "Star Quantum Transmission Station don't exceed the upper limit");
             TranslateDict.Add("星球量子充电功率", "Planet Quantum Transmission Station max charging power");
             TranslateDict.Add("星系量子充电功率", "Star Quantum Transmission Station max charging power");
-            
-            TranslateDict.Add("\"生成矿物\":鼠标左键生成矿物，鼠标右键取消。\n\"删除矿物\"：按x键进入拆除模式可拆除矿物。\n可点击下面的按钮更改矿物，数字框为生成矿数量", "\"Generate Vein\":left mouse button generate vein，right mouse button cancel.\n\"delete vein\"：Press the x key to enter the removal mode to delete the vein\nYou can click the button below to change the vein type.the number box is the number of vien generated");
+
+            TranslateDict.Add("\"生成矿物\":鼠标左键生成矿物，鼠标右键取消。\"删除矿物\"：按x键进入拆除模式可拆除矿物。", "\"Generate Vein\":left mouse button generate vein，right mouse button cancel.\"delete vein\"：Press the x key to enter the removal mode to delete the vein");
             TranslateDict.Add("生成矿物", "Generate Vein");
             TranslateDict.Add("移动单矿", "Change position of the vein");
             TranslateDict.Add("移动矿堆", "Change position of the veingroup");
@@ -131,7 +132,7 @@ namespace Multfunction_mod
             TranslateDict.Add("星球矿机", "Station_miner");
             TranslateDict.Add("自动改名", "auto. change name\"Station_miner\"");
             TranslateDict.Add("星球矿机无消耗", "Station_miner no comsumption veins");
-            TranslateDict.Add("星球矿机采矿速率", "Station_miner mining speed");
+            TranslateDict.Add("采矿速率", "mining speed");
             TranslateDict.Add("垃圾站", "Station_trash");
             TranslateDict.Add("不需要沙土", "no need for soil pile");
             TranslateDict.Add("改变海洋类型", "Change water type");
@@ -142,7 +143,7 @@ namespace Multfunction_mod
             TranslateDict.Add("保存戴森球", "save DysonSphere");
             TranslateDict.Add("打开戴森球蓝图文件夹", "Open DysonSphere Blueprint folder");
             TranslateDict.Add("导入戴森球", "Load DysonSphere");
-            TranslateDict.Add("跳过太阳帆吸收阶段", "Skip the solar sail absorption phase"); 
+            TranslateDict.Add("跳过太阳帆吸收阶段", "Skip the solar sail absorption phase");
             TranslateDict.Add("跳过太阳帆子弹阶段", "Skip the solar sail bullet stage");
             TranslateDict.Add("太阳帆秒吸收", "Quick abort solarsail");
             TranslateDict.Add("全球打帆", "Sail anywhere in the planet");
@@ -152,7 +153,7 @@ namespace Multfunction_mod
             TranslateDict.Add("最大半径", "maxOrbitRadius");
             TranslateDict.Add("最小半径", "minOrbitRadius");
             TranslateDict.Add("戴森云和戴森壳至少要有一层，否则会出bug", "Dyson swarm must have at least one orbit.Dyson shell must have al least one layer");
-            
+
             TranslateDict.Add("丢垃圾速率", "throw trash speed");
             TranslateDict.Add("以下设置需要进入存档", "The follow config need to load game");
             TranslateDict.Add("丢垃圾(整活用)", "throw trash");
@@ -160,8 +161,9 @@ namespace Multfunction_mod
             TranslateDict.Add("蓝图强制粘贴", "Enforce to paste blueprint");
             TranslateDict.Add("成就重新检测", "Recheck Achievements");
             TranslateDict.Add("以下设置需要重启游戏", "The follow config need restart the game");
-            TranslateDict.Add("设置冶炼倍数", "Set multiple smelt");
-            TranslateDict.Add("设置堆叠倍率", "Set stack size");
+            TranslateDict.Add("设置", "Set");
+            TranslateDict.Add("冶炼倍数", "Multiple smelt");
+            TranslateDict.Add("堆叠倍率", "Multiple stack");
             TranslateDict.Add("操作范围不受限制", "Inspect no limit");
             TranslateDict.Add("全部手搓", "All item can handcraft");
             TranslateDict.Add("无材料生产", "No material produce");
@@ -170,7 +172,8 @@ namespace Multfunction_mod
             TranslateDict.Add("窗口颜色及透明度", "Window color and alpha");
             TranslateDict.Add("应用", "Confirm");
             TranslateDict.Add("窗口字体颜色", "Window font color");
-            TranslateDict.Add("改变窗口快捷键", "Change shortcut");
+            TranslateDict.Add("快捷键", "QuickKey");
+            TranslateDict.Add("改变窗口快捷键", "Change QuickKey");
             TranslateDict.Add("点击确认", "Click to confirm");
 
 

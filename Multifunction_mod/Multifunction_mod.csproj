@@ -77,6 +77,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constant.cs" />
+    <Compile Include="GUIDraw.cs" />
+    <Compile Include="Models\PropertyData.cs" />
     <Compile Include="Multifunction.cs" />
     <Compile Include="Multifunctionpatch.cs" />
     <Compile Include="MultifunctionTranslate.cs" />

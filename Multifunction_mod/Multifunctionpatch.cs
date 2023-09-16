@@ -482,10 +482,9 @@ namespace Multfunction_mod
         [HarmonyPatch(typeof(UIGame), "On_E_Switch")]
         public static bool CloseWindowPatch(ref UIGame __instance)
         {
-            if (DisplayingWindow)
+            if (guidraw.DisplayingWindow)
             {
-                DisplayingWindow = false;
-                ui_MultiFunctionPanel?.SetActive(DisplayingWindow && !Preventpenetration.Value);
+                guidraw.CloseMainWindow();
                 return false;
             }
             return true;
@@ -582,6 +581,10 @@ namespace Multfunction_mod
                 __instance.genPool[__result].fuelEnergy = long.MaxValue;
                 __instance.genPool[__result].genEnergyPerTick = 1000000000000;
             }
+            if (WindturbinesUnlimitedEnergy.Value && __instance.genPool[__result].wind)
+            {
+                __instance.genPool[__result].genEnergyPerTick = 100_000_000_0000;
+            }
         }
 
         [HarmonyPostfix]
@@ -601,7 +604,9 @@ namespace Multfunction_mod
         [HarmonyPatch(typeof(PowerSystem), "NewNodeComponent")]
         public static void NewNodeComponentPatchPrefix(PowerSystem __instance, ref int entityId, ref float conn, ref float cover)
         {
-            if (PlanetPower_bool.Value && LDB.items.Select(__instance.factory.entityPool[entityId].protoId).ID == 2210)
+            if (!Windturbinescovertheglobe.Value && !PlanetPower_bool.Value) return;
+            var itemID = LDB.items.Select(__instance.factory.entityPool[entityId].protoId).ID;
+            if (PlanetPower_bool.Value && itemID == 2210)
             {
                 cover = GameMain.localPlanet.realRadius * 4;
                 if (farconnectdistance)
@@ -609,6 +614,10 @@ namespace Multfunction_mod
                     conn = GameMain.localPlanet.realRadius * 1.5f;
                     farconnectdistance = false;
                 }
+            }
+            if (Windturbinescovertheglobe.Value && itemID == 2203)
+            {
+                cover = GameMain.localPlanet.realRadius * 4;
             }
         }
         [HarmonyPostfix]
@@ -758,16 +767,6 @@ namespace Multfunction_mod
             return false;
         }
 
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(UniverseSimulator), "GameTick")]
-        public static bool Prefix(UniverseSimulator __instance)
-        {
-            return !stopUniverse;
-        }
-
-
-
         [HarmonyPrefix]
         [HarmonyPatch(typeof(ProductionStatistics), "GameTick")]
         public static bool Prefix(ProductionStatistics __instance)
@@ -783,11 +782,11 @@ namespace Multfunction_mod
                 time = Time.time;
                 if (addStatDic != null)
                 {
-                    List<int> key1s = new List<int>(addStatDic.Keys);
+                    var key1s = new List<int>(addStatDic.Keys);
                     foreach (var key1 in key1s)
                     {
+                        var key2s = new List<int>(addStatDic[key1].Keys);
                         int factoryIndex = GameMain.galaxy.PlanetById(key1).factoryIndex;
-                        List<int> key2s = new List<int>(addStatDic[key1].Keys);
                         foreach (var key2 in key2s)
                         {
                             if (addStatDic[key1][key2] == 0) continue;
@@ -993,13 +992,10 @@ namespace Multfunction_mod
         [HarmonyPatch(typeof(StorageComponent), "TakeItemFromGrid")]
         public static void DetermineMoreChainTargetsPatch(StorageComponent __instance, int gridIndex, ref int itemId, ref int count)
         {
-            if (GameMain.mainPlayer != null && __instance == GameMain.mainPlayer.package)
+            if (lockpackage_bool.Value && GameMain.mainPlayer != null && __instance == GameMain.mainPlayer.package)
             {
-                if (lockpackage_bool.Value)
-                {
-                    __instance.grids[gridIndex].itemId = itemId;
-                    __instance.grids[gridIndex].count = count;
-                }
+                __instance.grids[gridIndex].itemId = itemId;
+                __instance.grids[gridIndex].count = count;
             }
         }
 
