@@ -6,6 +6,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using static Multfunction_mod.Constant;
 using static Multfunction_mod.Multifunctionpatch;
@@ -17,11 +19,28 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.8.0";
+        public const string VERSION = "2.8.1";
 
         #region 临时变量
 
         public Light SunLight;
+        private bool coolDown;
+        public bool CoolDown
+        {
+            get => coolDown;
+            set
+            {
+                coolDown = value;
+                if (value)
+                {
+                    Task.Run(() =>
+                    {
+                        Thread.Sleep(1000);
+                        coolDown = false;
+                    });
+                }
+            }
+        }
         public static GUIDraw guidraw;
         public static PropertyData propertyData;
         public Texture2D mytexture;
@@ -1854,6 +1873,7 @@ namespace Multfunction_mod
 
         public void changeveingrouppos(VeinData vd)
         {
+            if (CoolDown) return;
             PlanetData pd = GameMain.localPlanet;
             if (pd == null || pd.type == EPlanetType.Gas) return;
             RaycastHit raycastHit1;
@@ -1877,6 +1897,7 @@ namespace Multfunction_mod
                     else
                     {
                         Vector3 temp = PostionCompute(begin, raycastpos, vd1.pos, index++, vd.type == EVeinType.Oil);
+                        if (CoolDown) return;
                         if (Vector3.Distance(temp, vd1.pos) < 0.01) continue;
                         veinPool[VeinId].pos = temp;
                         if (float.IsNaN(veinPool[VeinId].pos.x) || float.IsNaN(veinPool[VeinId].pos.y) || float.IsNaN(veinPool[VeinId].pos.z))
@@ -1966,6 +1987,7 @@ namespace Multfunction_mod
                 if (vd1.pos == null || vd1.id <= 0 || vd1.type != vd.type) continue;
                 int VeinId = vd1.id;
                 veinPool[VeinId].pos = NotTidyVein.Value ? raycastpos : PostionCompute(begin, raycastpos, vd1.pos, index++, vd.type == EVeinType.Oil);
+                if (CoolDown) return;
                 if (float.IsNaN(veinPool[VeinId].pos.x) || float.IsNaN(veinPool[VeinId].pos.y) || float.IsNaN(veinPool[VeinId].pos.z))
                 {
                     continue;
@@ -1984,7 +2006,8 @@ namespace Multfunction_mod
 
                 pd.factoryModel.gpuiManager.AlterModel(veinPool[VeinId].modelIndex, veinPool[VeinId].modelId, VeinId, veinPool[VeinId].pos, Maths.SphericalRotation(veinPool[VeinId].pos, 90f));
             }
-            pd.factory.veinGroups[vd.groupIndex].pos = veinPool[vd.id].pos / (pd.realRadius + 2.5f); ;
+            pd.factory.RecalculateVeinGroup(vd.groupIndex);
+            pd.factory.ArrangeVeinGroups();
         }
 
         public void removevein()
@@ -2043,7 +2066,12 @@ namespace Multfunction_mod
 
         public Vector3 PostionCompute(Vector3 begin, Vector3 end, Vector3 pointpos, int index, bool oil = false)
         {
-            if (end.y > 193 || end.y < -193) return pointpos;
+            if (end.y > 193 || end.y < -193)
+            {
+                UIMessageBox.Show("移动矿堆失败".Translate(), "当前纬度过高，为避免出错，无法移动矿堆".Translate(), "确定".Translate(), 3);
+                CoolDown = true;
+                return pointpos;
+            }
             Vector3 pos1 = begin;
             Vector3 pos2 = end;
             Vector3 pos3;

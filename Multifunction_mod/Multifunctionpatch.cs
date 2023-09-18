@@ -1388,6 +1388,13 @@ namespace Multfunction_mod
                 Beltsignalnumberoutput[factoryIndex].Remove(id);
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(GameData), "Import")]
+        public static void GameDataImport()
+        {
+
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GameData), "GameTick")]
         public static void GameDataGameTickPatch()

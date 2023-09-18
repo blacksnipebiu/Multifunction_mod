@@ -10,6 +10,7 @@ namespace Multfunction_mod
 {
     public class GUIDraw
     {
+        private bool firstDraw;
         private string stackmultipleStr;
         private string multipelsmeltStr;
         private Multifunction MainFunction;
@@ -17,7 +18,7 @@ namespace Multfunction_mod
         private Vector2 scrollPosition;
         private Vector2 TabscrollPosition;
         private GameObject ui_MultiFunctionPanel;
-        private bool firstopen;
+        private bool RefreshBaseSize;
         private bool englishShow;
         private bool ChangePlayerbool;
         private int baseSize;
@@ -38,7 +39,7 @@ namespace Multfunction_mod
             {
                 baseSize = value;
                 scale.Value = value;
-                firstopen = true;
+                RefreshBaseSize = true;
                 heightdis = value * 2;
             }
         }
@@ -137,7 +138,7 @@ namespace Multfunction_mod
             whichpannel = 1;
             scrollPosition[0] = 0;
             TabscrollPosition[0] = 0;
-            firstopen = true;
+            RefreshBaseSize = true;
             ColorChanged = true;
             stackmultipleStr = StackMultiple.Value.ToString();
             multipelsmeltStr = MULTIPELSMELT.Value.ToString();
@@ -181,7 +182,6 @@ namespace Multfunction_mod
             ui_MultiFunctionPanel.SetActive(false);
         }
 
-        private bool firstDraw;
         public void Draw()
         {
             if (firstDraw)
@@ -207,9 +207,9 @@ namespace Multfunction_mod
                     BaseSize = temp;
                 }
             }
-            if (firstopen)
+            if (RefreshBaseSize)
             {
-                firstopen = false;
+                RefreshBaseSize = false;
                 GUI.skin.label.fontSize = BaseSize;
                 GUI.skin.button.fontSize = BaseSize;
                 GUI.skin.toggle.fontSize = BaseSize;
@@ -287,7 +287,6 @@ namespace Multfunction_mod
             TabscrollPosition = GUILayout.BeginScrollView(TabscrollPosition);
             GUILayout.BeginVertical();
             int itemsNum = LDB.items.Length;
-            float buttonsize = BaseSize * 3;
             int lineNum = 10;
             int line = itemsNum / lineNum + ((itemsNum % lineNum) > 0 ? 1 : 0);
             var tempbuttonstyle = new GUIStyle(GUI.skin.button)
