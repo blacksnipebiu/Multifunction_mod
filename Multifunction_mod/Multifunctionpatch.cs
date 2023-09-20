@@ -538,6 +538,13 @@ namespace Multfunction_mod
         }
 
         [HarmonyPrefix]
+        [HarmonyPatch(typeof(StationComponent), "Init")]
+        public static void StationComponentInit(ref int _extraStorage, PrefabDesc _desc, StationComponent __instance)
+        {
+            _extraStorage = StationStoreMax(__instance);
+        }
+
+        [HarmonyPrefix]
         [HarmonyPatch(typeof(PlanetTransport), "RemoveStationComponent")]
         public static void PlanetTransportRemoveStationComponent(PlanetTransport __instance, int id)
         {
@@ -1818,25 +1825,8 @@ namespace Multfunction_mod
                 {
                     num = modelProto.prefabDesc.stationMaxItemCount;
                 }
-                int num2;
-                if (stationComponent.isCollector)
-                {
-                    num2 = GameMain.history.localStationExtraStorage;
-                }
-                else if (stationComponent.isVeinCollector)
-                {
-                    num2 = GameMain.history.localStationExtraStorage;
-                }
-                else if (stationComponent.isStellar)
-                {
-                    num2 = GameMain.history.remoteStationExtraStorage;
-                }
-                else
-                {
-                    num2 = GameMain.history.localStationExtraStorage;
-                }
-                int basemax = stationComponent.isStellar ? 10000 : 5000;
-                int maxvalue = num + num2 + StationStoExtra.Value * basemax;
+
+                int maxvalue = num + StationStoreMax(stationComponent);
                 if (itemCountMax > maxvalue)
                 {
                     itemCountMax = maxvalue;
@@ -1914,6 +1904,31 @@ namespace Multfunction_mod
                 __instance.gameData.galacticTransport.RefreshTraffic(stationComponent.gid);
             }
             return false;
+        }
+
+        public static int StationStoreMax(StationComponent sc)
+        {
+            int num = 0;
+            int num2;
+            if (sc.isCollector)
+            {
+                num2 = GameMain.history.localStationExtraStorage;
+            }
+            else if (sc.isVeinCollector)
+            {
+                num2 = GameMain.history.localStationExtraStorage;
+            }
+            else if (sc.isStellar)
+            {
+                num2 = GameMain.history.remoteStationExtraStorage;
+            }
+            else
+            {
+                num2 = GameMain.history.localStationExtraStorage;
+            }
+            int basemax = sc.isStellar ? 10000 : 5000;
+            int maxvalue = num + num2 + StationStoExtra.Value * basemax;
+            return maxvalue;
         }
     }
 }

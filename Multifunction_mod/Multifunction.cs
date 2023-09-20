@@ -19,7 +19,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.8.1";
+        public const string VERSION = "2.8.2";
 
         #region 临时变量
 
@@ -371,7 +371,7 @@ namespace Multfunction_mod
             for (int i = 0; i < GameMain.data.galacticTransport.stationPool.Length; i++)
             {
                 StationComponent sc = GameMain.data.galacticTransport.stationPool[i];
-                if (sc == null || sc.storage == null || sc.name == null || sc.isVeinCollector || sc.isCollector) continue;
+                if (sc?.name == null || sc.storage == null || !sc.isStellar) continue;
                 if (sc.name == "星系量子传输站")
                 {
                     StarSuperStation.Add(i);
@@ -491,7 +491,7 @@ namespace Multfunction_mod
         {
             foreach (StationComponent sc in fs.factory.transport.stationPool)
             {
-                if (sc == null || sc.name == "星球量子传输站") continue;
+                if (sc?.storage == null || sc?.name == "星球量子传输站") continue;
                 for (int i = 0; i < sc.storage.Length; i++)
                 {
                     ref StationStore store = ref sc.storage[i];
@@ -978,7 +978,7 @@ namespace Multfunction_mod
                         {
                             takeitemfromstarsuperstation();
                         }
-                        catch { }
+                        catch (Exception e) { Debug.Log("量子传输失败1" + e.Message); }
                     }
 
                     //机甲物流
