@@ -541,7 +541,8 @@ namespace Multfunction_mod
         [HarmonyPatch(typeof(StationComponent), "Init")]
         public static void StationComponentInit(ref int _extraStorage, PrefabDesc _desc, StationComponent __instance)
         {
-            _extraStorage = StationStoreMax(__instance);
+            int basemax = __instance.isStellar ? 10000 : 5000;
+            _extraStorage = (StationStoExtra.Value + 1) * basemax;
         }
 
         [HarmonyPrefix]
@@ -1783,11 +1784,10 @@ namespace Multfunction_mod
         [HarmonyPatch(typeof(UIStationStorage), "GetAdditionStorage")]
         public static void UIStationWindow_OnOpen(UIStationStorage __instance, ref int __result)
         {
-            if (StationStoExtra.Value >= 0)
-            {
-                int basemax = __instance.station.isStellar ? 10000 : 5000;
-                __result += StationStoExtra.Value * basemax;
-            }
+            if (StationStoExtra.Value == 0 || __instance.station.isCollector)
+                return;
+            int basemax = __instance.station.isStellar ? 10000 : 5000;
+            __result += StationStoExtra.Value * basemax;
         }
 
         [HarmonyPrefix]
@@ -1802,9 +1802,9 @@ namespace Multfunction_mod
             {
                 itemId = 0;
             }
+            StationComponent stationComponent = __instance.GetStationComponent(stationId);
             bool flag = false;
             bool flag2 = false;
-            StationComponent stationComponent = __instance.GetStationComponent(stationId);
             if (stationComponent != null)
             {
                 if (!stationComponent.isStellar)
@@ -1826,7 +1826,8 @@ namespace Multfunction_mod
                     num = modelProto.prefabDesc.stationMaxItemCount;
                 }
 
-                int maxvalue = num + StationStoreMax(stationComponent);
+                int basemax = stationComponent.isStellar ? 10000 : 5000;
+                int maxvalue = num + (StationStoExtra.Value + 1) * basemax;
                 if (itemCountMax > maxvalue)
                 {
                     itemCountMax = maxvalue;
@@ -1904,31 +1905,6 @@ namespace Multfunction_mod
                 __instance.gameData.galacticTransport.RefreshTraffic(stationComponent.gid);
             }
             return false;
-        }
-
-        public static int StationStoreMax(StationComponent sc)
-        {
-            int num = 0;
-            int num2;
-            if (sc.isCollector)
-            {
-                num2 = GameMain.history.localStationExtraStorage;
-            }
-            else if (sc.isVeinCollector)
-            {
-                num2 = GameMain.history.localStationExtraStorage;
-            }
-            else if (sc.isStellar)
-            {
-                num2 = GameMain.history.remoteStationExtraStorage;
-            }
-            else
-            {
-                num2 = GameMain.history.localStationExtraStorage;
-            }
-            int basemax = sc.isStellar ? 10000 : 5000;
-            int maxvalue = num + num2 + StationStoExtra.Value * basemax;
-            return maxvalue;
         }
     }
 }

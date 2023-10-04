@@ -19,7 +19,7 @@ namespace Multfunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.8.2";
+        public const string VERSION = "2.8.3";
 
         #region 临时变量
 
@@ -2646,7 +2646,7 @@ namespace Multfunction_mod
         #region 物品修改
         public void SetmultipleItemStatck(int multiple)
         {
-            int itemsLength = LDB.recipes.dataArray.Length;
+            int itemsLength = LDB.items.dataArray.Length;
             for (int i = 0; i < itemsLength; i++)
             {
                 var item = LDB.items.dataArray[i];
@@ -2688,11 +2688,12 @@ namespace Multfunction_mod
         /// </summary>
         public void InfiniteAllThingInPackage()
         {
-            if (player.package.grids.Length < itemProtos.Length)
+            if (GameMain.mainPlayer == null) return;
+            StorageComponent.GRID[] grids = GameMain.mainPlayer.package.grids;
+            if (grids.Length < itemProtos.Length)
             {
-                player.package.SetSize((itemProtos.Length / 10 + 1) * 10);
+                GameMain.mainPlayer.package.SetSize((itemProtos.Length / 10 + 1) * 10);
             }
-            StorageComponent.GRID[] grids = player.package.grids;
             int i = 0;
             foreach (ItemProto ip in itemProtos)
             {
@@ -2702,7 +2703,7 @@ namespace Multfunction_mod
                 i++;
                 if (i == grids.Length) break;
             }
-            player.package.NotifyStorageChange();
+            GameMain.mainPlayer.package.NotifyStorageChange();
         }
 
         /// <summary>
