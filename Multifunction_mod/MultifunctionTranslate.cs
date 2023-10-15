@@ -1,11 +1,19 @@
 ﻿using System.Collections.Generic;
 
-namespace Multfunction_mod
+namespace Multifunction_mod
 {
     public static class MultifunctionTranslate
     {
         private static Dictionary<string, string> TranslateDict = new Dictionary<string, string>();
-        public static string getTranslate(this string s) => Localization.language != Language.zhCN && TranslateDict.ContainsKey(s) && TranslateDict[s].Length > 0 ? TranslateDict[s] : s;
+        public static string getTranslate(this string s)
+        {
+            string result = Localization.language != Language.zhCN && TranslateDict.ContainsKey(s) && TranslateDict[s].Length > 0 ? TranslateDict[s] : s;
+            //if (!TranslateDict.ContainsKey(s))
+            //{
+            //    Debug.Log(s);
+            //}
+            return result;
+        }
         public static void regallTranslate()
         {
             TranslateDict.Clear();
@@ -20,6 +28,15 @@ namespace Multfunction_mod
 
             TranslateDict.Add("走路速度", "Move speed");
             TranslateDict.Add("研发速度", "Research speed");
+            TranslateDict.Add("配送机速度", "Dispenser speed");
+            TranslateDict.Add("配送机载量", "Delivery airload");
+            TranslateDict.Add("机甲制造MAX", "Mecha makes MAX");
+            TranslateDict.Add("机甲采矿MAX", "Mecha mining MAX");
+            TranslateDict.Add("背包", "Player Package");
+            TranslateDict.Add("加一行", "Add a line");
+            TranslateDict.Add("减一行", "Reduce a line");
+            TranslateDict.Add("加一列", "Add a column");
+            TranslateDict.Add("减一列", "Reduce a column");
             TranslateDict.Add("小飞机速度", "Construction drones flight speed");
             TranslateDict.Add("小飞机任务点数", "Construction drone task count");
             TranslateDict.Add("小飞机数量", "Construction drones");
@@ -71,6 +88,11 @@ namespace Multfunction_mod
             TranslateDict.Add("物流站功能", "Station storage functions");
             TranslateDict.Add("储液站功能", "Storage tank functions");
             TranslateDict.Add("其它建筑功能", "Other building functions");
+            TranslateDict.Add("储液站无限增产", "The station increases production indefinitely");
+            TranslateDict.Add("建筑抬升", "Building uplift");
+            TranslateDict.Add("风力涡轮机覆盖全球", "Wind turbines cover the globe");
+            TranslateDict.Add("内置喷涂", "Station Built-in spraying");
+            TranslateDict.Add("内置发电", "Built-in power generation");
             TranslateDict.Add("实时更改全部物流站存储倍率", "Real-time changes Station storage max");
             TranslateDict.Add("无限储液站", "Infinite storage tank");
             TranslateDict.Add("星球无限供货机", "Planet infinite item station");
@@ -120,15 +142,22 @@ namespace Multfunction_mod
             TranslateDict.Add("整理为", "Organized as");
             TranslateDict.Add("个", "veins");
             TranslateDict.Add("行", "lines");
-            TranslateDict.Add("无穷矿", "Infinite vein");
             TranslateDict.Add("铺平整个星球", "Pave the whole planet");
             TranslateDict.Add("还原全部海洋", "Restore the whole ocean");
             TranslateDict.Add("铺平整个星球(地基)", "Pave the whole planet(Foundation)");
             TranslateDict.Add("铺平整个星球(自定义颜色)", "Pave the whole planet(Custom color)");
             TranslateDict.Add("掩埋全部矿", "bury all veins");
             TranslateDict.Add("删除全部矿", "delete all veins");
+            TranslateDict.Add("添加油井速率", "Add oil interval");
+            TranslateDict.Add("添加矿脉数量", "Add vein interval");
+            TranslateDict.Add("无穷", "Infinite");
+            TranslateDict.Add("生成矿物点击模式", "Add vein Mode");
+            TranslateDict.Add("点按模式", "Click Mode");
+            TranslateDict.Add("按压模式", "Press Mode");
             TranslateDict.Add("删除当前星球所有建筑", "Dismantle all buildings");
             TranslateDict.Add("删除当前星球所有建筑(不掉落)", "Dismantle all buildings(no drop)");
+            TranslateDict.Add("初始化当前星球", "Initialize the current planet");
+            TranslateDict.Add("初始化当前星球(不要海洋)", "Initialize the current planet(no ocean)");
             TranslateDict.Add("星球矿机", "Station_miner");
             TranslateDict.Add("自动改名", "auto. change name\"Station_miner\"");
             TranslateDict.Add("星球矿机无消耗", "Station_miner no comsumption veins");
@@ -137,6 +166,11 @@ namespace Multfunction_mod
             TranslateDict.Add("不需要沙土", "no need for soil pile");
             TranslateDict.Add("改变海洋类型", "Change water type");
             TranslateDict.Add("还原所有海洋类型", "Restore all water types");
+            TranslateDict.Add("不排列", "Do not arrange");
+            TranslateDict.Add("切割矿脉", "Cutting veins");
+            TranslateDict.Add("超密铺采集器", "Ultra-dense shop collector");
+            TranslateDict.Add("设置当前星球海洋类型", "Sets the current planetary ocean type");
+            TranslateDict.Add("恢复所有星球海洋类型", "Restore all planetary ocean types");
 
             TranslateDict.Add("初始化当前戴森球", "Clear current DysonSphere");
             TranslateDict.Add("瞬间完成戴森球(用前存档)", "Finish DysonSphere(Remember to save)");
@@ -145,7 +179,7 @@ namespace Multfunction_mod
             TranslateDict.Add("导入戴森球", "Load DysonSphere");
             TranslateDict.Add("跳过太阳帆吸收阶段", "Skip the solar sail absorption phase");
             TranslateDict.Add("跳过太阳帆子弹阶段", "Skip the solar sail bullet stage");
-            TranslateDict.Add("太阳帆秒吸收", "Quick abort solarsail");
+            TranslateDict.Add("太阳帆帧吸收", "abort solarsail every frame");
             TranslateDict.Add("全球打帆", "Sail anywhere in the planet");
             TranslateDict.Add("间隔发射", "Eject average");
             TranslateDict.Add("开放戴森壳半径上下限(用前存档)", "Open the upper and lower limits of the Dyson shell radius (save before use)");
@@ -168,6 +202,11 @@ namespace Multfunction_mod
             TranslateDict.Add("全部手搓", "All item can handcraft");
             TranslateDict.Add("无材料生产", "No material produce");
             TranslateDict.Add("快速生产", "Quick produce");
+            TranslateDict.Add("关闭异常提示", "Turn off exception prompts");
+            TranslateDict.Add("增产点数上限10", "The maximum number of production increase points is 10");
+            TranslateDict.Add("建筑铺设无需条件", "No conditions are required for the laying of the building");
+            TranslateDict.Add("关闭所有碰撞体", "Close all colliders");
+            TranslateDict.Add("取消所有勾选", "Uncheck all ticks");
 
             TranslateDict.Add("窗口颜色及透明度", "Window color and alpha");
             TranslateDict.Add("应用", "Confirm");
@@ -180,6 +219,7 @@ namespace Multfunction_mod
             TranslateDict.Add("储存", "Store");
             TranslateDict.Add("需求", "Need");
             TranslateDict.Add("回收", "Recycle");
+            TranslateDict.Add("强化机甲物流", "Strengthen mecha logistics");
             TranslateDict.Add("机甲物流专用星", "Mecha logistics Planet");
             TranslateDict.Add("回收使用储物仓", "Recycle use storage");
             TranslateDict.Add("需求使用储物仓", "Provide use storage");

@@ -79,6 +79,8 @@
     <Compile Include="Constant.cs" />
     <Compile Include="GUIDraw.cs" />
     <Compile Include="Models\PropertyData.cs" />
+    <Compile Include="Models\SeedPlanetWater.cs" />
+    <Compile Include="Models\VeinControlProperty.cs" />
     <Compile Include="Multifunction.cs" />
     <Compile Include="Multifunctionpatch.cs" />
     <Compile Include="MultifunctionTranslate.cs" />

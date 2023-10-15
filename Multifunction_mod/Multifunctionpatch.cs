@@ -2,9 +2,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static Multfunction_mod.Multifunction;
+using static Multifunction_mod.Multifunction;
 
-namespace Multfunction_mod
+namespace Multifunction_mod
 {
     public class Tempsail
     {
@@ -156,7 +156,10 @@ namespace Multfunction_mod
                     DysonNode dysonNode = __instance.nodePool[i];
                     if (dysonNode != null && dysonNode.id == i && dysonNode.sp == dysonNode.spMax)
                     {
-                        dysonNode.OrderConstructCp(gameTick, swarm);
+                        for (int j = 1; j <= Solarsailsabsorbeveryframe.Value; j++)
+                        {
+                            dysonNode.OrderConstructCp(gameTick, swarm);
+                        }
                     }
                 }
             }
@@ -353,13 +356,12 @@ namespace Multfunction_mod
                             VectorLF3 uEndVel = VectorLF3.Cross(vectorLF2 - uPos, swarm.orbits[__instance.orbitId].up).normalized * Math.Sqrt((double)(swarm.dysonSphere.gravity / swarm.orbits[__instance.orbitId].radius));
                             if (playcancelsolarbullet)
                             {
-                                DysonSail ss = default(DysonSail);
+                                DysonSail ss = default;
                                 VectorLF3 vectorLF1 = vectorLF2 - swarm.starData.uPosition;
                                 ss.px = (float)vectorLF1.x;
                                 ss.py = (float)vectorLF1.y;
                                 ss.pz = (float)vectorLF1.z;
                                 vectorLF1 = uEndVel;
-                                vectorLF1 += RandomTable.SphericNormal(ref swarm.randSeed, 0.5);
                                 ss.vx = (float)vectorLF1.x;
                                 ss.vy = (float)vectorLF1.y;
                                 ss.vz = (float)vectorLF1.z;

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using static Multfunction_mod.Multifunction;
+using static Multifunction_mod.Multifunction;
 using Vector2 = UnityEngine.Vector2;
 
-namespace Multfunction_mod
+namespace Multifunction_mod
 {
     public class GUIDraw
     {
@@ -32,6 +32,7 @@ namespace Multfunction_mod
         private Color mainWindowTextureColor;
         private Texture2D mainWindowTexture;
         public bool ColorChanged;
+        public bool MouseInWindow;
         public int BaseSize
         {
             get => baseSize;
@@ -416,7 +417,11 @@ namespace Multfunction_mod
                     float.TryParse(Regex.Replace(t, @"^[^0-9]", ""), out temp);
                 }
             }
-            GUILayout.Label(propertyName.getTranslate(), style);
+
+            GUIStyle labelStyle = new GUIStyle(style);
+            labelStyle.margin = new RectOffset(0, 0, 3, 0);
+            GUILayout.Label(propertyName.getTranslate(), labelStyle);
+
             GUILayout.EndHorizontal();
             temp = Math.Max(left, Math.Min(right, temp));
             return temp;
@@ -742,95 +747,59 @@ namespace Multfunction_mod
             GUILayout.Label("\"生成矿物\":鼠标左键生成矿物，鼠标右键取消。\"删除矿物\"：按x键进入拆除模式可拆除矿物。".getTranslate(), style);
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical();
+            var veinControlProperty = MainFunction.veinproperty;
             string[] tempstr = new string[8] { "生成矿物", "删除矿物", "移动单矿", "移动矿堆", "不排列", "整理所有矿", "切割矿脉", "还原海洋" };
-            for (int i = 0; i < tempstr.Length; i++)
+            veinControlProperty.AddVein = GUILayout.Toggle(veinControlProperty.AddVein, "生成矿物".getTranslate());
+            veinControlProperty.DeleteVein = GUILayout.Toggle(veinControlProperty.DeleteVein, "删除矿物".getTranslate());
+            veinControlProperty.Changeveinpos = GUILayout.Toggle(veinControlProperty.Changeveinpos, "移动单矿".getTranslate());
+            veinControlProperty.Changeveingrouppos = GUILayout.Toggle(veinControlProperty.Changeveingrouppos, "移动矿堆".getTranslate());
+            veinControlProperty.NotTidyVein = GUILayout.Toggle(veinControlProperty.NotTidyVein, "不排列".getTranslate());
+            veinControlProperty.GetallVein = GUILayout.Toggle(veinControlProperty.GetallVein, "整理所有矿".getTranslate());
+            GUILayout.Label("整理为".getTranslate() + veinControlProperty.VeinLines + "行".getTranslate());
+            veinControlProperty.VeinLines = (int)GUILayout.HorizontalSlider(veinControlProperty.VeinLines, 1, 20);
+            veinControlProperty.Changexveinspos = GUILayout.Toggle(veinControlProperty.Changexveinspos, "切割矿脉".getTranslate());
+            GUILayout.Label("切割出".getTranslate() + veinControlProperty.CuttingVeinNumbers + "个".getTranslate());
+            veinControlProperty.CuttingVeinNumbers = (int)GUILayout.HorizontalSlider(veinControlProperty.CuttingVeinNumbers, 2, 72);
+            restorewater = GUILayout.Toggle(restorewater, "还原海洋".getTranslate() + "/s");
+            GUILayout.Label("生成矿物点击模式".getTranslate());
+            bool tempPress = GUILayout.Toggle(veinControlProperty.AddVeinMode == 0, "点按模式".getTranslate());
+            bool tempJustPress = GUILayout.Toggle(veinControlProperty.AddVeinMode == 1, "按压模式".getTranslate());
+            if (tempPress && veinControlProperty.AddVeinMode == 1)
             {
-                bool tempvalue = false;
-                switch (i)
-                {
-                    case 0: tempvalue = addveinbool; break;
-                    case 1: tempvalue = deleteveinbool.Value; break;
-                    case 2: tempvalue = changeveinposbool; break;
-                    case 3: tempvalue = changeveingroupposbool; break;
-                    case 4: tempvalue = NotTidyVein.Value; break;
-                    case 5: tempvalue = getallVein_bool; break;
-                    case 6: tempvalue = changexveinspos; break;
-                    case 7: tempvalue = restorewater; break;
-                }
-                tempvalue = GUILayout.Toggle(tempvalue, tempstr[i].getTranslate());
-                switch (i)
-                {
-                    case 0:
-                        addveinbool = tempvalue;
-                        if (addveinbool)
-                        {
-                            changeveinposbool = false;
-                            changeveingroupposbool = false;
-                            getallVein_bool = false;
-                            changexveinspos = false;
-                        }
-                        break;
-                    case 1: deleteveinbool.Value = tempvalue; break;
-                    case 2:
-                        changeveinposbool = tempvalue;
-                        if (changeveinposbool)
-                        {
-                            addveinbool = false;
-                            changeveingroupposbool = false;
-                            getallVein_bool = false;
-                            changexveinspos = false;
-                        }
-                        break;
-                    case 3:
-                        changeveingroupposbool = tempvalue;
-                        if (changeveingroupposbool)
-                        {
-                            addveinbool = false;
-                            changeveinposbool = false;
-                            getallVein_bool = false;
-                            changexveinspos = false;
-                        }
-                        break;
-                    case 4:
-                        NotTidyVein.Value = tempvalue;
-                        break;
-                    case 5:
-                        GUILayout.Label("整理为".getTranslate() + veinlines.Value + "行".getTranslate());
-                        veinlines.Value = (int)GUILayout.HorizontalSlider(veinlines.Value, 1, 20);
-                        getallVein_bool = tempvalue;
-                        if (getallVein_bool)
-                        {
-                            addveinbool = false;
-                            changeveinposbool = false;
-                            changeveingroupposbool = false;
-                            changexveinspos = false;
-                        }
-                        break;
-                    case 6:
-                        GUILayout.Label("切割出".getTranslate() + changeveinsposx.Value + "个".getTranslate());
-                        changeveinsposx.Value = (int)GUILayout.HorizontalSlider(changeveinsposx.Value, 2, 72);
-
-                        changexveinspos = tempvalue;
-                        if (changexveinspos)
-                        {
-                            addveinbool = false;
-                            changeveinposbool = false;
-                            changeveingroupposbool = false;
-                            getallVein_bool = false;
-                        }
-
-                        break;
-                    case 7: restorewater = tempvalue; break;
-                }
+                veinControlProperty.AddVeinMode = 0;
+            }
+            else if (tempJustPress && veinControlProperty.AddVeinMode == 0)
+            {
+                veinControlProperty.AddVeinMode = 1;
             }
             GUILayout.EndVertical();
             GUILayout.Space(heightdis);
             GUILayout.BeginVertical();
             var minbuttonoptions = new GUILayoutOption[2] { GUILayout.Height(heightdis), GUILayout.MinWidth(heightdis * 4) };
-            if (GUILayout.Button(LDB.items.Select(LDB.veins.Select(veintype).MiningItem).name, minbuttonoptions))
+            GUILayout.Label("添加矿脉数量".getTranslate());
+            bool temp500 = GUILayout.Toggle(veinControlProperty.AddVeinNumber == 500, "500");
+            bool tempInfinite = GUILayout.Toggle(veinControlProperty.AddVeinNumber != 500, "无穷".getTranslate());
+            if (temp500 && veinControlProperty.AddVeinNumber != 500)
+            {
+                veinControlProperty.AddVeinNumber = 500;
+            }
+            else if (tempInfinite && veinControlProperty.AddVeinNumber == 500)
+            {
+                veinControlProperty.AddVeinNumber = 1000000000;
+            }
+            GUILayout.Label("添加油井速率".getTranslate());
+            for (int i = 0; i < 3; i++)
+            {
+                bool temp = GUILayout.Toggle(veinControlProperty.OilAddIntervalBool[i], veinControlProperty.OilAddIntervalValue[i] + "/s");
+                if (temp != veinControlProperty.OilAddIntervalBool[i] && temp)
+                {
+                    veinControlProperty.SetOilAddInterval(i);
+                }
+            }
+            if (GUILayout.Button(LDB.items.Select(LDB.veins.Select(veinControlProperty.VeinType).MiningItem).name, minbuttonoptions))
             {
                 dropdownbutton = !dropdownbutton;
-                addveinbool = false;
+                veinControlProperty.AddVein = false;
             }
             if (dropdownbutton)
             {
@@ -839,7 +808,7 @@ namespace Multfunction_mod
                     if (GUILayout.Button(LDB.items.Select(LDB.veins.Select(i).MiningItem).name, minbuttonoptions))
                     {
                         dropdownbutton = !dropdownbutton;
-                        veintype = i;
+                        veinControlProperty.VeinType = i;
                     }
                 }
             }
@@ -857,8 +826,8 @@ namespace Multfunction_mod
                         case 0: MainFunction.OnSetBase(0); break;
                         case 1: MainFunction.OnSetBase(1); break;
                         case 2: MainFunction.OnSetBase(2); break;
-                        case 3: MainFunction.BuryAllvein(); break;
-                        case 4: MainFunction.RemoveAllvein(); break;
+                        case 3: veinControlProperty.BuryAllvein(); break;
+                        case 4: veinControlProperty.RemoveAllvein(); break;
                         case 5: MainFunction.SetMaxGasStation(); break;
                         case 6: MainFunction.RemoveAllBuild(0); break;
                         case 7: MainFunction.RemoveAllBuild(1); break;
@@ -867,10 +836,20 @@ namespace Multfunction_mod
                     }
                 }
             }
+            MainFunction.currentPlanetWaterType = GUILayout.TextField(MainFunction.currentPlanetWaterType, GUILayout.MinWidth(heightdis * 3));
+            if (GUILayout.Button("设置当前星球海洋类型".getTranslate(), GUILayout.Height(heightdis)))
+            {
+                MainFunction.SetWaterType();
+            }
+            if (GUILayout.Button("恢复所有星球海洋类型".getTranslate(), GUILayout.Height(heightdis)))
+            {
+                MainFunction.RestoreWaterType();
+            }
             GUILayout.EndVertical();
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
         }
+
 
         /// <summary>
         /// 戴森球面板
@@ -949,7 +928,14 @@ namespace Multfunction_mod
                 playcancelsolarbullet = cancelsolarbullet.Value;
             }
             quickabsorbsolar.Value = GUILayout.Toggle(quickabsorbsolar.Value, "跳过太阳帆吸收阶段".getTranslate());
-            QuickabortSwarm.Value = GUILayout.Toggle(QuickabortSwarm.Value, "太阳帆秒吸收".getTranslate());
+            QuickabortSwarm.Value = GUILayout.Toggle(QuickabortSwarm.Value, "太阳帆帧吸收".getTranslate() + ":" + Solarsailsabsorbeveryframe.Value);
+            if (QuickabortSwarm.Value)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(10);
+                Solarsailsabsorbeveryframe.Value = (int)GUILayout.HorizontalSlider(Solarsailsabsorbeveryframe.Value, 1, 100);
+                GUILayout.EndHorizontal();
+            }
             if (alwaysemission.Value != GUILayout.Toggle(alwaysemission.Value, "全球打帆".getTranslate()))
             {
                 alwaysemission.Value = !alwaysemission.Value;
@@ -1068,10 +1054,6 @@ namespace Multfunction_mod
                     if (GUILayout.Button("取消所有勾选".getTranslate()))
                     {
                         MainFunction.CancelAllToggle();
-                    }
-                    if (GUILayout.Button("GC".getTranslate()))
-                    {
-                        GC.Collect();
                     }
                 }
             }
@@ -1203,6 +1185,9 @@ namespace Multfunction_mod
         {
             if (leftscaling || rightscaling || bottomscaling) return;
             Vector2 temp = Input.mousePosition;
+            bool horizontal = MainWindow_x <= temp.x && MainWindow_x + MainWindowWidth >= temp.x;
+            bool vertical = Screen.height >= MainWindow_y + temp.y && Screen.height <= MainWindowHeight + MainWindow_y + temp.y;
+            MouseInWindow = horizontal && vertical;
             if (temp.x > MainWindow_x && temp.x < MainWindow_x + MainWindowWidth && Screen.height - temp.y > MainWindow_y && Screen.height - temp.y < MainWindow_y + 20)
             {
                 if (Input.GetMouseButton(0))

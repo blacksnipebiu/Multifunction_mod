@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace Multfunction_mod
+namespace Multifunction_mod
 {
     public class Constant
     {

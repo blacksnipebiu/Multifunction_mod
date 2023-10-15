@@ -6,45 +6,31 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
-using static Multfunction_mod.Constant;
-using static Multfunction_mod.Multifunctionpatch;
+using static Multifunction_mod.Constant;
+using static Multifunction_mod.Multifunctionpatch;
 
-namespace Multfunction_mod
+namespace Multifunction_mod
 {
     [BepInPlugin(GUID, NAME, VERSION)]
     public class Multifunction : BaseUnityPlugin
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.8.3";
+        public const string VERSION = "2.8.7";
 
         #region 临时变量
 
+        public string currentPlanetWaterType = "";
         public Light SunLight;
-        private bool coolDown;
-        public bool CoolDown
-        {
-            get => coolDown;
-            set
-            {
-                coolDown = value;
-                if (value)
-                {
-                    Task.Run(() =>
-                    {
-                        Thread.Sleep(1000);
-                        coolDown = false;
-                    });
-                }
-            }
-        }
+        private SeedPlanetWater originWaterTypes;
+        private SeedPlanetWater currentWaterTypes;
+        public Dictionary<long, SeedPlanetWater> seedPlanetWaterTypes;
         public static GUIDraw guidraw;
         public static PropertyData propertyData;
         public Texture2D mytexture;
         public ItemProto[] itemProtos => LDB.items.dataArray;
+        public VeinControlProperty veinproperty;
 
         public static bool Itemdelete_bool;
 
@@ -54,10 +40,8 @@ namespace Multfunction_mod
         public List<int[]> packageitemlist = new List<int[]>();
         public static List<Tempsail> tempsails = new List<Tempsail>();
         public static Dictionary<int, int> tmp_levelChanges;
-        public VeinData pointveindata;
         public static KeyboardShortcut tempShowWindow;
         public int oillowerlimit;
-        public static int veintype = 1;
         public static int DriftBuildingLevel;
         public static int incAbility = 4;
 
@@ -82,7 +66,6 @@ namespace Multfunction_mod
         public static bool rightscaling;
         public static bool bottomscaling;
         public static bool dropdownbutton;
-        public static bool addveinbool;
         public static bool buildnotimecolddown;
         public static bool SandBoxMode;
         public static bool blueprintPasteToolActive;
@@ -131,8 +114,9 @@ namespace Multfunction_mod
         public static ConfigEntry<int> Stationminenumber;
         public static ConfigEntry<int> Buildmaxlen;
         public static ConfigEntry<int> Quantumenergy;
-        public static ConfigEntry<int> changeveinsposx;
+        public static ConfigEntry<int> CuttingVeinNumbers;
         public static ConfigEntry<int> MaxOrbitRadiusConfig;
+        public static ConfigEntry<int> Solarsailsabsorbeveryframe;
         public static ConfigEntry<Color> Textcolor;
         public static ConfigEntry<Color> mainWindowTextureColor_config;
         public static ConfigEntry<float> MainWindow_width;
@@ -206,6 +190,7 @@ namespace Multfunction_mod
         public static ConfigEntry<bool> QuantumtransportpowerSupply;
         public static ConfigEntry<bool> QuantumtransportassembleSupply;
         public static ConfigEntry<bool> QuantumtransportstationDemand;
+        public static ConfigEntry<string> seedPlanetWater;
         public static ConfigEntry<bool> QuantumtransportminerDemand;
         public static ConfigEntry<bool> QuantumtransportsiloDemand;
         public static ConfigEntry<bool> QuantumtransportlabDemand;
@@ -217,6 +202,8 @@ namespace Multfunction_mod
         {
             preparedraw();
             Patchallmethod();
+            originWaterTypes = new SeedPlanetWater();
+            seedPlanetWaterTypes = new Dictionary<long, SeedPlanetWater>();
             MultifunctionTranslate.regallTranslate();
             AssetBundle assetBundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("Multifunction_mod.multifunctionpanel"));
             var MultiFunctionPanel = assetBundle.LoadAsset<GameObject>("MultiFunctionPanel");
@@ -256,7 +243,7 @@ namespace Multfunction_mod
                 noneedwarp = Config.Bind("无翘曲器曲速", "noneedwarp", false);
 
                 Mechalogneed = Config.Bind("机甲物流需求情况", "Mechalogneed", "");
-                changeveinsposx = Config.Bind("切割矿脉数量", "changeveinsposx", 3);
+                CuttingVeinNumbers = Config.Bind("切割矿脉数量", "CuttingVeinNumbers", 3);
                 veinlines = Config.Bind("矿物行数", "veinlines", 3);
                 NotTidyVein = Config.Bind("矿堆不整理", "NotTidyVein", false);
                 StationMaxproliferator = Config.Bind("物流站无限增产点数", "StationMaxproliferator", false);
@@ -311,6 +298,9 @@ namespace Multfunction_mod
                 CloseUIAbnormalityTip = Config.Bind("关闭异常提示", "CloseUIAbnormalityTip", false);
                 Textcolor = Config.Bind("字体颜色", "Textcolor", Color.white);
                 mainWindowTextureColor_config = Config.Bind("窗口材质颜色", "mainWindowTextureColor", Color.black);
+                seedPlanetWater = Config.Bind("海洋类型修改", "seedPlanetWater", "");
+                Solarsailsabsorbeveryframe = Config.Bind("每帧吸收个数", "Solarsailsabsorbeveryframe", 1);
+
 
                 MainWindow_x_config = Config.Bind("第一窗口x", "xl_SimpleUI_1_x_config", 448.0f);
                 MainWindow_y_config = Config.Bind("第一窗口y", "xl_SimpleUI_1_y_config", 199.0f);
@@ -319,14 +309,103 @@ namespace Multfunction_mod
                 WindowQuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt));
             }
             #endregion
-
+            veinproperty = new VeinControlProperty
+            {
+                VeinLines = veinlines.Value,
+                CuttingVeinNumbers = CuttingVeinNumbers.Value,
+                oillowerlimit = (int)(1 / VeinData.oilSpeedMultiplier)
+            };
             guidraw = new GUIDraw(Math.Max(5, Math.Min(scale.Value, 35)), temppanel, this);
             incAbility = Maxproliferator.Value ? 10 : 4;
-            oillowerlimit = (int)(0.1 / VeinData.oilSpeedMultiplier);
             tempShowWindow = WindowQuickKey.Value;
 
             CollectorStation = new List<int>();
+            InitWaterTypes();
             StartCoroutine(Timer());
+        }
+
+        private void InitWaterTypes()
+        {
+            string[] seedPlanetWaters = seedPlanetWater.Value.Split('|');
+            foreach (var seedPlanetWaterTypestr in seedPlanetWaters)
+            {
+                if (string.IsNullOrEmpty(seedPlanetWaterTypestr)) continue;
+                var seedPlanetWater = new SeedPlanetWater();
+                string[] values = seedPlanetWaterTypestr.Split(',');
+                if (values[0] == "0") continue;
+                if (values[1].Length > 0)
+                {
+                    seedPlanetWater.seedKey64 = Convert.ToInt64(values[0]);
+                    string[] planetwatertypes = values[1].Split('-');
+                    foreach (var planetwatertypestr in planetwatertypes)
+                    {
+                        if (string.IsNullOrEmpty(planetwatertypestr)) continue;
+                        string[] watervalues = planetwatertypestr.Split(':');
+                        seedPlanetWater.waterTypes.Add(Convert.ToInt32(watervalues[0]), Convert.ToInt32(watervalues[1]));
+                    }
+                }
+                if (seedPlanetWater.seedKey64 != 0)
+                {
+                    seedPlanetWaterTypes.Add(seedPlanetWater.seedKey64, seedPlanetWater);
+                }
+            }
+        }
+
+        public void SetWaterType()
+        {
+            if (GameMain.localPlanet == null) return;
+            var item = LDB.items.dataArray.ToList().Find(x => x.name == currentPlanetWaterType);
+            if (item == null)
+            {
+                UIMessageBox.Show("", "设置海洋类型失败".getTranslate(), "确定".Translate(), 3);
+                return;
+            }
+            if (GameMain.localPlanet.waterItemId == item.ID) return;
+            GameMain.localPlanet.waterItemId = item.ID;
+            int planetId = GameMain.localPlanet.id;
+            int originwaterId = originWaterTypes.waterTypes[planetId];
+            if (originwaterId == item.ID && currentWaterTypes.waterTypes.ContainsKey(planetId))
+            {
+                currentWaterTypes.waterTypes.Remove(planetId);
+            }
+            else if (originwaterId != item.ID)
+            {
+                if (!currentWaterTypes.waterTypes.ContainsKey(planetId))
+                    currentWaterTypes.waterTypes.Add(planetId, item.ID);
+                else
+                    currentWaterTypes.waterTypes[planetId] = item.ID;
+            }
+
+            string result = "";
+            foreach (var seedPlanetWaterType in seedPlanetWaterTypes)
+            {
+                if (seedPlanetWaterType.Value.seedKey64 == 0 || seedPlanetWaterType.Value.waterTypes.Count == 0) continue;
+                result += seedPlanetWaterType.Value.ToStr() + '|';
+            }
+            seedPlanetWater.Value = result;
+        }
+
+        public void RestoreWaterType()
+        {
+            string result = "";
+            foreach (var keyvalue in currentWaterTypes.waterTypes)
+            {
+                if (originWaterTypes.waterTypes.ContainsKey(keyvalue.Key))
+                {
+                    GameMain.galaxy.PlanetById(keyvalue.Key).waterItemId = originWaterTypes.waterTypes[keyvalue.Key];
+                    if (GameMain.localPlanet.id == keyvalue.Key)
+                    {
+                        currentPlanetWaterType = LDB.items.Select(originWaterTypes.waterTypes[keyvalue.Key])?.name ?? "无海洋".getTranslate();
+                    }
+                }
+            }
+            currentWaterTypes.waterTypes.Clear();
+            foreach (var seedPlanetWaterType in seedPlanetWaterTypes)
+            {
+                if (seedPlanetWaterType.Value.seedKey64 == 0 || seedPlanetWaterType.Value.waterTypes.Count == 0) continue;
+                result += seedPlanetWaterType.Value.ToStr() + '|';
+            }
+            seedPlanetWater.Value = result;
         }
 
         void Update()
@@ -878,9 +957,37 @@ namespace Multfunction_mod
                     StarSuperStation = new List<int>();
                     playcancelsolarbullet = false;
                     alwaysemissiontemp = false;
+                    originWaterTypes = new SeedPlanetWater();
                 }
                 if (GameMain.instance.running && !FinallyInit)
                 {
+                    if (GameMain.galaxy != null)
+                    {
+                        originWaterTypes.seedKey64 = GameMain.data.gameDesc.seedKey64;
+                        foreach (var star in GameMain.galaxy.stars)
+                        {
+                            if (star == null) continue;
+                            foreach (var planet in star.planets)
+                            {
+                                if (planet == null || planet.gasTotalHeat > 0) continue;
+                                originWaterTypes.waterTypes.Add(planet.id, planet.waterItemId);
+                            }
+                        }
+                        long seed = GameMain.data.gameDesc.seedKey64;
+                        if (seedPlanetWaterTypes.ContainsKey(seed))
+                        {
+                            currentWaterTypes = seedPlanetWaterTypes[seed];
+                            foreach (var watertypes in currentWaterTypes.waterTypes)
+                            {
+                                GameMain.galaxy.PlanetById(watertypes.Key).waterItemId = watertypes.Value;
+                            }
+                        }
+                        else
+                        {
+                            currentWaterTypes = new SeedPlanetWater(seed);
+                            seedPlanetWaterTypes.Add(seed, currentWaterTypes);
+                        }
+                    }
                     FinallyInit = true;
                     RandomEmissionEjectorSilo();
                     warpstationqua = new float[200];
@@ -919,7 +1026,9 @@ namespace Multfunction_mod
         }
         #endregion
 
-        #region 游戏启动后
+        /// <summary>
+        /// 游戏启动后
+        /// </summary>
         public void AfterGameStart()
         {
             if (GameMain.history != null && FinallyInit)
@@ -928,10 +1037,21 @@ namespace Multfunction_mod
                 PlayerDataInit();
                 LockPlayerPackage();
                 BluePrintpasteNoneed();
+                if (GameMain.localPlanet == null)
+                {
+                    currentPlanetWaterType = "";
+                }
+                else if (string.IsNullOrEmpty(currentPlanetWaterType))
+                {
+                    currentPlanetWaterType = LDB.items.Select(GameMain.localPlanet.waterItemId)?.name ?? "无海洋".getTranslate();
+                }
                 if (player != null)
                 {
                     GameRunning = true;
-                    ControlVein();
+                    if (!guidraw.MouseInWindow)
+                    {
+                        veinproperty.ControlVein();
+                    }
                     Sunlightset();
                     SetDronenocomsume();
                     DriftBuild();
@@ -960,7 +1080,6 @@ namespace Multfunction_mod
                 }
             }
         }
-        #endregion
 
         /// <summary>
         /// 定时任务
@@ -1673,487 +1792,6 @@ namespace Multfunction_mod
             TempSiloRandomEmission = true;
         }
 
-        #region 矿脉管理
-        public void ControlVein()
-        {
-            if (Input.GetMouseButton(0))
-            {
-                if (deleteveinbool.Value && GameMain.mainPlayer.controller.actionBuild.dismantleTool.active)
-                {
-                    removevein();
-                }
-                else if (addveinbool)
-                {
-                    addvein(veintype, 1000000000, new Vector3());
-                }
-            }
-            if (Input.GetMouseButton(1))
-            {
-                addveinbool = false;
-                changeveingroupposbool = false;
-                changexveinspos = false;
-                changeveinposbool = false;
-                getallVein_bool = false;
-                //changeveinposbool = false;
-            }
-            if (Input.GetMouseButton(0) && !player.controller.actionBuild.dismantleTool.active)
-            {
-                if (Input.GetMouseButtonDown(0))
-                {
-                    pointveindata = getveinbymouse();
-                }
-                if (pointveindata.amount != 0)
-                {
-                    if (getallVein_bool)
-                    {
-                        getallVein(pointveindata);
-                    }
-                    else if (changeveingroupposbool)
-                    {
-                        changeveingrouppos(pointveindata);
-                    }
-                    else if (changexveinspos)
-                    {
-                        changexveins(pointveindata);
-                    }
-                    else if (changeveinposbool)
-                    {
-                        RaycastHit raycastHit1;
-                        if (!Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
-                            return;
-                        Vector3 raycastpos = raycastHit1.point;
-                        changeveinpos(pointveindata, raycastpos);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// 添加矿脉
-        /// </summary>
-        /// <param name="veintype"></param>
-        /// <param name="number"></param>
-        /// <param name="pos"></param>
-        public void addvein(int veintype, int number, Vector3 pos)
-        {
-            if (number == 0) return;
-            PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas) return;
-            RaycastHit raycastHit1;
-            if (pd == null || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
-                return;
-            Vector3 raycastpos = raycastHit1.point;
-            if (pos.magnitude == 0)
-            {
-                foreach (VeinData i in pd.factory.veinPool)
-                {
-                    if (i.type == EVeinType.None) continue;
-                    if ((raycastpos - i.pos).magnitude < 1)
-                    {
-                        if (i.type != EVeinType.Oil)
-                        {
-                            if (pd.factory.veinPool[i.id].amount + number < 1000000000)
-                            {
-                                pd.factory.veinPool[i.id].amount += number;
-                                pd.factory.veinGroups[i.groupIndex].amount += number;
-                            }
-                            else
-                            {
-                                pd.factory.veinGroups[i.groupIndex].amount += 1000000000 - pd.factory.veinPool[i.id].amount;
-                                pd.factory.veinPool[i.id].amount = 1000000000;
-                            }
-                        }
-                        else
-                        {
-                            pd.factory.veinPool[i.id].amount += (int)(1 / VeinData.oilSpeedMultiplier);
-                            pd.factory.veinGroups[i.groupIndex].amount += (int)(1 / VeinData.oilSpeedMultiplier);
-                        }
-                        return;
-                    }
-                }
-                pos = raycastpos;
-            }
-            pos = raycastpos;
-            VeinData vein = new VeinData()
-            {
-                amount = veintype == 7 ? (int)(1 / VeinData.oilSpeedMultiplier) : number,
-                type = (EVeinType)veintype,
-                pos = pos,
-                productId = LDB.veins.Select(veintype).MiningItem,
-                modelIndex = (short)LDB.veins.Select(veintype).ModelIndex
-            };
-            vein.id = pd.factory.AddVeinData(vein);
-            vein.colliderId = pd.physics.AddColliderData(LDB.veins.Select(veintype).prefabDesc.colliders[0].BindToObject(vein.id, 0, EObjectType.Vein, vein.pos, Quaternion.FromToRotation(Vector3.up, vein.pos.normalized)));
-            vein.modelId = pd.factoryModel.gpuiManager.AddModel(vein.modelIndex, vein.id, vein.pos, Maths.SphericalRotation(vein.pos, UnityEngine.Random.value * 360f));
-            vein.minerCount = 0;
-            pd.factory.AssignGroupIndexForNewVein(ref vein);
-            pd.factory.veinPool[vein.id] = vein;
-            pd.factory.RefreshVeinMiningDisplay(vein.id, 0, 0);
-            pd.factory.RecalculateVeinGroup(pd.factory.veinPool[vein.id].groupIndex);
-        }
-
-        public void changexveins(VeinData vd)
-        {
-            PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas) return;
-            RaycastHit raycastHit1;
-            if (pd == null || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
-                return;
-            if (pd.factory.veinGroups[pd.factory.veinPool[vd.id].groupIndex].count <= changeveinsposx.Value)
-            {
-                changeveingrouppos(vd);
-                return;
-            }
-
-            Vector3 raycastpos = raycastHit1.point;
-            VeinData[] veinPool = pd.factory.veinPool;
-            int colliderId;
-            Vector3 begin = veinPool[vd.id].pos;
-            bool find = false;
-            List<int> veinids = new List<int>();
-            foreach (VeinData vd1 in veinPool)
-            {
-                if (vd1.pos == null || vd1.id <= 0) continue;
-                if (vd1.groupIndex == vd.groupIndex)
-                {
-                    int VeinId = vd1.id;
-                    if (vd.id == VeinId) find = true;
-                    if (!find && veinids.Count == changeveinsposx.Value - 1) continue;
-                    veinids.Add(vd1.id);
-                    if (veinids.Count == changeveinsposx.Value) break;
-                }
-            }
-            if (veinids.Count != changeveinsposx.Value) return;
-            int index = 0;
-            foreach (int VeinId in veinids)
-            {
-                veinPool[VeinId].pos = NotTidyVein.Value ? raycastpos : PostionCompute(begin, raycastpos, veinPool[VeinId].pos, index++);
-                if (float.IsNaN(veinPool[VeinId].pos.x) || float.IsNaN(veinPool[VeinId].pos.y) || float.IsNaN(veinPool[VeinId].pos.z))
-                {
-                    continue;
-                }
-                colliderId = veinPool[VeinId].colliderId;
-                pd.physics.RemoveColliderData(colliderId);
-                veinPool[VeinId].colliderId = pd.physics.AddColliderData(LDB.veins.Select((int)veinPool[VeinId].type).prefabDesc.colliders[0].BindToObject(VeinId, 0, EObjectType.Vein, veinPool[VeinId].pos, Quaternion.FromToRotation(Vector3.up, veinPool[VeinId].pos.normalized)));
-
-                pd.factoryModel.gpuiManager.AlterModel(veinPool[VeinId].modelIndex, veinPool[VeinId].modelId, VeinId, veinPool[VeinId].pos, Maths.SphericalRotation(veinPool[VeinId].pos, 90f));
-
-            }
-            bool leave = true;
-            foreach (VeinData vd1 in veinPool)
-            {
-                if (veinids.Contains(vd1.id) || vd1.type != vd.type)
-                {
-                    continue;
-                }
-                else if ((pd.factory.veinPool[vd.id].pos - vd1.pos).magnitude < 5)
-                {
-                    leave = false;
-                    break;
-                }
-            }
-            if (leave)
-            {
-                int origingroup = pd.factory.veinPool[vd.id].groupIndex;
-                pd.factory.veinPool[vd.id].groupIndex = (short)pd.factory.AddVeinGroup(vd.type, vd.pos.normalized);
-                foreach (int veinid in veinids)
-                {
-                    if (veinid == vd.id) continue;
-                    else
-                    {
-                        pd.factory.veinPool[veinid].groupIndex = pd.factory.veinPool[vd.id].groupIndex;
-                    }
-                }
-                pd.factory.RecalculateVeinGroup(pd.factory.veinPool[vd.id].groupIndex);
-                pd.factory.RecalculateVeinGroup(origingroup);
-                pd.factory.ArrangeVeinGroups();
-            }
-
-        }
-
-        public void changeveingrouppos(VeinData vd)
-        {
-            if (CoolDown) return;
-            PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas) return;
-            RaycastHit raycastHit1;
-            if (pd == null || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
-                return;
-            Vector3 raycastpos = raycastHit1.point;
-            VeinData[] veinPool = pd.factory.veinPool;
-            int colliderId;
-            Vector3 begin = veinPool[vd.id].pos;
-            int index = 0;
-            foreach (VeinData vd1 in veinPool)
-            {
-                if (vd1.pos == null || vd1.id <= 0) continue;
-                int VeinId = vd1.id;
-                if (vd1.groupIndex == veinPool[vd.id].groupIndex)
-                {
-                    if (NotTidyVein.Value)
-                    {
-                        veinPool[VeinId].pos = raycastpos;
-                    }
-                    else
-                    {
-                        Vector3 temp = PostionCompute(begin, raycastpos, vd1.pos, index++, vd.type == EVeinType.Oil);
-                        if (CoolDown) return;
-                        if (Vector3.Distance(temp, vd1.pos) < 0.01) continue;
-                        veinPool[VeinId].pos = temp;
-                        if (float.IsNaN(veinPool[VeinId].pos.x) || float.IsNaN(veinPool[VeinId].pos.y) || float.IsNaN(veinPool[VeinId].pos.z))
-                        {
-                            continue;
-                        }
-                    }
-                    colliderId = veinPool[VeinId].colliderId;
-                    pd.physics.RemoveColliderData(colliderId);
-                    veinPool[VeinId].colliderId = pd.physics.AddColliderData(LDB.veins.Select((int)veinPool[VeinId].type).prefabDesc.colliders[0].BindToObject(VeinId, 0, EObjectType.Vein, veinPool[VeinId].pos, Quaternion.FromToRotation(Vector3.up, veinPool[VeinId].pos.normalized)));
-
-                    pd.factoryModel.gpuiManager.AlterModel((int)veinPool[VeinId].modelIndex, veinPool[VeinId].modelId, VeinId, veinPool[VeinId].pos, Maths.SphericalRotation(veinPool[VeinId].pos, 90f));
-
-                }
-            }
-
-            pd.factory.veinGroups[veinPool[vd.id].groupIndex].pos = veinPool[vd.id].pos / (pd.realRadius + 2.5f);
-        }
-
-        public void changeveinpos(VeinData vd, Vector3 pos)
-        {
-            PlanetData planet = GameMain.localPlanet;
-            int VeinId = vd.id;
-            if (planet == null || planet.type == EPlanetType.Gas) return;
-            VeinData[] veinPool = planet.factory.veinPool;
-            veinPool[VeinId].pos = pos;
-            int colliderId = veinPool[VeinId].colliderId;
-            planet.physics.RemoveColliderData(colliderId);
-            veinPool[VeinId].colliderId = planet.physics.AddColliderData(LDB.veins.Select((int)veinPool[VeinId].type).prefabDesc.colliders[0].BindToObject(VeinId, 0, EObjectType.Vein, veinPool[VeinId].pos, Quaternion.FromToRotation(Vector3.up, veinPool[VeinId].pos.normalized)));
-            planet.factoryModel.gpuiManager.AlterModel(veinPool[VeinId].modelIndex, veinPool[VeinId].modelId, VeinId, veinPool[VeinId].pos, Maths.SphericalRotation(veinPool[VeinId].pos, 90f));
-            bool leave = false;
-            int origingroup = -1;
-            if (planet.factory.veinGroups[veinPool[VeinId].groupIndex].count > 1)
-            {
-                Vector3 vector3 = pos - planet.factory.veinGroups[veinPool[VeinId].groupIndex].pos * (planet.realRadius + 2.5f);
-                if (vector3.magnitude > 10.0)
-                {
-                    leave = true;
-                    origingroup = veinPool[VeinId].groupIndex;
-                    veinPool[VeinId].groupIndex = -1;
-                }
-            }
-            else
-            {
-                planet.factory.veinGroups[veinPool[VeinId].groupIndex].pos = veinPool[VeinId].pos / (planet.realRadius + 2.5f);
-                foreach (VeinData veindata in planet.factory.veinPool)
-                {
-                    if (veindata.type == veinPool[VeinId].type && veindata.groupIndex != origingroup && (veindata.pos - veinPool[VeinId].pos).magnitude < 10)
-                    {
-                        origingroup = veinPool[VeinId].groupIndex;
-                        veinPool[VeinId].groupIndex = veindata.groupIndex;
-                        planet.factory.RecalculateVeinGroup(origingroup);
-                    }
-                }
-            }
-            if (leave)
-            {
-                planet.factory.RecalculateVeinGroup(origingroup);
-                foreach (VeinData veindata in planet.factory.veinPool)
-                {
-                    if (veindata.type == veinPool[VeinId].type && veindata.groupIndex != origingroup && (veindata.pos - veinPool[VeinId].pos).magnitude < 10)
-                    {
-                        veinPool[VeinId].groupIndex = veindata.groupIndex;
-                    }
-                }
-                if (veinPool[VeinId].groupIndex == -1)
-                {
-                    veinPool[VeinId].groupIndex = (short)planet.factory.AddVeinGroup(veinPool[VeinId].type, veinPool[VeinId].pos.normalized);
-                }
-            }
-            planet.factory.RecalculateVeinGroup(veinPool[VeinId].groupIndex);
-            planet.factory.ArrangeVeinGroups();
-        }
-
-        public void getallVein(VeinData vd)
-        {
-            PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
-                return;
-            Vector3 raycastpos = raycastHit1.point;
-            VeinData[] veinPool = pd.factory.veinPool;
-            int colliderId;
-            Vector3 begin = veinPool[vd.id].pos;
-            int index = 0;
-            foreach (VeinData vd1 in veinPool)
-            {
-                if (vd1.pos == null || vd1.id <= 0 || vd1.type != vd.type) continue;
-                int VeinId = vd1.id;
-                veinPool[VeinId].pos = NotTidyVein.Value ? raycastpos : PostionCompute(begin, raycastpos, vd1.pos, index++, vd.type == EVeinType.Oil);
-                if (CoolDown) return;
-                if (float.IsNaN(veinPool[VeinId].pos.x) || float.IsNaN(veinPool[VeinId].pos.y) || float.IsNaN(veinPool[VeinId].pos.z))
-                {
-                    continue;
-                }
-                if (vd1.groupIndex != vd.groupIndex)
-                {
-                    int origingroup = veinPool[vd1.id].groupIndex;
-                    veinPool[vd1.id].groupIndex = vd.groupIndex;
-                    pd.factory.RecalculateVeinGroup(origingroup);
-                    pd.factory.RecalculateVeinGroup(vd.groupIndex);
-                    pd.factory.ArrangeVeinGroups();
-                }
-                colliderId = veinPool[VeinId].colliderId;
-                pd.physics.RemoveColliderData(colliderId);
-                veinPool[VeinId].colliderId = pd.physics.AddColliderData(LDB.veins.Select((int)veinPool[VeinId].type).prefabDesc.colliders[0].BindToObject(VeinId, 0, EObjectType.Vein, veinPool[VeinId].pos, Quaternion.FromToRotation(Vector3.up, veinPool[VeinId].pos.normalized)));
-
-                pd.factoryModel.gpuiManager.AlterModel(veinPool[VeinId].modelIndex, veinPool[VeinId].modelId, VeinId, veinPool[VeinId].pos, Maths.SphericalRotation(veinPool[VeinId].pos, 90f));
-            }
-            pd.factory.RecalculateVeinGroup(vd.groupIndex);
-            pd.factory.ArrangeVeinGroups();
-        }
-
-        public void removevein()
-        {
-            PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas || !Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
-                return;
-            Vector3 raycastpos = raycastHit1.point;
-            foreach (VeinData i in pd.factory.veinPool)
-            {
-                if ((raycastpos - i.pos).magnitude < 1 && i.type != EVeinType.None)
-                {
-                    pd.factory.veinGroups[i.groupIndex].count--;
-                    pd.factory.veinGroups[i.groupIndex].amount -= i.amount;
-                    pd.factory.RemoveVeinWithComponents(i.id);
-                    if (pd.factory.veinGroups[i.groupIndex].count == 0)
-                    {
-                        pd.factory.veinGroups[i.groupIndex].type = 0;
-                        pd.factory.veinGroups[i.groupIndex].amount = 0;
-                        pd.factory.veinGroups[i.groupIndex].pos = Vector3.zero;
-                    }
-                    return;
-                }
-            }
-        }
-
-        public VeinData getveinbymouse()
-        {
-            PlanetData pd = GameMain.localPlanet;
-            if (pd != null && pd.type != EPlanetType.Gas && Physics.Raycast(player.controller.mainCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit raycastHit1, 800f, 8720, (QueryTriggerInteraction)2))
-            {
-                Vector3 raycastpos = raycastHit1.point;
-                float min = 100;
-                VeinData vein = new VeinData();
-                foreach (VeinData vd in pd.factory.veinPool)
-                {
-                    if (vd.id == 0) continue;
-                    if ((raycastpos - vd.pos).magnitude < min && vd.type != EVeinType.None)
-                    {
-                        min = (raycastpos - vd.pos).magnitude;
-                        vein = vd;
-                    }
-                }
-                if (min > 4)
-                {
-                    return new VeinData();
-                }
-                else
-                {
-                    return vein;
-                }
-            }
-
-            return new VeinData();
-        }
-
-        public Vector3 PostionCompute(Vector3 begin, Vector3 end, Vector3 pointpos, int index, bool oil = false)
-        {
-            if (end.y > 193 || end.y < -193)
-            {
-                UIMessageBox.Show("移动矿堆失败".Translate(), "当前纬度过高，为避免出错，无法移动矿堆".Translate(), "确定".Translate(), 3);
-                CoolDown = true;
-                return pointpos;
-            }
-            Vector3 pos1 = begin;
-            Vector3 pos2 = end;
-            Vector3 pos3;
-            float radius = GameMain.localPlanet.realRadius;
-            Quaternion quaternion2 = Maths.SphericalRotation(pos1, 0);
-            float areaRadius = oil ? 15 : 1.5f;
-            if (!oil)
-            {
-                pos2.x = (int)pos2.x;
-                pos2.z = (int)pos2.z;
-                pos2.y = (int)pos2.y;
-                pos3 = pos1 + quaternion2 * (new Vector3(index / veinlines.Value, 0, index % veinlines.Value) * areaRadius);
-            }
-            else
-                pos3 = pos1 - quaternion2 * (new Vector3((index / veinlines.Value) * 8, 0, index % veinlines.Value * areaRadius));
-            double del1 = Math.Atan(pos1.z / pos1.x) - Math.Atan(pos2.z / pos2.x);
-            double del2 = Math.Acos(pos1.y / radius) - Math.Acos(pos2.y / radius);
-            double del3_1 = -Math.Atan(pos3.z / pos3.x) + del1;
-            double del3_2 = Math.Acos(pos3.y / radius) - del2;
-            if (del1 == double.NaN || del2 == double.NaN || del3_1 == double.NaN || del3_2 == double.NaN)
-            {
-                return pointpos;
-            }
-            pos3.x = (float)(end.x < 0 ? -Math.Abs(Math.Sin(del3_2) * Math.Cos(del3_1)) : Math.Abs(Math.Sin(del3_2) * Math.Cos(del3_1)));
-            pos3.y = (float)(end.y < 0 ? -Math.Abs(Math.Cos(del3_2)) : Math.Abs(Math.Cos(del3_2)));
-            pos3.z = (float)(end.z < 0 ? -Math.Abs(Math.Sin(del3_2) * Math.Sin(del3_1)) : Math.Abs(Math.Sin(del3_2) * Math.Sin(del3_1)));
-            pos3.x *= radius;
-            pos3.y *= radius;
-            pos3.z *= radius;
-
-            if (pos3.x == float.NaN || pos3.y == float.NaN || pos3.z == float.NaN || pos3.y > 190 || pos3.y < -190)
-            {
-                return pointpos;
-            }
-            return pos3;
-        }
-
-        public void BuryAllvein()
-        {
-            PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas) return;
-            float num9 = pd.realRadius - 50f;
-            foreach (VeinData i in pd.factory.veinPool)
-            {
-                PlanetPhysics physics = pd.physics;
-                int id = i.id;
-                int colliderId = i.colliderId;
-                ColliderData colliderData = physics.GetColliderData(colliderId);
-                Vector3 vector3_2 = colliderData.pos.normalized * (num9 + 0.4f);
-                physics.colChunks[colliderId >> 20].colliderPool[colliderId & 1048575].pos = vector3_2;
-                pd.factory.veinPool[id].pos = i.pos.normalized * num9;
-            }
-            foreach (VeinData i in pd.factory.veinPool)
-            {
-                GameMain.gpuiManager.AlterModel(i.modelIndex, i.modelId, i.id, i.pos, false);
-            }
-            GameMain.gpuiManager.SyncAllGPUBuffer();
-        }
-
-        public void RemoveAllvein()
-        {
-            PlanetData pd = GameMain.localPlanet;
-            if (pd == null || pd.type == EPlanetType.Gas) return;
-            foreach (VeinData i in pd.factory.veinPool)
-            {
-                if (i.type != EVeinType.None)
-                {
-                    pd.factory.veinGroups[i.groupIndex].count--;
-                    pd.factory.veinGroups[i.groupIndex].amount -= i.amount;
-                    pd.factory.RemoveVeinWithComponents(i.id);
-                    if (pd.factory.veinGroups[i.groupIndex].count == 0)
-                    {
-                        pd.factory.veinGroups[i.groupIndex].type = 0;
-                        pd.factory.veinGroups[i.groupIndex].amount = 0;
-                        pd.factory.veinGroups[i.groupIndex].pos = Vector3.zero;
-                    }
-                }
-            }
-            pd.factory.ArrangeVeinGroups();
-        }
-
-        #endregion
 
         /// <summary>
         /// 瞬间完成戴森球
@@ -2869,7 +2507,7 @@ namespace Multfunction_mod
                 {
                     if (itemid == 1007 && i.amount * VeinData.oilSpeedMultiplier <= 0.1)
                     {
-                        int dis = oillowerlimit - pd.factory.veinPool[i.id].amount;
+                        int dis = veinproperty.oillowerlimit - pd.factory.veinPool[i.id].amount;
                         pd.factory.veinPool[i.id].amount += dis;
                         pd.factory.veinGroups[i.groupIndex].amount += dis;
                         getmine += (int)(0.1 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
