@@ -111,6 +111,7 @@ namespace Multifunction_mod
 
 
         private GUIStyle style;
+        private GUIStyle labelmarginStyle;
         private GUIStyle selectedButtonStyle;
         private GUILayoutOption[] slideroptions;
         private GUILayoutOption[] textfieldoptions;
@@ -185,7 +186,6 @@ namespace Multifunction_mod
                 BaseSize = GUI.skin.label.fontSize;
             }
             englishShow = Localization.language != Language.zhCN;
-            bool changesize = false;
             if (DisplayingWindow)
             {
                 if (Input.GetKey(KeyCode.LeftControl))
@@ -195,10 +195,6 @@ namespace Multifunction_mod
                     if (Input.GetKeyDown(KeyCode.UpArrow)) { temp++; }
                     if (Input.GetKeyDown(KeyCode.DownArrow)) { temp--; }
                     temp = Math.Max(5, Math.Min(temp, 35));
-                    if (temp != BaseSize)
-                    {
-                        changesize = true;
-                    }
                     BaseSize = temp;
                 }
             }
@@ -213,6 +209,7 @@ namespace Multifunction_mod
                 if (style != null)
                 {
                     style.fontSize = BaseSize;
+                    labelmarginStyle.fontSize = BaseSize;
                 }
                 selectedButtonStyle = new GUIStyle(GUI.skin.button);
                 selectedButtonStyle.normal.textColor = new Color32(215, 186, 245, 255);
@@ -223,18 +220,22 @@ namespace Multifunction_mod
             }
             if (ColorChanged)
             {
+                ColorChanged = false;
                 GUI.skin.button.normal.textColor = TextColor;
                 GUI.skin.textArea.normal.textColor = TextColor;
                 GUI.skin.textField.normal.textColor = TextColor;
                 GUI.skin.toggle.normal.textColor = TextColor;
                 GUI.skin.toggle.onNormal.textColor = TextColor;
-                ColorChanged = false;
                 style = new GUIStyle
                 {
                     wordWrap = true,
                     fontSize = baseSize - 2,
                 };
                 style.normal.textColor = TextColor;
+                labelmarginStyle = new GUIStyle(style)
+                {
+                    margin = new RectOffset(0, 0, 3, 0)
+                };
             }
             if (DisplayingWindow)
             {
@@ -353,7 +354,7 @@ namespace Multifunction_mod
             string t = GUILayout.TextField(result, textfieldoptions);
             if (t != result)
             {
-                if (result.Contains("."))
+                if (resulttype != 0)
                 {
                     float.TryParse(Regex.Replace(t, @"^[^0-9]+(.[^0-9]{2})?$", ""), out temp);
                 }
@@ -362,10 +363,7 @@ namespace Multifunction_mod
                     float.TryParse(Regex.Replace(t, @"^[^0-9]", ""), out temp);
                 }
             }
-
-            GUIStyle labelStyle = new GUIStyle(style);
-            labelStyle.margin = new RectOffset(0, 0, 3, 0);
-            GUILayout.Label(propertyName.getTranslate(), labelStyle);
+            GUILayout.Label(propertyName.getTranslate(), labelmarginStyle);
 
             GUILayout.EndHorizontal();
             temp = Math.Max(left, Math.Min(right, temp));
@@ -394,7 +392,7 @@ namespace Multifunction_mod
                     propertydata.MaxSailSpeed = PropertyDataUIDraw(propertydata.MaxSailSpeed, 1, 10, "最大航行速度");
                     propertydata.MaxWarpSpeed = PropertyDataUIDraw(propertydata.MaxWarpSpeed, 1, 100, "最大曲速");
                     propertydata.BuildArea = PropertyDataUIDraw(propertydata.BuildArea, 80, 400, "建造范围");
-                    propertydata.ReactorPowerGen = PropertyDataUIDraw(propertydata.ReactorPowerGen, 1000000, 500000000, "核心功率", 1);
+                    propertydata.ReactorPowerGen = PropertyDataUIDraw(propertydata.ReactorPowerGen, 800_000, 500_000_000, "核心功率", 1);
                     propertydata.LogisticCourierSpeed = PropertyDataUIDraw(propertydata.LogisticCourierSpeed, 1, 100, "配送机速度");
                     propertydata.LogisticDroneSpeedScale = PropertyDataUIDraw(propertydata.LogisticDroneSpeedScale, 1, 100, "运输机速度", 2);
                     propertydata.LogisticShipSpeedScale = PropertyDataUIDraw(propertydata.LogisticShipSpeedScale, 1, 100, "运输船速度", 2);
@@ -466,6 +464,7 @@ namespace Multifunction_mod
                 GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
 
+                if (GUILayout.Button("解锁全部科技".getTranslate() + "(" + "补充原料".getTranslate() + ")")) MainFunction.UnlockallTech(true);
                 if (GUILayout.Button("解锁全部科技".getTranslate())) MainFunction.UnlockallTech();
                 if (GUILayout.Button("回退无穷科技".getTranslate())) MainFunction.lockTech();
 
@@ -727,7 +726,6 @@ namespace Multifunction_mod
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical();
             var veinControlProperty = MainFunction.veinproperty;
-            string[] tempstr = new string[8] { "生成矿物", "删除矿物", "移动单矿", "移动矿堆", "不排列", "整理所有矿", "切割矿脉", "还原海洋" };
             veinControlProperty.AddVein = GUILayout.Toggle(veinControlProperty.AddVein, "生成矿物".getTranslate());
             veinControlProperty.DeleteVein = GUILayout.Toggle(veinControlProperty.DeleteVein, "删除矿物".getTranslate());
             veinControlProperty.Changeveinpos = GUILayout.Toggle(veinControlProperty.Changeveinpos, "移动单矿".getTranslate());
@@ -786,7 +784,8 @@ namespace Multifunction_mod
             }
             if (dropdownbutton)
             {
-                for (int i = 1; i <= 14; i++)
+                int count = LDB.veins.dataArray.Length;
+                for (int i = 1; i <= count; i++)
                 {
                     if (GUILayout.Button(LDB.items.Select(LDB.veins.Select(i).MiningItem).name, minbuttonoptions))
                     {
@@ -799,7 +798,7 @@ namespace Multifunction_mod
 
             GUILayout.Space(heightdis);
             GUILayout.BeginVertical();
-            tempstr = new string[10] { !restorewater ? "铺平整个星球" : "还原全部海洋", "铺平整个星球(地基)", "铺平整个星球(自定义颜色)", "掩埋全部矿", "删除全部矿", "超密铺采集器", "删除当前星球所有建筑", "删除当前星球所有建筑(不掉落)", "初始化当前星球", "初始化当前星球(不要海洋)" };
+            var tempstr = new string[10] { !restorewater ? "铺平整个星球" : "还原全部海洋", "铺平整个星球(地基)", "铺平整个星球(自定义颜色)", "掩埋全部矿", "删除全部矿", "超密铺采集器", "删除当前星球所有建筑", "删除当前星球所有建筑(不掉落)", "初始化当前星球", "初始化当前星球(不要海洋)" };
             for (int i = 0; i < tempstr.Length; i++)
             {
                 if (GUILayout.Button(tempstr[i].getTranslate(), GUILayout.Height(heightdis)))

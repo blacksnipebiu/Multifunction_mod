@@ -17,7 +17,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.9.7";
+        public const string VERSION = "2.9.8";
 
         #region 临时变量
 
@@ -46,9 +46,6 @@ namespace Multifunction_mod
         public static int DriftBuildingLevel;
         public static int incAbility = 4;
 
-        public float tempx1;
-        public float tempy1;
-        public static float buildheight = 1;
         public static float[] warpstationqua;
         public static float[] warpsuperstationqua;
         private static bool LDBInitSave;
@@ -1784,8 +1781,6 @@ namespace Multifunction_mod
                             }
                         }
                     }
-                    AddComsumeItemtoTotal(1501, sum2);
-                    AddComsumeItemtoTotal(1503, sum1);
                     ds.modelRenderer.RebuildModels();
                 }
             }
@@ -2049,7 +2044,8 @@ namespace Multifunction_mod
         /// <summary>
         /// 解锁全部科技
         /// </summary>
-        public void UnlockallTech()
+        /// <param name="addstat">是否补充统计信息</param>
+        public void UnlockallTech(bool addstat = false)
         {
             if (player == null) return;
             bool end = true;
@@ -2066,9 +2062,12 @@ namespace Multifunction_mod
                     {
                         for (int level = techProto.Level; level < techProto.MaxLevel; ++level)
                         {
-                            for (int i = 0; i < techProto.itemArray.Length; i++)
+                            if (addstat)
                             {
-                                AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
+                                for (int i = 0; i < techProto.itemArray.Length; i++)
+                                {
+                                    AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
+                                }
                             }
                             for (int index = 0; index < techProto.UnlockFunctions.Length; ++index)
                             {
@@ -2082,9 +2081,12 @@ namespace Multifunction_mod
                     }
                     if (!GameMain.history.techStates[techProto.ID].unlocked)
                     {
-                        for (int i = 0; i < techProto.itemArray.Length; i++)
+                        if (addstat)
                         {
-                            AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
+                            for (int i = 0; i < techProto.itemArray.Length; i++)
+                            {
+                                AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
+                            }
                         }
                         for (int index = 0; index < techProto.UnlockFunctions.Length; ++index)
                         {

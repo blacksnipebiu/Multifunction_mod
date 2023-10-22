@@ -1552,7 +1552,7 @@ namespace Multifunction_mod
                             int inc1 = ((t / 10 >= 3 ? 4 : t / 10)) * stack1;
                             fs.factory.cargoTraffic.GetCargoPath(belt.segPathId).TryInsertItem(belt.segIndex + belt.segPivotOffset, signalId, (byte)stack1, (byte)inc1);
                         }
-                        else if (beltnumber == 1 || (beltnumber >= 11 && beltnumber <= 14))
+                        else if (beltnumber >= 11 && beltnumber <= 14)
                         {
                             bool breakfor = false;
                             CargoPath cargoPath = fs.factory.cargoTraffic.GetCargoPath(belt.segPathId);
@@ -1642,7 +1642,7 @@ namespace Multifunction_mod
                                 }
                             }
                         }
-                        else if (beltnumber == 2 || (beltnumber >= 21 && beltnumber <= 24))
+                        else if (beltnumber >= 21 && beltnumber <= 24)
                         {
                             if (fs.minerPool != null)
                             {
@@ -1864,9 +1864,8 @@ namespace Multifunction_mod
                             int itemid = 0;
                             int cargoId = -1;
                             int offset = -1;
-                            Cargo cargo;
                             int num1 = belt.segIndex + belt.segPivotOffset;
-                            if (cargoPath.GetCargoAtIndex(num1, out cargo, out cargoId, out offset))
+                            if (cargoPath.GetCargoAtIndex(num1, out Cargo cargo, out cargoId, out offset))
                             {
                                 itemid = cargo.item;
                                 inc = cargoPath.cargoContainer.cargoPool[cargoId].inc;
