@@ -81,7 +81,6 @@ namespace Multifunction_mod
             }
         }
         public bool DisplayingWindow { get; private set; }
-        public bool TabDisplayingWindow { get; private set; }
         public Color TextColor
         {
             get => textColor;
@@ -166,11 +165,6 @@ namespace Multifunction_mod
             ui_MultiFunctionPanel.SetActive(DisplayingWindow);
         }
 
-        public void TabWindowKeyInvoke()
-        {
-            TabDisplayingWindow = !TabDisplayingWindow;
-        }
-
         public void OpenMainWindow()
         {
             DisplayingWindow = true;
@@ -192,7 +186,7 @@ namespace Multifunction_mod
             }
             englishShow = Localization.language != Language.zhCN;
             bool changesize = false;
-            if (DisplayingWindow || TabDisplayingWindow)
+            if (DisplayingWindow)
             {
                 if (Input.GetKey(KeyCode.LeftControl))
                 {
@@ -259,10 +253,6 @@ namespace Multifunction_mod
                     MainWindow_y = 100;
                 }
             }
-            if (TabDisplayingWindow && LDB.items != null && !changesize)
-            {
-                TabItemWindow();
-            }
         }
 
         private void UIPanelSet()
@@ -276,51 +266,6 @@ namespace Multifunction_mod
         }
 
         #region 窗口UI
-
-        /// <summary>
-        /// Tab物品列表
-        /// </summary>
-        /// <param name="windId"></param>
-        void TabItemWindow()
-        {
-            GUILayout.BeginHorizontal(new[] { GUILayout.Width(Screen.width), GUILayout.Height(Screen.height) });
-            GUILayout.FlexibleSpace();
-            TabscrollPosition = GUILayout.BeginScrollView(TabscrollPosition);
-            GUILayout.BeginVertical();
-            int itemsNum = LDB.items.Length;
-            int lineNum = 10;
-            int line = itemsNum / lineNum + ((itemsNum % lineNum) > 0 ? 1 : 0);
-            var tempbuttonstyle = new GUIStyle(GUI.skin.button)
-            {
-                margin = new RectOffset(0, 0, 0, 0)
-            };
-            for (int i = 0; i < line; i++)
-            {
-                GUILayout.BeginHorizontal();
-                for (int j = 0; j < lineNum; j++)
-                {
-                    int index = i * lineNum + j;
-                    if (index == itemsNum) break;
-                    var item = LDB.items.dataArray[index];
-                    if (GUILayout.Button(item.iconSprite.texture, tempbuttonstyle, iconbuttonoptions))
-                    {
-                        Itemdelete_bool = false;
-                        if (Input.GetKey(KeyCode.LeftControl))
-                        {
-                            GameMain.mainPlayer.TryAddItemToPackage(item.ID, StorageComponent.itemStackCount[item.ID], 0, true);
-                        }
-                        else
-                        {
-                            GameMain.mainPlayer.TryAddItemToPackage(item.ID, 1, 0, true);
-                        }
-                    }
-                }
-                GUILayout.EndHorizontal();
-            }
-            GUILayout.EndVertical();
-            GUILayout.EndScrollView();
-            GUILayout.EndHorizontal();
-        }
 
         /// <summary>
         /// 主控面板
@@ -501,7 +446,7 @@ namespace Multifunction_mod
                 dismantle_but_nobuild.Value = GUILayout.Toggle(dismantle_but_nobuild.Value, "不往背包放东西".getTranslate());
                 QuickHandcraft.Value = GUILayout.Toggle(QuickHandcraft.Value, "机甲制造MAX".getTranslate());
                 QuickPlayerMine.Value = GUILayout.Toggle(QuickPlayerMine.Value, "机甲采矿MAX".getTranslate());
-                ItemList_bool.Value = GUILayout.Toggle(ItemList_bool.Value, "物品列表(Tab)".getTranslate());
+                isInstantItem.Value = GUILayout.Toggle(isInstantItem.Value, "直接获取物品".getTranslate());
                 noneedwarp.Value = GUILayout.Toggle(noneedwarp.Value, "无需翘曲器曲速飞行".getTranslate());
             }
             {
@@ -549,8 +494,8 @@ namespace Multifunction_mod
 
                 GUILayout.BeginVertical();
 
-                StationStoExtra.Value = (int)GUILayout.HorizontalSlider(StationStoExtra.Value, 0, 100, GUILayout.Width(heightdis * 4));
                 GUILayout.Label("额外存储倍率".getTranslate() + ":" + StationStoExtra.Value, style);
+                StationStoExtra.Value = (int)GUILayout.HorizontalSlider(StationStoExtra.Value, 0, 100, GUILayout.Width(heightdis * 4));
 
                 Stationfullenergy.Value = GUILayout.Toggle(Stationfullenergy.Value, "永久满电".getTranslate());
                 StationfullCount = GUILayout.Toggle(StationfullCount, "要啥有啥".getTranslate());
@@ -575,10 +520,6 @@ namespace Multifunction_mod
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.Space(BaseSize);
-                    autochangestationname.Value = GUILayout.Toggle(autochangestationname.Value, "自动改名".getTranslate());
-                    GUILayout.EndHorizontal();
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Space(BaseSize);
 
                     GUILayout.BeginVertical();
                     GUILayout.Label("采矿速率".getTranslate() + ":" + Stationminenumber.Value, style);
@@ -586,19 +527,44 @@ namespace Multifunction_mod
                     GUILayout.EndVertical();
                     GUILayout.EndHorizontal();
                 }
+                StationSprayer.Value = GUILayout.Toggle(StationSprayer.Value, "喷涂加工厂".getTranslate());
+                StationMinerSmelter.Value = GUILayout.Toggle(StationMinerSmelter.Value, "星球熔炉矿机".getTranslate());
+                if (StationMinerSmelter.Value)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(BaseSize);
+
+                    GUILayout.BeginVertical();
+                    GUILayout.Label("等价高级熔炉数量".getTranslate() + ":" + StationMinerSmelterNum.Value, style);
+                    int tempStationMinerSmelterNum = (int)GUILayout.HorizontalSlider(StationMinerSmelterNum.Value, 30, 1000, GUILayout.Width(heightdis * 4));
+                    if (tempStationMinerSmelterNum % 100 <= tempStationMinerSmelterNum % 30)
+                    {
+                        StationMinerSmelterNum.Value = tempStationMinerSmelterNum / 100 * 100;
+                    }
+                    else
+                    {
+                        StationMinerSmelterNum.Value = tempStationMinerSmelterNum / 30 * 30;
+                    }
+                    GUILayout.EndVertical();
+                    GUILayout.EndHorizontal();
+                }
+                GUILayout.Label("自动改名".getTranslate() + ":", style);
+                string[] stationNames = new string[] { "星球无限供货机", "垃圾站", "星球矿机", "喷涂加工厂", "星球熔炉矿机", "星球量子传输站", "星系量子传输站" };
+                for (int i = 0; i < stationNames.Length; i++)
+                {
+                    bool temp = GUILayout.Toggle(AutoChangeStationName.Value == stationNames[i], stationNames[i].getTranslate());
+                    if (temp && AutoChangeStationName.Value != stationNames[i])
+                    {
+                        AutoChangeStationName.Value = stationNames[i];
+                    }
+                    else if (!temp && AutoChangeStationName.Value == stationNames[i])
+                    {
+                        AutoChangeStationName.Value = "";
+                    }
+                }
 
                 GUILayout.EndVertical();
 
-                GUILayout.EndHorizontal();
-
-                GUILayout.Label("储液站功能".getTranslate() + ":", style);
-                GUILayout.BeginHorizontal();
-                GUILayout.Space(BaseSize);
-                GUILayout.BeginVertical();
-                Tankcontentall.Value = GUILayout.Toggle(Tankcontentall.Value, "储液站任意存".getTranslate());
-                Infinitestoragetank.Value = GUILayout.Toggle(Infinitestoragetank.Value, "无限储液站".getTranslate());
-                TankMaxproliferator.Value = GUILayout.Toggle(TankMaxproliferator.Value, "储液站无限增产".getTranslate());
-                GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
 
                 GUILayout.EndVertical();
@@ -613,8 +579,14 @@ namespace Multifunction_mod
                     GUILayout.Space(BaseSize);
 
                     GUILayout.BeginVertical();
+                    GUILayout.Label("建造数量最大值".getTranslate() + ":" + Buildmaxlen.Value, style);
                     Buildmaxlen.Value = (int)GUILayout.HorizontalSlider(Buildmaxlen.Value, 15, 100, GUILayout.Width(heightdis * 4));
-                    GUILayout.Label(Buildmaxlen.Value + " " + "建造数量最大值".getTranslate(), style);
+                    bool temp = GUILayout.Toggle(InspectDisNoLimit.Value, "操作范围不受限制".getTranslate());
+                    if (temp != InspectDisNoLimit.Value)
+                    {
+                        InspectDisNoLimit.Value = temp;
+                        GameMain.mainPlayer.mecha.buildArea = InspectDisNoLimit.Value ? 200 : 80;
+                    }
                     BuildNotime_bool.Value = GUILayout.Toggle(BuildNotime_bool.Value, "建筑秒完成".getTranslate());
                     blueprintpastenoneed_bool.Value = GUILayout.Toggle(blueprintpastenoneed_bool.Value, "蓝图建造无需材料".getTranslate());
                     ArchitectMode.Value = GUILayout.Toggle(ArchitectMode.Value, "建筑师模式".getTranslate());
@@ -657,6 +629,17 @@ namespace Multifunction_mod
 
                     GUILayout.EndHorizontal();
                 }
+
+                GUILayout.Label("储液站功能".getTranslate() + ":", style);
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(BaseSize);
+                GUILayout.BeginVertical();
+                Tankcontentall.Value = GUILayout.Toggle(Tankcontentall.Value, "储液站任意存".getTranslate());
+                Infinitestoragetank.Value = GUILayout.Toggle(Infinitestoragetank.Value, "无限储液站".getTranslate());
+                TankMaxproliferator.Value = GUILayout.Toggle(TankMaxproliferator.Value, "储液站无限增产".getTranslate());
+                GUILayout.EndVertical();
+                GUILayout.EndHorizontal();
+
                 GUILayout.EndVertical();
 
             }
@@ -667,8 +650,6 @@ namespace Multifunction_mod
                 {
                     Quantumtransportpdwarp_bool.Value = GUILayout.Toggle(Quantumtransportpdwarp_bool.Value, "星球级翘曲全面供应".getTranslate());
                     Quantumtransportstarwarp_bool.Value = GUILayout.Toggle(Quantumtransportstarwarp_bool.Value, "星系级翘曲全面供应".getTranslate());
-                    autochangeQuantumstationname = GUILayout.Toggle(autochangeQuantumstationname, "自动改名\"星球量子传输站\"".getTranslate());
-                    autochangeQuantumStarstationname = GUILayout.Toggle(autochangeQuantumStarstationname, "自动改名\"星系量子传输站\"".getTranslate());
                     Quantumtransportbuild_bool.Value = GUILayout.Toggle(Quantumtransportbuild_bool.Value, "星球级材料供应".getTranslate());
 
                     if (Quantumtransportbuild_bool.Value)
@@ -730,8 +711,6 @@ namespace Multifunction_mod
                         planetquamaxpowerpertick.Value = tempplanetquamaxpowerpertick;
                         starquamaxpowerpertick.Value = tempstarquamaxpowerpertick;
                     }
-                    if (autochangeQuantumstationname) autochangeQuantumStarstationname = false;
-                    if (autochangeQuantumStarstationname) autochangeQuantumstationname = false;
                 }
                 GUILayout.EndVertical();
             }
@@ -772,11 +751,8 @@ namespace Multifunction_mod
             {
                 veinControlProperty.AddVeinMode = 1;
             }
-            GUILayout.EndVertical();
-            GUILayout.Space(heightdis);
-            GUILayout.BeginVertical();
-            var minbuttonoptions = new GUILayoutOption[2] { GUILayout.Height(heightdis), GUILayout.MinWidth(heightdis * 4) };
             GUILayout.Label("添加矿脉数量".getTranslate());
+            GUILayout.BeginHorizontal();
             bool temp500 = GUILayout.Toggle(veinControlProperty.AddVeinNumber == 500, "500");
             bool tempInfinite = GUILayout.Toggle(veinControlProperty.AddVeinNumber != 500, "无穷".getTranslate());
             if (temp500 && veinControlProperty.AddVeinNumber != 500)
@@ -787,7 +763,9 @@ namespace Multifunction_mod
             {
                 veinControlProperty.AddVeinNumber = 1000000000;
             }
+            GUILayout.EndHorizontal();
             GUILayout.Label("添加油井速率".getTranslate());
+            GUILayout.BeginHorizontal();
             for (int i = 0; i < 3; i++)
             {
                 bool temp = GUILayout.Toggle(veinControlProperty.OilAddIntervalBool[i], veinControlProperty.OilAddIntervalValue[i] + "/s");
@@ -796,6 +774,11 @@ namespace Multifunction_mod
                     veinControlProperty.SetOilAddInterval(i);
                 }
             }
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+            GUILayout.Space(heightdis);
+            GUILayout.BeginVertical();
+            var minbuttonoptions = new GUILayoutOption[2] { GUILayout.Height(heightdis), GUILayout.MinWidth(heightdis * 4) };
             if (GUILayout.Button(LDB.items.Select(LDB.veins.Select(veinControlProperty.VeinType).MiningItem).name, minbuttonoptions))
             {
                 dropdownbutton = !dropdownbutton;
@@ -1003,15 +986,6 @@ namespace Multifunction_mod
                 {
                     sunlight_bool.Value = GUILayout.Toggle(sunlight_bool.Value, "夜灯".getTranslate());
                     CloseUIAbnormalityTip.Value = GUILayout.Toggle(CloseUIAbnormalityTip.Value, "关闭异常提示".getTranslate());
-                    InspectDisNoLimit.Value = GUILayout.Toggle(InspectDisNoLimit.Value, "操作范围不受限制".getTranslate());
-                    if (InspectDisNoLimit.Value)
-                    {
-                        GameMain.mainPlayer.mecha.buildArea = 200;
-                    }
-                    else
-                    {
-                        GameMain.mainPlayer.mecha.buildArea = 80;
-                    }
                     Maxproliferator.Value = GUILayout.Toggle(Maxproliferator.Value, "增产点数上限10".getTranslate());
                     incAbility = Maxproliferator.Value ? 10 : 4;
                     pasteanyway = GUILayout.Toggle(pasteanyway, "蓝图强制粘贴".getTranslate());
@@ -1031,8 +1005,8 @@ namespace Multifunction_mod
                         quickproduce.Value = !quickproduce.Value;
                         refreshLDB = true;
                     }
-                    GUILayout.BeginHorizontal();
                     GUILayout.Label("堆叠倍率".getTranslate() + ":", style);
+                    GUILayout.BeginHorizontal();
                     stackmultipleStr = Regex.Replace(GUILayout.TextField(stackmultipleStr, 10, GUILayout.MinWidth(heightdis * 3)), @"[^0-9]", "");
                     int multiple = IntParseLimit(stackmultipleStr, 1, 5000000);
                     stackmultipleStr = multiple.ToString();
@@ -1041,8 +1015,8 @@ namespace Multifunction_mod
                         MainFunction.SetmultipleItemStatck(multiple);
                     }
                     GUILayout.EndHorizontal();
-                    GUILayout.BeginHorizontal();
                     GUILayout.Label("冶炼倍数".getTranslate() + ":", style);
+                    GUILayout.BeginHorizontal();
                     multipelsmeltStr = Regex.Replace(GUILayout.TextField(multipelsmeltStr, 10, GUILayout.MinWidth(heightdis * 3)), @"[^0-9]", "");
                     multiple = IntParseLimit(multipelsmeltStr, 1, 100);
                     multipelsmeltStr = multiple.ToString();

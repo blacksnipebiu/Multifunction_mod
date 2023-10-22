@@ -76,6 +76,7 @@ namespace Multifunction_mod
             TranslateDict.Add("清空背包", "Clear the package");
             TranslateDict.Add("初始化玩家", "Initialize player");
             TranslateDict.Add("增加背包大小", "Add package size");
+            TranslateDict.Add("直接获取物品", "InstantItem Mode");
             TranslateDict.Add("减少背包大小", "Reduce package size");
             TranslateDict.Add("解锁全部科技", "Unlock all tech.");
             TranslateDict.Add("回退无穷科技", "Lock all Infinite tech.");

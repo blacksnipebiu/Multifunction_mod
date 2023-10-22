@@ -2,10 +2,10 @@
 using BepInEx.Configuration;
 using Multifunction_mod.Models;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using UnityEngine;
 using static Multifunction_mod.Constant;
 using static Multifunction_mod.Multifunctionpatch;
@@ -17,7 +17,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.8.7";
+        public const string VERSION = "2.9.7";
 
         #region 临时变量
 
@@ -32,7 +32,8 @@ namespace Multifunction_mod
         public ItemProto[] itemProtos => LDB.items.dataArray;
         public VeinControlProperty veinproperty;
 
-        public static bool Itemdelete_bool;
+        private bool OneSecondTimeElapse;
+        private bool HalfSecondTimeElapse;
 
         public ItemProto[] originItemProtos;
         public RecipeProto[] originRecipeProtos;
@@ -82,7 +83,6 @@ namespace Multifunction_mod
         public static bool FinallyInit;
         public static bool lighton;
         public static bool DisplayingWindow;
-        public static bool ItemDisplayingWindow;
         public static bool restorewater;
         public static bool entityitemnoneed;
         public static bool quickEjector;
@@ -94,8 +94,6 @@ namespace Multifunction_mod
         public static bool PasteBuildAnyWay;
         public static bool closeallcollider;
         public static bool unlockpointtech;
-        public static bool autochangeQuantumstationname;
-        public static bool autochangeQuantumStarstationname;
         public static bool TempEjectorRandomEmission;
         public static bool TempSiloRandomEmission;
         public string watertype = "";
@@ -117,6 +115,7 @@ namespace Multifunction_mod
         public static ConfigEntry<int> CuttingVeinNumbers;
         public static ConfigEntry<int> MaxOrbitRadiusConfig;
         public static ConfigEntry<int> Solarsailsabsorbeveryframe;
+        public static ConfigEntry<int> StationMinerSmelterNum;
         public static ConfigEntry<Color> Textcolor;
         public static ConfigEntry<Color> mainWindowTextureColor_config;
         public static ConfigEntry<float> MainWindow_width;
@@ -127,6 +126,7 @@ namespace Multifunction_mod
         public static ConfigEntry<float> planetquamaxpowerpertick;
         public static ConfigEntry<string> Mechalogneed;
         public static ConfigEntry<bool> InfiniteSand;
+        public static ConfigEntry<bool> isInstantItem;
         public static ConfigEntry<bool> WindturbinesUnlimitedEnergy;
         public static ConfigEntry<bool> Windturbinescovertheglobe;
         public static ConfigEntry<bool> NotTidyVein;
@@ -159,7 +159,8 @@ namespace Multifunction_mod
         public static ConfigEntry<bool> deleteveinbool;
         public static ConfigEntry<bool> MechalogisticsPlanet_bool;
         public static ConfigEntry<bool> StationMiner;
-        public static ConfigEntry<bool> autochangestationname;
+        public static ConfigEntry<bool> StationSprayer;
+        public static ConfigEntry<bool> StationMinerSmelter;
         public static ConfigEntry<bool> dismantle_but_nobuild;
         public static ConfigEntry<bool> build_gascol_noequator;
         public static ConfigEntry<bool> StationTrash;
@@ -169,7 +170,6 @@ namespace Multifunction_mod
         public static ConfigEntry<bool> BuildNotime_bool;
         public static ConfigEntry<bool> Station_infiniteWarp_bool;
         public static ConfigEntry<bool> StationfullCount_bool;
-        public static ConfigEntry<bool> ItemList_bool;
         public static ConfigEntry<bool> Buildingnoconsume;
         public static ConfigEntry<bool> Stationfullenergy;
         public static ConfigEntry<bool> BeltSignalFunction;
@@ -191,13 +191,14 @@ namespace Multifunction_mod
         public static ConfigEntry<bool> QuantumtransportassembleSupply;
         public static ConfigEntry<bool> QuantumtransportstationDemand;
         public static ConfigEntry<string> seedPlanetWater;
+        public static ConfigEntry<string> AutoChangeStationName;
         public static ConfigEntry<bool> QuantumtransportminerDemand;
         public static ConfigEntry<bool> QuantumtransportsiloDemand;
         public static ConfigEntry<bool> QuantumtransportlabDemand;
         public static ConfigEntry<bool> QuantumtransportpowerDemand;
         public static ConfigEntry<bool> QuantumtransportassembleDemand;
         #endregion
-
+        Dictionary<int, List<RecipeProto>> smeltRecipes = new Dictionary<int, List<RecipeProto>>();
         void Start()
         {
             preparedraw();
@@ -231,7 +232,10 @@ namespace Multifunction_mod
 
                 ArchitectMode = Config.Bind("建筑师模式", "ArchitectMode", false);
                 Quantumenergy = Config.Bind("量子耗能", "Quantumenergy", 1000000);
+                StationMinerSmelterNum = Config.Bind("星球熔炉矿机等价高级熔炉数量", "StationMinerSmelterNum", 120);
                 StationfullCount_bool = Config.Bind("星球无限供货机", "StationfullCount_bool", false);
+                StationMinerSmelter = Config.Bind("星球熔炉矿机", "StationMinerSmelter", false);
+                StationSprayer = Config.Bind("喷涂加工厂", "StationSprayer", false);
                 InfineteStarPower = Config.Bind("人造卫星无限能源", "InfineteStarPower", false);
                 WindturbinesUnlimitedEnergy = Config.Bind("风力涡轮机无限能源", "WindturbinesUnlimitedEnergy", false);
                 Windturbinescovertheglobe = Config.Bind("风力涡轮机覆盖全球", "Windturbinescovertheglobe", false);
@@ -241,11 +245,13 @@ namespace Multifunction_mod
                 allhandcraft = Config.Bind("全部手搓", "allhandcraft", false);
                 quickproduce = Config.Bind("快速生产", "quickproduce", false);
                 noneedwarp = Config.Bind("无翘曲器曲速", "noneedwarp", false);
+                isInstantItem = Config.Bind("直接获取物品", "isInstantItem", false);
 
                 Mechalogneed = Config.Bind("机甲物流需求情况", "Mechalogneed", "");
                 CuttingVeinNumbers = Config.Bind("切割矿脉数量", "CuttingVeinNumbers", 3);
                 veinlines = Config.Bind("矿物行数", "veinlines", 3);
                 NotTidyVein = Config.Bind("矿堆不整理", "NotTidyVein", false);
+                deleteveinbool = Config.Bind("删除矿物", "deleteveinbool", false);
                 StationMaxproliferator = Config.Bind("物流站无限增产点数", "StationMaxproliferator", false);
                 BeltSignalFunction = Config.Bind("传送带信号功能", "BeltSignalFunction", false);
                 Mechalogistics_bool = Config.Bind("机甲物流", "Mechalogistics_bool", false);
@@ -257,10 +263,8 @@ namespace Multifunction_mod
                 Infinitething = Config.Bind("无限物品", "Infinitething", false);
                 InfiniteSand = Config.Bind("无限沙土", "InfiniteSand", false);
                 Infiniteplayerpower = Config.Bind("无限机甲能量", "Infiniteplayerpower", false);
-                deleteveinbool = Config.Bind("删除矿物", "deleteveinbool", false);
                 StationMiner = Config.Bind("星球矿机", "stationmineropen", false);
                 StationTrash = Config.Bind("星球垃圾箱", "stationtrashopen", false);
-                autochangestationname = Config.Bind("自动改名", "autochangestationname", false);
                 Buildingnoconsume = Config.Bind("全设备不耗电", "Buildingnoconsume", false);
                 Stationfullenergy = Config.Bind("物流站永久满电", "Stationfullenergy", false);
                 StationSpray = Config.Bind("物流站喷涂", "StationSpray", false);
@@ -272,7 +276,6 @@ namespace Multifunction_mod
                 InspectDisNoLimit = Config.Bind("操作范围不受限制", "InspectDisNoLimit", false);
                 noneedtrashsand = Config.Bind("不需要垃圾沙土", "noneedtrashsand", false);
                 dismantle_but_nobuild = Config.Bind("拆除不添加至背包", "dismantle_but_nobuild", false);
-                ItemList_bool = Config.Bind("物品列表", "ItemList_bool", false);
                 sunlight_bool = Config.Bind("日光灯", "sunlight_bool", false);
                 DroneNoenergy_bool = Config.Bind("小飞机不耗能", "DroneNoenergy_bool", false);
                 Station_infiniteWarp_bool = Config.Bind("星际运输站无限曲速", "Station_infiniteWarp_bool", false);
@@ -299,6 +302,7 @@ namespace Multifunction_mod
                 Textcolor = Config.Bind("字体颜色", "Textcolor", Color.white);
                 mainWindowTextureColor_config = Config.Bind("窗口材质颜色", "mainWindowTextureColor", Color.black);
                 seedPlanetWater = Config.Bind("海洋类型修改", "seedPlanetWater", "");
+                AutoChangeStationName = Config.Bind("物流站自动改名", "AutoChangeStationName", "");
                 Solarsailsabsorbeveryframe = Config.Bind("每帧吸收个数", "Solarsailsabsorbeveryframe", 1);
 
 
@@ -313,7 +317,9 @@ namespace Multifunction_mod
             {
                 VeinLines = veinlines.Value,
                 CuttingVeinNumbers = CuttingVeinNumbers.Value,
-                oillowerlimit = (int)(1 / VeinData.oilSpeedMultiplier)
+                oillowerlimit = (int)(1 / VeinData.oilSpeedMultiplier),
+                DeleteVein = deleteveinbool.Value,
+                NotTidyVein = NotTidyVein.Value
             };
             guidraw = new GUIDraw(Math.Max(5, Math.Min(scale.Value, 35)), temppanel, this);
             incAbility = Maxproliferator.Value ? 10 : 4;
@@ -321,95 +327,37 @@ namespace Multifunction_mod
 
             CollectorStation = new List<int>();
             InitWaterTypes();
-            StartCoroutine(Timer());
-        }
-
-        private void InitWaterTypes()
-        {
-            string[] seedPlanetWaters = seedPlanetWater.Value.Split('|');
-            foreach (var seedPlanetWaterTypestr in seedPlanetWaters)
+            ThreadPool.QueueUserWorkItem(o =>
             {
-                if (string.IsNullOrEmpty(seedPlanetWaterTypestr)) continue;
-                var seedPlanetWater = new SeedPlanetWater();
-                string[] values = seedPlanetWaterTypestr.Split(',');
-                if (values[0] == "0") continue;
-                if (values[1].Length > 0)
+                while (true)
                 {
-                    seedPlanetWater.seedKey64 = Convert.ToInt64(values[0]);
-                    string[] planetwatertypes = values[1].Split('-');
-                    foreach (var planetwatertypestr in planetwatertypes)
+                    if (FinallyInit)
                     {
-                        if (string.IsNullOrEmpty(planetwatertypestr)) continue;
-                        string[] watervalues = planetwatertypestr.Split(':');
-                        seedPlanetWater.waterTypes.Add(Convert.ToInt32(watervalues[0]), Convert.ToInt32(watervalues[1]));
+                        OneSecondTimeElapse = true;
                     }
+                    // 等待指定的时间
+                    Thread.Sleep(1000);
                 }
-                if (seedPlanetWater.seedKey64 != 0)
+            });
+            ThreadPool.QueueUserWorkItem(o =>
+            {
+                while (true)
                 {
-                    seedPlanetWaterTypes.Add(seedPlanetWater.seedKey64, seedPlanetWater);
-                }
-            }
-        }
-
-        public void SetWaterType()
-        {
-            if (GameMain.localPlanet == null) return;
-            var item = LDB.items.dataArray.ToList().Find(x => x.name == currentPlanetWaterType);
-            if (item == null)
-            {
-                UIMessageBox.Show("", "设置海洋类型失败".getTranslate(), "确定".Translate(), 3);
-                return;
-            }
-            if (GameMain.localPlanet.waterItemId == item.ID) return;
-            GameMain.localPlanet.waterItemId = item.ID;
-            int planetId = GameMain.localPlanet.id;
-            int originwaterId = originWaterTypes.waterTypes[planetId];
-            if (originwaterId == item.ID && currentWaterTypes.waterTypes.ContainsKey(planetId))
-            {
-                currentWaterTypes.waterTypes.Remove(planetId);
-            }
-            else if (originwaterId != item.ID)
-            {
-                if (!currentWaterTypes.waterTypes.ContainsKey(planetId))
-                    currentWaterTypes.waterTypes.Add(planetId, item.ID);
-                else
-                    currentWaterTypes.waterTypes[planetId] = item.ID;
-            }
-
-            string result = "";
-            foreach (var seedPlanetWaterType in seedPlanetWaterTypes)
-            {
-                if (seedPlanetWaterType.Value.seedKey64 == 0 || seedPlanetWaterType.Value.waterTypes.Count == 0) continue;
-                result += seedPlanetWaterType.Value.ToStr() + '|';
-            }
-            seedPlanetWater.Value = result;
-        }
-
-        public void RestoreWaterType()
-        {
-            string result = "";
-            foreach (var keyvalue in currentWaterTypes.waterTypes)
-            {
-                if (originWaterTypes.waterTypes.ContainsKey(keyvalue.Key))
-                {
-                    GameMain.galaxy.PlanetById(keyvalue.Key).waterItemId = originWaterTypes.waterTypes[keyvalue.Key];
-                    if (GameMain.localPlanet.id == keyvalue.Key)
+                    if (FinallyInit)
                     {
-                        currentPlanetWaterType = LDB.items.Select(originWaterTypes.waterTypes[keyvalue.Key])?.name ?? "无海洋".getTranslate();
+                        HalfSecondTimeElapse = true;
                     }
+                    // 等待指定的时间
+                    Thread.Sleep(500);
                 }
-            }
-            currentWaterTypes.waterTypes.Clear();
-            foreach (var seedPlanetWaterType in seedPlanetWaterTypes)
-            {
-                if (seedPlanetWaterType.Value.seedKey64 == 0 || seedPlanetWaterType.Value.waterTypes.Count == 0) continue;
-                result += seedPlanetWaterType.Value.ToStr() + '|';
-            }
-            seedPlanetWater.Value = result;
+            });
         }
 
         void Update()
         {
+            if (Input.GetKey(KeyCode.F9) && Input.GetKeyDown(KeyCode.LeftShift))
+            {
+            }
             ChangeQuickKeyMethod();
             RestoreWaterMethod();
             FirstStartGame();
@@ -420,16 +368,6 @@ namespace Multifunction_mod
         public void OnGUI()
         {
             guidraw.Draw();
-            //如果物品列表开着，按ctrl或shift能够删除选中物品
-            if (guidraw.TabDisplayingWindow && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftShift)))
-            {
-                Itemdelete_bool = true;
-                player.SetHandItems(0, 0);
-            }
-            else
-            {
-                Itemdelete_bool = false;
-            }
         }
 
 
@@ -958,6 +896,7 @@ namespace Multifunction_mod
                     playcancelsolarbullet = false;
                     alwaysemissiontemp = false;
                     originWaterTypes = new SeedPlanetWater();
+                    smeltRecipes.Clear();
                 }
                 if (GameMain.instance.running && !FinallyInit)
                 {
@@ -986,6 +925,21 @@ namespace Multifunction_mod
                         {
                             currentWaterTypes = new SeedPlanetWater(seed);
                             seedPlanetWaterTypes.Add(seed, currentWaterTypes);
+                        }
+                    }
+                    foreach (RecipeProto rp in LDB.recipes.dataArray)
+                    {
+                        if (rp.Type != ERecipeType.Smelt) continue;
+                        foreach (var item in rp.Items)
+                        {
+                            if (smeltRecipes.ContainsKey(item))
+                            {
+                                smeltRecipes[item].Add(rp);
+                            }
+                            else
+                            {
+                                smeltRecipes.Add(item, new List<RecipeProto>() { rp });
+                            }
                         }
                     }
                     FinallyInit = true;
@@ -1020,6 +974,14 @@ namespace Multifunction_mod
                     //更改物品相关
                     SetmultipleItemStatck(StackMultiple.Value);
                     ChangeItemstack();
+                    if (InspectDisNoLimit.Value)
+                    {
+                        GameMain.mainPlayer.mecha.buildArea = 200;
+                    }
+                    else
+                    {
+                        GameMain.mainPlayer.mecha.buildArea = 80;
+                    }
                 }
             }
 
@@ -1045,10 +1007,40 @@ namespace Multifunction_mod
                 {
                     currentPlanetWaterType = LDB.items.Select(GameMain.localPlanet.waterItemId)?.name ?? "无海洋".getTranslate();
                 }
+                //量子传输站
+                if (Quantumtransport_bool.Value)
+                {
+                    try
+                    {
+                        takeitemfromstarsuperstation();
+                    }
+                    catch (Exception e) { Debug.Log("量子传输失败1" + e.Message); }
+                }
                 if (player != null)
                 {
+                    if (OneSecondTimeElapse)
+                    {
+                        //机甲物流
+                        if (Mechalogistics_bool.Value)
+                        {
+                            MechaLogisticsMethod();
+                        }
+
+                        //背包无限物品
+                        if (Infinitething.Value)
+                        {
+                            InfiniteAllThingInPackage();
+                        }
+
+                        //星球矿机
+                        if (StationMiner.Value)
+                        {
+                            StationMine();
+                        }
+                        OneSecondTimeElapse = false;
+                    }
                     GameRunning = true;
-                    if (!guidraw.MouseInWindow)
+                    if (!guidraw.DisplayingWindow || !guidraw.MouseInWindow)
                     {
                         veinproperty.ControlVein();
                     }
@@ -1071,55 +1063,20 @@ namespace Multifunction_mod
                                 int preid = GameMain.localPlanet.factory.prebuildPool[i].id;
                                 if (preid == i)
                                 {
-                                    GameMain.localPlanet.factory.BuildFinally(GameMain.mainPlayer, preid, false);
+                                    if (GameMain.localPlanet.factory.prebuildPool[i].protoId != 0)
+                                    {
+                                        GameMain.localPlanet.factory.BuildFinally(GameMain.mainPlayer, preid, false);
+                                    }
+                                    else
+                                    {
+                                        GameMain.localPlanet.factory.RemovePrebuildWithComponents(preid);
+                                    }
                                 }
                             }
                             GameMain.localPlanet.factory.EndFlattenTerrain();
                         }
                     }
                 }
-            }
-        }
-
-        /// <summary>
-        /// 定时任务
-        /// </summary>
-        private IEnumerator Timer()
-        {
-            while (true)
-            {
-                if (FinallyInit)
-                {
-                    //量子传输站
-                    if (Quantumtransport_bool.Value)
-                    {
-                        try
-                        {
-                            takeitemfromstarsuperstation();
-                        }
-                        catch (Exception e) { Debug.Log("量子传输失败1" + e.Message); }
-                    }
-
-                    //机甲物流
-                    if (Mechalogistics_bool.Value)
-                    {
-                        MechaLogisticsMethod();
-                    }
-
-                    //背包无限物品
-                    if (Infinitething.Value)
-                    {
-                        InfiniteAllThingInPackage();
-                    }
-
-                    //星球矿机
-                    if (StationMiner.Value)
-                    {
-                        StationMine();
-                    }
-                }
-                // 等待指定的时间
-                yield return new WaitForSeconds(1);
             }
         }
 
@@ -1134,6 +1091,7 @@ namespace Multifunction_mod
             QuickabortSwarm.Value = false;
             ChangeDysonradius.Value = false;
             NotTidyVein.Value = false;
+            isInstantItem.Value = false;
             InspectDisNoLimit.Value = false;
             RandomEmission.Value = false;
             changexveinspos = false;
@@ -1163,7 +1121,6 @@ namespace Multifunction_mod
             changeveinposbool = false;
             MechalogisticsPlanet_bool.Value = false;
             StationMiner.Value = false;
-            autochangestationname.Value = false;
             changeveingroupposbool = false;
             dismantle_but_nobuild.Value = false;
             build_gascol_noequator.Value = false;
@@ -1174,7 +1131,6 @@ namespace Multifunction_mod
             BuildNotime_bool.Value = false;
             Station_infiniteWarp_bool.Value = false;
             StationfullCount_bool.Value = false;
-            ItemList_bool.Value = false;
             getallVein_bool = false;
             Buildingnoconsume.Value = false;
             Stationfullenergy.Value = false;
@@ -1200,9 +1156,14 @@ namespace Multifunction_mod
             QuantumtransportassembleDemand.Value = false;
             Windturbinescovertheglobe.Value = false;
             WindturbinesUnlimitedEnergy.Value = false;
+            AutoChangeStationName.Value = "";
+            StationMinerSmelter.Value = false;
+            StationSprayer.Value = false;
         }
 
-        #region 开启窗口
+        /// <summary>
+        /// 开启窗口
+        /// </summary>
         public void QuickKeyOpenWindow()
         {
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -1213,21 +1174,7 @@ namespace Multifunction_mod
             {
                 guidraw.MainWindowKeyInvoke();
             }
-
-            if (player != null && player.controller != null && !player.controller.actionBuild.active)
-            {
-                if (ItemList_bool.Value && Input.GetKeyDown(KeyCode.Tab))
-                {
-                    guidraw.TabWindowKeyInvoke();
-                }
-                if (GameMain.localPlanet == null) ItemDisplayingWindow = false;
-            }
-            else
-            {
-                ItemDisplayingWindow = false;
-            }
         }
-        #endregion
 
         /// <summary>
         /// 修改快捷键
@@ -2282,6 +2229,10 @@ namespace Multifunction_mod
         #endregion
 
         #region 物品修改
+        /// <summary>
+        /// 设置物品堆叠倍数
+        /// </summary>
+        /// <param name="multiple"></param>
         public void SetmultipleItemStatck(int multiple)
         {
             int itemsLength = LDB.items.dataArray.Length;
@@ -2364,6 +2315,99 @@ namespace Multifunction_mod
             }
         }
 
+        /// <summary>
+        /// 导入海洋类型数据
+        /// </summary>
+        private void InitWaterTypes()
+        {
+            string[] seedPlanetWaters = seedPlanetWater.Value.Split('|');
+            foreach (var seedPlanetWaterTypestr in seedPlanetWaters)
+            {
+                if (string.IsNullOrEmpty(seedPlanetWaterTypestr)) continue;
+                var seedPlanetWater = new SeedPlanetWater();
+                string[] values = seedPlanetWaterTypestr.Split(',');
+                if (values[0] == "0") continue;
+                if (values[1].Length > 0)
+                {
+                    seedPlanetWater.seedKey64 = Convert.ToInt64(values[0]);
+                    string[] planetwatertypes = values[1].Split('-');
+                    foreach (var planetwatertypestr in planetwatertypes)
+                    {
+                        if (string.IsNullOrEmpty(planetwatertypestr)) continue;
+                        string[] watervalues = planetwatertypestr.Split(':');
+                        seedPlanetWater.waterTypes.Add(Convert.ToInt32(watervalues[0]), Convert.ToInt32(watervalues[1]));
+                    }
+                }
+                if (seedPlanetWater.seedKey64 != 0)
+                {
+                    seedPlanetWaterTypes.Add(seedPlanetWater.seedKey64, seedPlanetWater);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 设置海洋类型
+        /// </summary>
+        public void SetWaterType()
+        {
+            if (GameMain.localPlanet == null) return;
+            var item = LDB.items.dataArray.ToList().Find(x => x.name == currentPlanetWaterType);
+            if (item == null)
+            {
+                UIMessageBox.Show("", "设置海洋类型失败".getTranslate(), "确定".Translate(), 3);
+                return;
+            }
+            if (GameMain.localPlanet.waterItemId == item.ID) return;
+            GameMain.localPlanet.waterItemId = item.ID;
+            int planetId = GameMain.localPlanet.id;
+            int originwaterId = originWaterTypes.waterTypes[planetId];
+            if (originwaterId == item.ID && currentWaterTypes.waterTypes.ContainsKey(planetId))
+            {
+                currentWaterTypes.waterTypes.Remove(planetId);
+            }
+            else if (originwaterId != item.ID)
+            {
+                if (!currentWaterTypes.waterTypes.ContainsKey(planetId))
+                    currentWaterTypes.waterTypes.Add(planetId, item.ID);
+                else
+                    currentWaterTypes.waterTypes[planetId] = item.ID;
+            }
+
+            string result = "";
+            foreach (var seedPlanetWaterType in seedPlanetWaterTypes)
+            {
+                if (seedPlanetWaterType.Value.seedKey64 == 0 || seedPlanetWaterType.Value.waterTypes.Count == 0) continue;
+                result += seedPlanetWaterType.Value.ToStr() + '|';
+            }
+            seedPlanetWater.Value = result;
+        }
+
+        /// <summary>
+        /// 还原海洋类型
+        /// </summary>
+        public void RestoreWaterType()
+        {
+            string result = "";
+            foreach (var keyvalue in currentWaterTypes.waterTypes)
+            {
+                if (originWaterTypes.waterTypes.ContainsKey(keyvalue.Key))
+                {
+                    GameMain.galaxy.PlanetById(keyvalue.Key).waterItemId = originWaterTypes.waterTypes[keyvalue.Key];
+                    if (GameMain.localPlanet.id == keyvalue.Key)
+                    {
+                        currentPlanetWaterType = LDB.items.Select(originWaterTypes.waterTypes[keyvalue.Key])?.name ?? "无海洋".getTranslate();
+                    }
+                }
+            }
+            currentWaterTypes.waterTypes.Clear();
+            foreach (var seedPlanetWaterType in seedPlanetWaterTypes)
+            {
+                if (seedPlanetWaterType.Value.seedKey64 == 0 || seedPlanetWaterType.Value.waterTypes.Count == 0) continue;
+                result += seedPlanetWaterType.Value.ToStr() + '|';
+            }
+            seedPlanetWater.Value = result;
+        }
+
         public void Sunlightset()
         {
             if (GameMain.universeSimulator == null || GameMain.universeSimulator.LocalStarSimulator() == null || GameMain.universeSimulator.LocalStarSimulator().sunLight == null)
@@ -2428,15 +2472,31 @@ namespace Multifunction_mod
                                     continue;
                                 StationTrashMethod(sc, pdId);
                                 break;
+                            case "喷涂加工厂":
+                                if (StationSprayer.Value)
+                                {
+                                    StationSprayInc(sc);
+                                }
+                                break;
+                            case "星球熔炉矿机":
+                                if (StationMinerSmelter.Value && HalfSecondTimeElapse)
+                                {
+                                    StationFurnaceMiner(sc, pdId);
+                                }
+                                break;
                         }
                     }
                 }
+            }
+            if (StationMinerSmelter.Value && HalfSecondTimeElapse)
+            {
+                HalfSecondTimeElapse = false;
             }
         }
 
         private void StationMine()
         {
-            foreach (StarData sd in GameMain.galaxy.stars)
+            foreach (StarData sd in GameMain.galaxy?.stars)
             {
                 foreach (PlanetData pd in sd.planets)
                 {
@@ -2446,7 +2506,7 @@ namespace Multifunction_mod
                     {
                         if (sc?.storage == null) continue;
                         if (sc.isCollector || sc.isVeinCollector) continue;
-                        if (sc.name != "星球矿机" && sc.name != "Station_miner") continue;
+                        if (sc.name != "星球矿机" && sc.name != "Station_miner" && sc.name != "星球熔炉矿机") continue;
                         for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
                         {
                             int itemID = sc.storage[i].itemId;
@@ -2570,21 +2630,31 @@ namespace Multifunction_mod
         /// 物流站内置喷涂
         /// </summary>
         /// <param name="sc"></param>
-        public static void StationSprayInc(StationComponent sc)
+        public void StationSprayInc(StationComponent sc)
         {
-            var incstore = sc.storage.FirstOrDefault(x => x.itemId == 1143 && x.count > 0 && x.localLogic != ELogisticStorage.None);
-            if (incstore.itemId <= 0)
+            int incIndex = -1;
+            for (int i = 0; i < sc.storage.Length; i++)
+            {
+                if (sc.storage[i].itemId == 1143)
+                {
+                    incIndex = i;
+                    if (sc.storage[i].count == 0) return;
+                    break;
+                }
+            }
+            if (incIndex == -1)
                 return;
-            for (int i = 0; i < sc.storage.Length && incstore.count <= 0; i++)
+            for (int i = 0; i < sc.storage.Length; i++)
             {
                 ref StationStore store = ref sc.storage[i];
+                ref StationStore incstore = ref sc.storage[incIndex];
                 if (store.itemId == 1143 || store.itemId <= 0 || store.count <= 0) continue;
 
                 int needinc = store.count * incAbility - store.inc;
                 int needNumber = Math.Min((int)Math.Ceiling(needinc / 296.0), incstore.count);
                 store.inc += incstore.count >= needNumber ? needinc : incstore.count * 296;
                 incstore.count -= needNumber;
-                incstore.inc = Math.Min(incstore.count * incAbility, incstore.inc);
+                store.inc = Math.Min(store.count * incAbility, store.inc);
             }
         }
 
@@ -2592,7 +2662,7 @@ namespace Multifunction_mod
         /// 物流站满货物
         /// </summary>
         /// <param name="sc"></param>
-        private static void StationFullItemCount(StationComponent sc)
+        private void StationFullItemCount(StationComponent sc)
         {
             for (int i = 0; i < sc.storage.Length; i++)
             {
@@ -2607,7 +2677,7 @@ namespace Multifunction_mod
         /// </summary>
         /// <param name="sc"></param>
         /// <param name="pdId"></param>
-        private static void StationTrashMethod(StationComponent sc, int pdId)
+        private void StationTrashMethod(StationComponent sc, int pdId)
         {
             for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
             {
@@ -2625,6 +2695,62 @@ namespace Multifunction_mod
                         player.SetSandCount(player.sandCount + trashnum * 100);
                 }
             }
+        }
+
+        private void StationFurnaceMiner(StationComponent sc, int pdId)
+        {
+            List<int> storageItems = sc.storage.Select(x => x.itemId).ToList();
+            storageItems.ForEach(itemId =>
+            {
+                if (itemId <= 0 || !smeltRecipes.ContainsKey(itemId)) return;
+                smeltRecipes[itemId].ForEach(rp =>
+                {
+                    if (!rp.Results.All(storageItems.Contains))
+                        return;
+                    for (int i = 0; i < rp.ResultCounts.Length; i++)
+                    {
+                        int index = storageItems.IndexOf(rp.Results[i]);
+                        if (sc.storage[index].count > sc.storage[index].max)
+                        {
+                            return;
+                        }
+                    }
+                    int smelters = StationMinerSmelterNum.Value;
+                    float multiple = 60f / rp.TimeSpend;
+                    int costenergypertime = (int)(1440000 * multiple);
+                    int doublecostenergypertime = costenergypertime * 2;
+                    int smeltTime = (int)(smelters * multiple);
+                    int incsmeltTime = smeltTime;
+                    int len = rp.Items.Length;
+                    for (int i = 0; i < len; i++)
+                    {
+                        int index = storageItems.IndexOf(rp.Items[i]);
+                        int tempcount = sc.storage[index].count / rp.ItemCounts[i];
+                        smeltTime = Math.Min(smeltTime, tempcount);
+                        incsmeltTime = Math.Min(Math.Min(incsmeltTime, tempcount), sc.storage[index].inc / incAbility);
+                    }
+                    incsmeltTime = (int)Math.Min(incsmeltTime, sc.energy / doublecostenergypertime);
+                    sc.energy -= incsmeltTime * doublecostenergypertime;
+                    smeltTime = (int)Math.Min(smeltTime - incsmeltTime, sc.energy / costenergypertime);
+                    sc.energy -= smeltTime * costenergypertime;
+                    for (int i = 0; i < len; i++)
+                    {
+                        int consumeCount = rp.ItemCounts[i] * (smeltTime + incsmeltTime);
+                        int index = storageItems.IndexOf(rp.Items[i]);
+                        sc.storage[index].count -= consumeCount;
+                        sc.storage[index].inc -= incsmeltTime * rp.ItemCounts[i] * incAbility;
+                        sc.storage[index].inc = Math.Max(0, Math.Min(sc.storage[index].count * incAbility, sc.storage[index].inc));
+                        AddStatInfo(pdId, rp.Items[i], consumeCount, false);
+                    }
+                    for (int i = 0; i < rp.ResultCounts.Length; i++)
+                    {
+                        int addcount = (int)(rp.ResultCounts[i] * (smeltTime + incsmeltTime * (1 + Cargo.incTableMilli[incAbility])));
+                        int index = storageItems.IndexOf(rp.Results[i]);
+                        sc.storage[index].count += addcount;
+                        AddStatInfo(pdId, rp.Results[i], addcount);
+                    }
+                });
+            });
         }
         #endregion
 
