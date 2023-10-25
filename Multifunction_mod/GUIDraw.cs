@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using static Multifunction_mod.Multifunction;
+using static Multifunction_mod.Multifunctionpatch;
 using Vector2 = UnityEngine.Vector2;
 
 namespace Multifunction_mod
@@ -110,7 +111,10 @@ namespace Multifunction_mod
         }
 
 
-        private GUIStyle style;
+        GUIStyle style;
+        GUIStyle normalStyle;
+        GUIStyle selectedIconStyle;
+        Texture2D selectedTexture;
         private GUIStyle labelmarginStyle;
         private GUIStyle selectedButtonStyle;
         private GUILayoutOption[] slideroptions;
@@ -147,6 +151,9 @@ namespace Multifunction_mod
             TextColor = Textcolor.Value;
             MainWindowTextureColor = mainWindowTextureColor_config.Value;
             MainWindowTexture = new Texture2D(10, 10);
+            selectedTexture = new Texture2D(1, 1);
+            selectedTexture.SetPixel(0, 0, new Color(50f / 255, 50f / 255, 50f / 255));
+            selectedTexture.Apply();
             mainWindowTexture.SetPixels(Enumerable.Repeat(MainWindowTextureColor, 100).ToArray());
             mainWindowTexture.Apply();
             mainWindowWidth = MainWindow_width.Value;
@@ -232,6 +239,9 @@ namespace Multifunction_mod
                     fontSize = baseSize - 2,
                 };
                 style.normal.textColor = TextColor;
+                normalStyle = new GUIStyle();
+                selectedIconStyle = new GUIStyle();
+                selectedIconStyle.normal.background = selectedTexture;
                 labelmarginStyle = new GUIStyle(style)
                 {
                     margin = new RectOffset(0, 0, 3, 0)
@@ -442,8 +452,30 @@ namespace Multifunction_mod
                 Infiniteplayerpower.Value = GUILayout.Toggle(Infiniteplayerpower.Value, "无限机甲能量".getTranslate());
                 unlockpointtech = GUILayout.Toggle(unlockpointtech, "科技点击解锁".getTranslate());
                 dismantle_but_nobuild.Value = GUILayout.Toggle(dismantle_but_nobuild.Value, "不往背包放东西".getTranslate());
-                QuickHandcraft.Value = GUILayout.Toggle(QuickHandcraft.Value, "机甲制造MAX".getTranslate());
-                QuickPlayerMine.Value = GUILayout.Toggle(QuickPlayerMine.Value, "机甲采矿MAX".getTranslate());
+                if (QuickHandcraft.Value != GUILayout.Toggle(QuickHandcraft.Value, "机甲制造MAX".getTranslate()))
+                {
+                    QuickHandcraft.Value = !QuickHandcraft.Value;
+                    if (QuickHandcraft.Value)
+                    {
+                        GameMain.mainPlayer.mecha.replicateSpeed = 100;
+                    }
+                    else
+                    {
+                        GameMain.mainPlayer.mecha.replicateSpeed = Configs.freeMode.mechaMiningSpeed;
+                    }
+                }
+                if (QuickPlayerMine.Value != GUILayout.Toggle(QuickPlayerMine.Value, "机甲采矿MAX".getTranslate()))
+                {
+                    QuickPlayerMine.Value = !QuickPlayerMine.Value;
+                    if (QuickPlayerMine.Value)
+                    {
+                        GameMain.mainPlayer.mecha.miningSpeed = 100;
+                    }
+                    else
+                    {
+                        GameMain.mainPlayer.mecha.miningSpeed = Configs.freeMode.mechaReplicateSpeed;
+                    }
+                }
                 isInstantItem.Value = GUILayout.Toggle(isInstantItem.Value, "直接获取物品".getTranslate());
                 noneedwarp.Value = GUILayout.Toggle(noneedwarp.Value, "无需翘曲器曲速飞行".getTranslate());
             }
@@ -502,8 +534,7 @@ namespace Multifunction_mod
                 StationSpray.Value = GUILayout.Toggle(StationSpray.Value, "内置喷涂".getTranslate());
                 StationPowerGen.Value = GUILayout.Toggle(StationPowerGen.Value, "内置发电".getTranslate());
                 Station_infiniteWarp_bool.Value = GUILayout.Toggle(Station_infiniteWarp_bool.Value, "无限翘曲".getTranslate());
-                build_gascol_noequator.Value = GUILayout.Toggle(build_gascol_noequator.Value, "无需赤道造采集器".getTranslate());
-                build_tooclose_bool.Value = GUILayout.Toggle(build_tooclose_bool.Value, "强行近距离建造物流站".getTranslate());
+                build_station_nocondition.Value = GUILayout.Toggle(build_station_nocondition.Value, "建造无需条件".getTranslate());
                 GUILayout.Label("以下功能需改名".getTranslate() + ":", style);
                 StationfullCount_bool.Value = GUILayout.Toggle(StationfullCount_bool.Value, "星球无限供货机".getTranslate());
                 StationTrash.Value = GUILayout.Toggle(StationTrash.Value, "垃圾站".getTranslate());
@@ -579,17 +610,25 @@ namespace Multifunction_mod
 
                     GUILayout.BeginVertical();
                     GUILayout.Label("建造数量最大值".getTranslate() + ":" + Buildmaxlen.Value, style);
-                    Buildmaxlen.Value = (int)GUILayout.HorizontalSlider(Buildmaxlen.Value, 15, 100, GUILayout.Width(heightdis * 4));
-                    bool temp = GUILayout.Toggle(InspectDisNoLimit.Value, "操作范围不受限制".getTranslate());
-                    if (temp != InspectDisNoLimit.Value)
+                    int tempBuildmaxlen = (int)GUILayout.HorizontalSlider(Buildmaxlen.Value, 15, 100, GUILayout.Width(heightdis * 4));
+                    if (tempBuildmaxlen != Buildmaxlen.Value)
                     {
-                        InspectDisNoLimit.Value = temp;
-                        GameMain.mainPlayer.mecha.buildArea = InspectDisNoLimit.Value ? 200 : 80;
+                        Buildmaxlen.Value = tempBuildmaxlen;
+                        GameMain.mainPlayer.controller.actionBuild.clickTool.dotsSnapped = new Vector3[tempBuildmaxlen];
                     }
+                    InspectDisNoLimit.Value = GUILayout.Toggle(InspectDisNoLimit.Value, "操作范围不受限制".getTranslate());
                     BuildNotime_bool.Value = GUILayout.Toggle(BuildNotime_bool.Value, "建筑秒完成".getTranslate());
                     blueprintpastenoneed_bool.Value = GUILayout.Toggle(blueprintpastenoneed_bool.Value, "蓝图建造无需材料".getTranslate());
                     ArchitectMode.Value = GUILayout.Toggle(ArchitectMode.Value, "建筑师模式".getTranslate());
-                    DriftBuildings = GUILayout.Toggle(DriftBuildings, "建筑抬升".getTranslate());
+                    if (DriftBuildings != GUILayout.Toggle(DriftBuildings, "建筑抬升".getTranslate()))
+                    {
+                        DriftBuildings = !DriftBuildings;
+                        if (DriftBuildings && !DriftBuildingsPatch.IsPatched)
+                        {
+                            DriftBuildingsPatch.IsPatched = true;
+                            harmony.PatchAll(typeof(DriftBuildingsPatch));
+                        }
+                    }
                     if (DriftBuildings) GUILayout.Label("抬升层数:" + DriftBuildingLevel, style);
                     if (BeltSignalFunction.Value != GUILayout.Toggle(BeltSignalFunction.Value, "传送带信号功能".getTranslate()))
                     {
@@ -726,7 +765,6 @@ namespace Multifunction_mod
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical();
             var veinControlProperty = MainFunction.veinproperty;
-            veinControlProperty.AddVein = GUILayout.Toggle(veinControlProperty.AddVein, "生成矿物".getTranslate());
             veinControlProperty.DeleteVein = GUILayout.Toggle(veinControlProperty.DeleteVein, "删除矿物".getTranslate());
             veinControlProperty.Changeveinpos = GUILayout.Toggle(veinControlProperty.Changeveinpos, "移动单矿".getTranslate());
             veinControlProperty.Changeveingrouppos = GUILayout.Toggle(veinControlProperty.Changeveingrouppos, "移动矿堆".getTranslate());
@@ -737,10 +775,34 @@ namespace Multifunction_mod
             veinControlProperty.Changexveinspos = GUILayout.Toggle(veinControlProperty.Changexveinspos, "切割矿脉".getTranslate());
             GUILayout.Label("切割出".getTranslate() + veinControlProperty.CuttingVeinNumbers + "个".getTranslate());
             veinControlProperty.CuttingVeinNumbers = (int)GUILayout.HorizontalSlider(veinControlProperty.CuttingVeinNumbers, 2, 72);
-            restorewater = GUILayout.Toggle(restorewater, "还原海洋".getTranslate() + "/s");
-            GUILayout.Label("生成矿物点击模式".getTranslate());
-            bool tempPress = GUILayout.Toggle(veinControlProperty.AddVeinMode == 0, "点按模式".getTranslate());
-            bool tempJustPress = GUILayout.Toggle(veinControlProperty.AddVeinMode == 1, "按压模式".getTranslate());
+            GUILayout.EndVertical();
+            GUILayout.Space(heightdis);
+            GUILayout.BeginVertical();
+
+            var squareoptions = new GUILayoutOption[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis) };
+            int columnnum = 8;
+            int veinNums = LDB.veins.dataArray.Length;
+            int lines = veinNums / columnnum + ((veinNums % columnnum) > 0 ? 1 : 0);
+            for (int i = 0; i < lines; i++)
+            {
+                GUILayout.BeginHorizontal();
+                for (int j = 0; j < columnnum; j++)
+                {
+                    int index = i * columnnum + j + 1;
+                    if (index == veinNums + 1) break;
+                    if (GUILayout.Button(LDB.items?.Select(LDB.veins.Select(index).MiningItem)?.iconSprite?.texture, veinControlProperty.VeinType == index ? selectedIconStyle : normalStyle, squareoptions))
+                    {
+                        veinControlProperty.VeinType = veinControlProperty.VeinType != index ? index : 0;
+                    }
+                }
+
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("生成矿物模式".getTranslate());
+            bool tempPress = GUILayout.Toggle(veinControlProperty.AddVeinMode == 0, "点按".getTranslate());
+            bool tempJustPress = GUILayout.Toggle(veinControlProperty.AddVeinMode == 1, "按压".getTranslate());
+            GUILayout.EndHorizontal();
             if (tempPress && veinControlProperty.AddVeinMode == 1)
             {
                 veinControlProperty.AddVeinMode = 0;
@@ -749,56 +811,80 @@ namespace Multifunction_mod
             {
                 veinControlProperty.AddVeinMode = 1;
             }
-            GUILayout.Label("添加矿脉数量".getTranslate());
-            GUILayout.BeginHorizontal();
-            bool temp500 = GUILayout.Toggle(veinControlProperty.AddVeinNumber == 500, "500");
-            bool tempInfinite = GUILayout.Toggle(veinControlProperty.AddVeinNumber != 500, "无穷".getTranslate());
-            if (temp500 && veinControlProperty.AddVeinNumber != 500)
+            if (veinControlProperty.VeinType == 7)
             {
-                veinControlProperty.AddVeinNumber = 500;
-            }
-            else if (tempInfinite && veinControlProperty.AddVeinNumber == 500)
-            {
-                veinControlProperty.AddVeinNumber = 1000000000;
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label("添加油井速率".getTranslate());
-            GUILayout.BeginHorizontal();
-            for (int i = 0; i < 3; i++)
-            {
-                bool temp = GUILayout.Toggle(veinControlProperty.OilAddIntervalBool[i], veinControlProperty.OilAddIntervalValue[i] + "/s");
-                if (temp != veinControlProperty.OilAddIntervalBool[i] && temp)
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("添加油井速率".getTranslate());
+                for (int i = 0; i < 3; i++)
                 {
-                    veinControlProperty.SetOilAddInterval(i);
-                }
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
-            GUILayout.Space(heightdis);
-            GUILayout.BeginVertical();
-            var minbuttonoptions = new GUILayoutOption[2] { GUILayout.Height(heightdis), GUILayout.MinWidth(heightdis * 4) };
-            if (GUILayout.Button(LDB.items.Select(LDB.veins.Select(veinControlProperty.VeinType).MiningItem).name, minbuttonoptions))
-            {
-                dropdownbutton = !dropdownbutton;
-                veinControlProperty.AddVein = false;
-            }
-            if (dropdownbutton)
-            {
-                int count = LDB.veins.dataArray.Length;
-                for (int i = 1; i <= count; i++)
-                {
-                    if (GUILayout.Button(LDB.items.Select(LDB.veins.Select(i).MiningItem).name, minbuttonoptions))
+                    bool temp = GUILayout.Toggle(veinControlProperty.OilAddIntervalBool[i], veinControlProperty.OilAddIntervalValue[i] + "/s");
+                    if (temp != veinControlProperty.OilAddIntervalBool[i] && temp)
                     {
-                        dropdownbutton = !dropdownbutton;
-                        veinControlProperty.VeinType = i;
+                        veinControlProperty.SetOilAddInterval(i);
                     }
                 }
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("添加矿脉数量".getTranslate());
+                bool temp500 = GUILayout.Toggle(veinControlProperty.AddVeinNumber == 500, "500");
+                bool tempInfinite = GUILayout.Toggle(veinControlProperty.AddVeinNumber != 500, "无穷".getTranslate());
+                if (temp500 && veinControlProperty.AddVeinNumber != 500)
+                {
+                    veinControlProperty.AddVeinNumber = 500;
+                }
+                else if (tempInfinite && veinControlProperty.AddVeinNumber == 500)
+                {
+                    veinControlProperty.AddVeinNumber = 1000000000;
+                }
+                GUILayout.EndHorizontal();
             }
             GUILayout.EndVertical();
 
             GUILayout.Space(heightdis);
             GUILayout.BeginVertical();
-            var tempstr = new string[10] { !restorewater ? "铺平整个星球" : "还原全部海洋", "铺平整个星球(地基)", "铺平整个星球(自定义颜色)", "掩埋全部矿", "删除全部矿", "超密铺采集器", "删除当前星球所有建筑", "删除当前星球所有建筑(不掉落)", "初始化当前星球", "初始化当前星球(不要海洋)" };
+            restorewater = GUILayout.Toggle(restorewater, "还原海洋".getTranslate());
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("地基类型");
+            if (GUILayout.Button("<"))
+            {
+                MainFunction.ReformType--;
+                if (MainFunction.ReformType < 0)
+                {
+                    MainFunction.ReformType = 7;
+                }
+            }
+            GUILayout.Label(MainFunction.ReformType.ToString());
+            if (GUILayout.Button(">"))
+            {
+                MainFunction.ReformType++;
+                MainFunction.ReformType %= 8;
+            }
+
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("颜色类型");
+            if (GUILayout.Button("<"))
+            {
+                MainFunction.ReformColor--;
+                if (MainFunction.ReformColor < 0)
+                {
+                    MainFunction.ReformColor = 31;
+                }
+            }
+            GUILayout.Label(MainFunction.ReformColor.ToString());
+            if (GUILayout.Button(">"))
+            {
+                MainFunction.ReformColor++;
+                MainFunction.ReformColor %= 32;
+            }
+            ReformTypeConfig.Value = MainFunction.ReformType;
+            ReformColorConfig.Value = MainFunction.ReformColor;
+
+            GUILayout.EndHorizontal();
+            var tempstr = new string[8] { !restorewater ? "铺平整个星球" : "还原全部海洋", "掩埋全部矿", "删除全部矿", "超密铺采集器", "删除当前星球所有建筑", "删除当前星球所有建筑(不掉落)", "初始化当前星球", "初始化当前星球(不要海洋)" };
             for (int i = 0; i < tempstr.Length; i++)
             {
                 if (GUILayout.Button(tempstr[i].getTranslate(), GUILayout.Height(heightdis)))
@@ -806,15 +892,13 @@ namespace Multifunction_mod
                     switch (i)
                     {
                         case 0: MainFunction.OnSetBase(0); break;
-                        case 1: MainFunction.OnSetBase(1); break;
-                        case 2: MainFunction.OnSetBase(2); break;
-                        case 3: veinControlProperty.BuryAllvein(); break;
-                        case 4: veinControlProperty.RemoveAllvein(); break;
-                        case 5: MainFunction.SetMaxGasStation(); break;
-                        case 6: MainFunction.RemoveAllBuild(0); break;
-                        case 7: MainFunction.RemoveAllBuild(1); break;
-                        case 8: MainFunction.RemoveAllBuild(2); break;
-                        case 9: MainFunction.RemoveAllBuild(3); break;
+                        case 1: veinControlProperty.BuryAllvein(); break;
+                        case 2: veinControlProperty.RemoveAllvein(); break;
+                        case 3: MainFunction.SetMaxGasStation(); break;
+                        case 4: MainFunction.RemoveAllBuild(0); break;
+                        case 5: MainFunction.RemoveAllBuild(1); break;
+                        case 6: MainFunction.RemoveAllBuild(2); break;
+                        case 7: MainFunction.RemoveAllBuild(3); break;
                     }
                 }
             }
@@ -923,11 +1007,6 @@ namespace Multifunction_mod
                 alwaysemission.Value = !alwaysemission.Value;
                 alwaysemissiontemp = alwaysemission.Value;
             }
-            if (RandomEmission.Value != GUILayout.Toggle(RandomEmission.Value, "间隔发射".getTranslate()))
-            {
-                RandomEmission.Value = !RandomEmission.Value;
-                MainFunction.RandomEmissionEjectorSilo();
-            }
             var temp = GUILayout.Toggle(ChangeDysonradius.Value, "开放戴森壳半径上下限(用前存档)".getTranslate());
             GUILayout.Label("最小半径".getTranslate() + ":100", style);
             GUILayout.Label("最大半径".getTranslate() + ":" + TGMKinttostring(MaxOrbitRadiusConfig.Value, ""), style);
@@ -988,7 +1067,15 @@ namespace Multifunction_mod
                     Maxproliferator.Value = GUILayout.Toggle(Maxproliferator.Value, "增产点数上限10".getTranslate());
                     incAbility = Maxproliferator.Value ? 10 : 4;
                     pasteanyway = GUILayout.Toggle(pasteanyway, "蓝图强制粘贴".getTranslate());
-                    PasteBuildAnyWay = GUILayout.Toggle(PasteBuildAnyWay, "建筑铺设无需条件".getTranslate());
+                    if (PasteBuildAnyWay != GUILayout.Toggle(PasteBuildAnyWay, "建筑铺设无需条件".getTranslate()))
+                    {
+                        PasteBuildAnyWay = !PasteBuildAnyWay;
+                        if (PasteBuildAnyWay && !PasteAnywayPatch.IsPatched)
+                        {
+                            PasteAnywayPatch.IsPatched = true;
+                            harmony.PatchAll(typeof(PasteAnywayPatch));
+                        }
+                    }
                     if (closeallcollider != GUILayout.Toggle(closeallcollider, "关闭所有碰撞体".getTranslate()))
                     {
                         closeallcollider = !closeallcollider;

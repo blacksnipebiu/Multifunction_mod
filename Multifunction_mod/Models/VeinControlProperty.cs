@@ -23,7 +23,7 @@ namespace Multifunction_mod.Models
 
         public int AddVeinMode;
 
-        public int VeinType = 1;
+        public int VeinType;
         /// <summary>
         /// 矿脉整理行数
         /// </summary>
@@ -64,22 +64,6 @@ namespace Multifunction_mod.Models
             {
                 cuttingveinNumbers = value;
                 Multifunction.CuttingVeinNumbers.Value = value;
-            }
-        }
-
-        /// <summary>
-        /// 是否添加矿脉
-        /// </summary>
-        public bool AddVein
-        {
-            get => addVein;
-            set
-            {
-                if (value)
-                {
-                    SetFalse();
-                }
-                addVein = value;
             }
         }
 
@@ -196,7 +180,7 @@ namespace Multifunction_mod.Models
 
         public void SetFalse()
         {
-            AddVein = false;
+            VeinType = 0;
             Changeveinpos = false;
             Changeveingrouppos = false;
             GetallVein = false;
@@ -226,7 +210,7 @@ namespace Multifunction_mod.Models
         #region 矿脉管理
         public void ControlVein()
         {
-            if (AddVein && !GameMain.mainPlayer.controller.actionBuild.dismantleTool.active)
+            if (VeinType != 0 && !GameMain.mainPlayer.controller.actionBuild.dismantleTool.active)
             {
                 if (AddVeinMode == 0 && Input.GetMouseButtonDown(0))
                 {

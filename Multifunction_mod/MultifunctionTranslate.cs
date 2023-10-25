@@ -98,6 +98,7 @@ namespace Multifunction_mod
             TranslateDict.Add("无限储液站", "Infinite storage tank");
             TranslateDict.Add("星球无限供货机", "Planet infinite item station");
             TranslateDict.Add("要啥有啥", "All stations infinite item");
+            TranslateDict.Add("建造无需条件", "Build no conditions");
             TranslateDict.Add("无需赤道造采集器", "Collector no equatorial condition");
             TranslateDict.Add("强行近距离建造物流站", "Station no too close condition");
             TranslateDict.Add("无限翘曲", "Station infinite space warpers");
@@ -152,9 +153,9 @@ namespace Multifunction_mod
             TranslateDict.Add("添加油井速率", "Add oil interval");
             TranslateDict.Add("添加矿脉数量", "Add vein interval");
             TranslateDict.Add("无穷", "Infinite");
-            TranslateDict.Add("生成矿物点击模式", "Add vein Mode");
-            TranslateDict.Add("点按模式", "Click Mode");
-            TranslateDict.Add("按压模式", "Press Mode");
+            TranslateDict.Add("生成矿物模式", "Add vein Mode");
+            TranslateDict.Add("点按", "Click");
+            TranslateDict.Add("按压", "Press");
             TranslateDict.Add("删除当前星球所有建筑", "Dismantle all buildings");
             TranslateDict.Add("删除当前星球所有建筑(不掉落)", "Dismantle all buildings(no drop)");
             TranslateDict.Add("初始化当前星球", "Initialize the current planet");
