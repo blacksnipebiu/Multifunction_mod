@@ -1062,7 +1062,6 @@ namespace Multifunction_mod
                 GUILayout.Label("以下设置需要进入存档".getTranslate(), style);
                 if (GameMain.mainPlayer != null)
                 {
-                    sunlight_bool.Value = GUILayout.Toggle(sunlight_bool.Value, "夜灯".getTranslate());
                     CloseUIAbnormalityTip.Value = GUILayout.Toggle(CloseUIAbnormalityTip.Value, "关闭异常提示".getTranslate());
                     Maxproliferator.Value = GUILayout.Toggle(Maxproliferator.Value, "增产点数上限10".getTranslate());
                     incAbility = Maxproliferator.Value ? 10 : 4;

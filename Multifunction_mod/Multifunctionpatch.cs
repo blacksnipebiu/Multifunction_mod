@@ -1467,61 +1467,6 @@ namespace Multifunction_mod
             }
 
             [HarmonyPrefix]
-            [HarmonyPatch(typeof(StarSimulator), "LateUpdate")]
-            public static bool StarSimulatorLateUpdate(ref StarSimulator __instance, Material ___bodyMaterial, Material ___haloMaterial)
-            {
-                __instance.sunLight.enabled = GameMain.localStar == __instance.starData && !FactoryModel.whiteMode0;
-                if (GameMain.localStar == __instance.starData)
-                {
-                    if (!FactoryModel.whiteMode0)
-                    {
-                        Vector3 vector3 = sunlight_bool.Value ? GameMain.mainPlayer.transform.up : __instance.transform.forward;
-                        Shader.SetGlobalVector("_Global_SunDir", new Vector4(vector3.x, vector3.y, vector3.z, 0.0f));
-                        Shader.SetGlobalColor("_Global_SunsetColor0", Color.Lerp(Color.white, __instance.sunsetColor0, __instance.useSunsetColor));
-                        Shader.SetGlobalColor("_Global_SunsetColor1", Color.Lerp(Color.white, __instance.sunsetColor1, __instance.useSunsetColor));
-                        Shader.SetGlobalColor("_Global_SunsetColor2", Color.Lerp(Color.white, __instance.sunsetColor2, __instance.useSunsetColor));
-                    }
-                    else
-                    {
-                        Transform transform = GameCamera.instance.camLight.transform;
-                        transform.rotation = Quaternion.LookRotation((GameMain.mainPlayer.position * 0.75f - transform.position).normalized, transform.position.normalized);
-                        Vector3 vector = -GameCamera.instance.camLight.transform.forward;
-                        Shader.SetGlobalVector("_Global_SunDir", new Vector4(vector.x, vector.y, vector.z, 0f));
-                        Shader.SetGlobalColor("_Global_SunsetColor0", Color.white);
-                        Shader.SetGlobalColor("_Global_SunsetColor1", Color.white);
-                        Shader.SetGlobalColor("_Global_SunsetColor2", Color.white);
-                    }
-                }
-                ___bodyMaterial.renderQueue = GameMain.localStar == __instance.starData ? 2981 : 2979;
-                ___haloMaterial.renderQueue = GameMain.localStar == __instance.starData ? 2981 : 2979;
-                __instance.blackRenderer.enabled = GameMain.localStar == __instance.starData && __instance.starData.type != EStarType.BlackHole;
-                return false;
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(PlanetSimulator), "LateUpdate")]
-            public static bool PlanetSimulatorLateUpdatePatch(PlanetSimulator __instance)
-            {
-                PlanetData localPlanet = GameMain.localPlanet;
-                if (localPlanet == __instance.planetData && localPlanet != null)
-                {
-                    Vector3 vector3 = Quaternion.Inverse(localPlanet.runtimeRotation) * (__instance.planetData.star.uPosition - __instance.planetData.uPosition).normalized;
-                    vector3 = sunlight_bool.Value ? GameMain.mainPlayer.transform.up : vector3;
-                    if (FactoryModel.whiteMode0)
-                        vector3 = -GameCamera.instance.camLight.transform.forward;
-                    if (__instance.surfaceRenderer != null && __instance.surfaceRenderer.Length != 0)
-                        __instance.surfaceRenderer[0].sharedMaterial.SetVector("_SunDir", (Vector4)vector3);
-                    if (__instance.reformMat0 != null)
-                        __instance.reformMat0.SetVector("_SunDir", (Vector4)vector3);
-                    if (__instance.reformMat1 != null)
-                        __instance.reformMat1.SetVector("_SunDir", (Vector4)vector3);
-                    if (__instance.atmoMat != null)
-                        __instance.atmoMat.SetVector("_SunDir", (Vector4)vector3);
-                }
-                return false;
-            }
-
-            [HarmonyPrefix]
             [HarmonyPatch(typeof(ProductionStatistics), "GameTick")]
             public static bool Prefix(ProductionStatistics __instance)
             {

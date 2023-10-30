@@ -17,7 +17,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "2.9.9";
+        public const string VERSION = "3.0.3";
 
         #region 临时变量
 
@@ -25,7 +25,6 @@ namespace Multifunction_mod
         public int ReformType;
         public int ReformColor;
         public string currentPlanetWaterType = "";
-        public Light SunLight;
         private SeedPlanetWater originWaterTypes;
         private SeedPlanetWater currentWaterTypes;
         public Dictionary<long, SeedPlanetWater> seedPlanetWaterTypes;
@@ -90,7 +89,6 @@ namespace Multifunction_mod
         public static bool playcancelsolarbullet;
         public static bool alwaysemissiontemp;
         public static bool FinallyInit;
-        public static bool lighton;
         public static bool DisplayingWindow;
         public static bool restorewater;
         public static bool entityitemnoneed;
@@ -173,7 +171,6 @@ namespace Multifunction_mod
         public static ConfigEntry<bool> dismantle_but_nobuild;
         public static ConfigEntry<bool> build_station_nocondition;
         public static ConfigEntry<bool> StationTrash;
-        public static ConfigEntry<bool> sunlight_bool;
         public static ConfigEntry<bool> DroneNoenergy_bool;
         public static ConfigEntry<bool> BuildNotime_bool;
         public static ConfigEntry<bool> Station_infiniteWarp_bool;
@@ -284,7 +281,6 @@ namespace Multifunction_mod
                 InspectDisNoLimit = Config.Bind("操作范围不受限制", "InspectDisNoLimit", false);
                 noneedtrashsand = Config.Bind("不需要垃圾沙土", "noneedtrashsand", false);
                 dismantle_but_nobuild = Config.Bind("拆除不添加至背包", "dismantle_but_nobuild", false);
-                sunlight_bool = Config.Bind("日光灯", "sunlight_bool", false);
                 DroneNoenergy_bool = Config.Bind("小飞机不耗能", "DroneNoenergy_bool", false);
                 Station_infiniteWarp_bool = Config.Bind("星际运输站无限曲速", "Station_infiniteWarp_bool", false);
                 BuildNotime_bool = Config.Bind("建筑秒完成", "BuildNotime_bool", false);
@@ -366,6 +362,35 @@ namespace Multifunction_mod
         {
             if (Input.GetKey(KeyCode.F9) && Input.GetKeyDown(KeyCode.LeftShift))
             {
+                //TechProto tech = new TechProto();
+                //for (int i = 1; i < 150; i++)
+                //{
+                //    string result3 = i + ":";
+                //    foreach (var t in LDB.techs.dataArray)
+                //    {
+                //        if (t.MaxLevel > 7)
+                //        {
+                //            tech = t;
+                //            Debug.Log(tech.name);
+                //            result3 += tech.name;
+                //            for (int j = 0; j < tech.itemArray.Length; j++)
+                //            {
+                //                ItemProto itemProto2 = tech.itemArray[j];
+                //                if (itemProto2.ID != 6006) continue;
+                //                long value = tech.GetHashNeeded(i) * tech.ItemPoints[j] / 3600L;
+                //                StringBuilder result = new StringBuilder("         ", 12);
+                //                StringBuilderUtility.WriteKMG(result, 8, value, false);
+                //                StringBuilder result2 = new StringBuilder("         ", 12);
+                //                long hashNeeded = tech.GetHashNeeded(i);
+                //                StringBuilderUtility.WriteKMG(result2, 8, hashNeeded, false);
+
+                //                result3 += result2.ToString() + "," + result.ToString();
+                //                result3 += ";";
+                //            }
+                //        }
+                //    }
+                //    File.AppendAllText(@"C:\Users\blacksnipe\Desktop\temp\1.txt", result3 + "\n");
+                //}
             }
             ChangeQuickKeyMethod();
             RestoreWaterMethod();
@@ -1009,12 +1034,12 @@ namespace Multifunction_mod
             {
                 BuildFinallyInstant();
                 BluePrintpasteNoneed();
-                StationComponentSet();
                 if (string.IsNullOrEmpty(currentPlanetWaterType))
                 {
                     currentPlanetWaterType = LDB.items.Select(GameMain.localPlanet.waterItemId)?.name ?? "无海洋".getTranslate();
                 }
             }
+            StationComponentSet();
             if (!guidraw.DisplayingWindow || !guidraw.MouseInWindow)
             {
                 veinproperty.ControlVein();
@@ -1025,7 +1050,6 @@ namespace Multifunction_mod
                 ChangeRecipe();
             }
             OnsecondMethod();
-            Sunlightset();
             SetDronenocomsume();
             DriftBuild();
             if (HalfSecondTimeElapse)
@@ -1142,7 +1166,6 @@ namespace Multifunction_mod
             dismantle_but_nobuild.Value = false;
             build_station_nocondition.Value = false;
             StationTrash.Value = false;
-            sunlight_bool.Value = false;
             DroneNoenergy_bool.Value = false;
             BuildNotime_bool.Value = false;
             Station_infiniteWarp_bool.Value = false;
@@ -2148,29 +2171,6 @@ namespace Multifunction_mod
             }
         }
 
-        public void Sunlightset()
-        {
-            if (GameMain.universeSimulator == null || GameMain.universeSimulator.LocalStarSimulator() == null || GameMain.universeSimulator.LocalStarSimulator().sunLight == null)
-            {
-                SunLight = null;
-                lighton = false;
-                return;
-            }
-            if (sunlight_bool.Value)
-            {
-                if (SunLight == null)
-                    SunLight = GameMain.universeSimulator.LocalStarSimulator().sunLight;
-                if (SunLight != null)
-                    SunLight.transform.rotation = Quaternion.LookRotation(-player.transform.up);
-                lighton = true;
-            }
-            else if (!sunlight_bool.Value && SunLight != null && lighton)
-            {
-                SunLight = null;
-                lighton = false;
-            }
-        }
-
         #region 配方修改
         public void Setmultiplesmelt(int multiple)
         {
@@ -2480,17 +2480,17 @@ namespace Multifunction_mod
         /// <param name="minenumber"></param>
         /// <param name="pdid"></param>
         /// <returns></returns>
-        public int MineVein(int itemid, int minenumber, int pdid)
+        public int MineVein(int itemid, int minenumber, PlanetData pd)
         {
             int getmine = 0;
-            PlanetData pd = GameMain.galaxy.PlanetById(pdid);
             if (pd.waterItemId == itemid)
             {
                 return (int)(30 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
             }
             int neednumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningCostRate / 2) : (int)(minenumber * GameMain.history.miningCostRate);
+            int maxmineNumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningSpeedScale / 2) : (int)(minenumber * GameMain.history.miningSpeedScale); ;
             if (GameMain.data.gameDesc.isInfiniteResource)
-                return neednumber;
+                return maxmineNumber;
             if (LDB.veins.GetVeinTypeByItemId(itemid) == EVeinType.None || pd == null)
             {
                 return 0;
@@ -2549,7 +2549,6 @@ namespace Multifunction_mod
                 int itemID = sc.storage[i].itemId;
                 if (itemID <= 0 || sc.storage[i].count >= sc.storage[i].max)
                     continue;
-
                 int veinNumbers = GetNumberOfVein(itemID, pd);
                 int pointminenum = veinNumbers * Stationminenumber.Value;
                 if (veinNumbers > 0 && pointminenum == 0) pointminenum = 1;
@@ -2557,7 +2556,7 @@ namespace Multifunction_mod
 
                 if (Stationfullenergy.Value || sc.energy > pointminenum * GameMain.history.miningSpeedScale * 5000)
                 {
-                    int minenum = MineVein(itemID, pointminenum, pd.id);
+                    int minenum = MineVein(itemID, pointminenum, pd);
                     if (minenum > 0)
                     {
                         AddStatInfo(pd.id, itemID, minenum);
@@ -2679,7 +2678,7 @@ namespace Multifunction_mod
                 if (itemId <= 0 || !smeltRecipes.ContainsKey(itemId)) return;
                 smeltRecipes[itemId].ForEach(rp =>
                 {
-                    if (!rp.Results.All(storageItems.Contains))
+                    if (!rp.Results.All(storageItems.Contains) || !rp.Items.All(storageItems.Contains))
                         return;
                     for (int i = 0; i < rp.ResultCounts.Length; i++)
                     {
