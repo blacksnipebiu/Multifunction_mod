@@ -17,7 +17,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "3.0.3";
+        public const string VERSION = "3.0.6";
 
         #region 临时变量
 
@@ -901,64 +901,77 @@ namespace Multifunction_mod
 
         #endregion
 
+
         /// <summary>
         /// 加载存档时进行初始化操作
         /// </summary>
         public void FirstStartGame()
         {
-            if (GameMain.instance != null)
+            if (GameMain.instance == null)
             {
-                if (!GameMain.instance.running && FinallyInit)
+                return;
+            }
+            if (!GameMain.instance.running && FinallyInit)
+            {
+                GameRunning = false;
+                FinallyInit = false;
+                closeallcollider = false;
+                tempsails = new List<Tempsail>();
+                addStatDic = new Dictionary<int, Dictionary<int, long>>();
+                Beltsignal = new Dictionary<int, Dictionary<int, int>>();
+                consumeStatDic = new Dictionary<int, Dictionary<int, long>>();
+                Beltsignalnumberoutput = new Dictionary<int, Dictionary<int, int>>();
+                StarSuperStation = new List<int>();
+                SuperStation = new List<int>();
+                StarSuperStationItemidstore = new Dictionary<int, int[]>();
+                PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, List<int[]>>>();
+                CollectorStation.Clear();
+                SuperStation = new List<int>();
+                StarSuperStation = new List<int>();
+                playcancelsolarbullet = false;
+                alwaysemissiontemp = false;
+                originWaterTypes = new SeedPlanetWater();
+                smeltRecipes.Clear();
+                warpstationqua = new float[200];
+                warpsuperstationqua = new float[200];
+                for (int i = 0; i < warpstationqua.Length; i++)
+                    warpstationqua[i] = Time.time;
+                for (int i = 0; i < warpsuperstationqua.Length; i++)
+                    warpsuperstationqua[i] = Time.time;
+            }
+            if (GameMain.instance.running && !FinallyInit)
+            {
+                FinallyInit = true;
+                InitPlanetWaterType();
+                if (BeltSignalFunction.Value)
                 {
-                    GameRunning = false;
-                    FinallyInit = false;
-                    closeallcollider = false;
-                    tempsails = new List<Tempsail>();
-                    addStatDic = new Dictionary<int, Dictionary<int, long>>();
-                    Beltsignal = new Dictionary<int, Dictionary<int, int>>();
-                    consumeStatDic = new Dictionary<int, Dictionary<int, long>>();
-                    Beltsignalnumberoutput = new Dictionary<int, Dictionary<int, int>>();
-                    StarSuperStation = new List<int>();
-                    SuperStation = new List<int>();
-                    StarSuperStationItemidstore = new Dictionary<int, int[]>();
-                    PlanetSuperStationItemidstore = new Dictionary<int, Dictionary<int, List<int[]>>>();
-                    CollectorStation.Clear();
-                    SuperStation = new List<int>();
-                    StarSuperStation = new List<int>();
-                    playcancelsolarbullet = false;
-                    alwaysemissiontemp = false;
-                    originWaterTypes = new SeedPlanetWater();
-                    smeltRecipes.Clear();
+                    InitBeltSignalDiction();
                 }
-                if (GameMain.instance.running && !FinallyInit)
+
+                if (Quantumtransport_bool.Value)
                 {
-                    if (GameMain.galaxy != null)
+                    InitQuantumTransport();
+                }
+                if (LDB.recipes != null)
+                {
+                    if (!LDBInitSave)
                     {
-                        originWaterTypes.seedKey64 = GameMain.data.gameDesc.seedKey64;
-                        foreach (var star in GameMain.galaxy.stars)
+                        LDBInitSave = true;
+                        //保存配方原始属性
+                        originRecipeProtos = new RecipeProto[LDB.recipes.dataArray.Length];
+                        for (int i = 0; i < originRecipeProtos.Length; i++)
                         {
-                            if (star == null) continue;
-                            foreach (var planet in star.planets)
+                            var recipe = LDB.recipes.dataArray[i];
+                            originRecipeProtos[i] = new RecipeProto()
                             {
-                                if (planet == null || planet.gasTotalHeat > 0) continue;
-                                originWaterTypes.waterTypes.Add(planet.id, planet.waterItemId);
-                            }
+                                TimeSpend = recipe.TimeSpend,
+                                Handcraft = recipe.Handcraft
+                            };
                         }
-                        long seed = GameMain.data.gameDesc.seedKey64;
-                        if (seedPlanetWaterTypes.ContainsKey(seed))
-                        {
-                            currentWaterTypes = seedPlanetWaterTypes[seed];
-                            foreach (var watertypes in currentWaterTypes.waterTypes)
-                            {
-                                GameMain.galaxy.PlanetById(watertypes.Key).waterItemId = watertypes.Value;
-                            }
-                        }
-                        else
-                        {
-                            currentWaterTypes = new SeedPlanetWater(seed);
-                            seedPlanetWaterTypes.Add(seed, currentWaterTypes);
-                        }
+                        ChangeRecipe();
+                        //更改配方相关
                     }
+                    //收集熔炉配方
                     foreach (RecipeProto rp in LDB.recipes.dataArray)
                     {
                         if (rp.Type != ERecipeType.Smelt) continue;
@@ -974,44 +987,12 @@ namespace Multifunction_mod
                             }
                         }
                     }
-                    FinallyInit = true;
-                    warpstationqua = new float[200];
-                    warpsuperstationqua = new float[200];
-                    for (int i = 0; i < warpstationqua.Length; i++)
-                        warpstationqua[i] = Time.time;
-                    for (int i = 0; i < warpsuperstationqua.Length; i++)
-                        warpsuperstationqua[i] = Time.time;
-                    if (BeltSignalFunction.Value)
-                    {
-                        InitBeltSignalDiction();
-                    }
-
-                    if (Quantumtransport_bool.Value)
-                    {
-                        InitQuantumTransport();
-                    }
-                    if (!LDBInitSave && LDB.recipes != null)
-                    {
-                        LDBInitSave = true;
-                        originRecipeProtos = new RecipeProto[LDB.recipes.dataArray.Length];
-                        for (int i = 0; i < originRecipeProtos.Length; i++)
-                        {
-                            var recipe = LDB.recipes.dataArray[i];
-                            originRecipeProtos[i] = new RecipeProto()
-                            {
-                                TimeSpend = recipe.TimeSpend,
-                                Handcraft = recipe.Handcraft
-                            };
-                        }
-                    }
-                    playcancelsolarbullet = cancelsolarbullet.Value;
-                    alwaysemissiontemp = alwaysemission.Value;
-                    //更改配方相关
-                    ChangeRecipe();
-                    //更改物品相关
-                    SetmultipleItemStatck(StackMultiple.Value);
-                    ChangeItemstack();
                 }
+                playcancelsolarbullet = cancelsolarbullet.Value;
+                alwaysemissiontemp = alwaysemission.Value;
+                //更改物品相关
+                SetmultipleItemStatck(StackMultiple.Value);
+                ChangeItemstack();
             }
 
         }
@@ -1059,6 +1040,42 @@ namespace Multifunction_mod
             if (OneSecondTimeElapse)
             {
                 OneSecondTimeElapse = false;
+            }
+        }
+
+        private void InitPlanetWaterType()
+        {
+            if (GameMain.galaxy?.stars == null || GameMain.data?.gameDesc == null)
+            {
+                return;
+            }
+            long seed = GameMain.data.gameDesc.seedKey64;
+            originWaterTypes.seedKey64 = seed;
+            foreach (var star in GameMain.galaxy.stars)
+            {
+                if (star == null) continue;
+                foreach (var planet in star.planets)
+                {
+                    if (planet == null || planet.gasTotalHeat > 0) continue;
+                    originWaterTypes.waterTypes.Add(planet.id, planet.waterItemId);
+                }
+            }
+            if (seedPlanetWaterTypes.ContainsKey(seed))
+            {
+                currentWaterTypes = seedPlanetWaterTypes[seed];
+                foreach (var watertypes in currentWaterTypes.waterTypes)
+                {
+                    var pd = GameMain.galaxy.PlanetById(watertypes.Key);
+                    if (pd != null)
+                    {
+                        pd.waterItemId = watertypes.Value;
+                    }
+                }
+            }
+            else
+            {
+                currentWaterTypes = new SeedPlanetWater(seed);
+                seedPlanetWaterTypes.Add(seed, currentWaterTypes);
             }
         }
 
@@ -2226,10 +2243,12 @@ namespace Multifunction_mod
             //    LDB._recipes.OnAfterDeserialize();
             //}
 
+
+
             for (int i = 0; i < LDB.recipes.dataArray.Length && i < originRecipeProtos.Length; i++)
             {
                 var recipe = LDB.recipes.dataArray[i];
-                recipe.Handcraft = allhandcraft.Value ? true : originRecipeProtos[i].Handcraft;
+                recipe.Handcraft = allhandcraft.Value || originRecipeProtos[i].Handcraft;
                 recipe.TimeSpend = quickproduce.Value ? 1 : originRecipeProtos[i].TimeSpend;
             }
             //配方信息查询

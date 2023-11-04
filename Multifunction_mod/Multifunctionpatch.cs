@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using static Multifunction_mod.Multifunction;
 
@@ -41,38 +42,6 @@ namespace Multifunction_mod
                 }
             }
 
-            //var methods = typeof(DysonPatch).GetMethods();
-            //foreach (var method in methods)
-            //{
-            //    var attribute = method.GetCustomAttributesData();
-            //    if (attribute == null) continue;
-            //    foreach (var a in attribute)
-            //    {
-            //        if (a?.AttributeType != typeof(HarmonyPatch)) continue;
-            //        Type type = null;
-            //        string methodName = "";
-            //        foreach (var b in a.ConstructorArguments)
-            //        {
-            //            string typeName = b.ArgumentType.Name;
-            //            switch (typeName)
-            //            {
-            //                case "Type":
-            //                    type = b.Value as Type;
-            //                    break;
-            //                case "String":
-            //                    methodName = b.Value as string;
-            //                    break;
-            //            }
-            //        }
-            //        if (type != null && !string.IsNullOrEmpty(methodName))
-            //        {
-            //            var originMethod = type.GetMethod(methodName);
-            //            var harmonyMethod = new HarmonyMethod(method);
-            //            harmony.Patch(originMethod, harmonyMethod);
-            //            harmony.Unpatch(originMethod, HarmonyPatchType.All);
-            //        }
-            //    }
-            //}
             harmony.PatchAll(typeof(DysonPatch));
             harmony.PatchAll(typeof(PlayerPatch));
             harmony.PatchAll(typeof(PowerSystemPatch));
@@ -636,20 +605,6 @@ namespace Multifunction_mod
 
         public class PowerSystemPatch
         {
-            static bool isPatched;
-            public static bool IsPatched
-            {
-                get => isPatched;
-                set
-                {
-                    if (isPatched) return;
-                    isPatched = value;
-                    if (value)
-                    {
-                        harmony.PatchAll(typeof(PowerSystemPatch));
-                    }
-                }
-            }
             [HarmonyPostfix]
             [HarmonyPatch(typeof(PowerSystem), "NewGeneratorComponent")]
             public static void PowerSystemNewGeneratorComponent(ref int __result, PowerSystem __instance)
@@ -714,20 +669,6 @@ namespace Multifunction_mod
 
         public class PlanetFactoryPatch
         {
-            static bool isPatched;
-            public static bool IsPatched
-            {
-                get => isPatched;
-                set
-                {
-                    if (isPatched) return;
-                    isPatched = value;
-                    if (value)
-                    {
-                        harmony.PatchAll(typeof(PlanetFactoryPatch));
-                    }
-                }
-            }
             [HarmonyPostfix]
             [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
             public static void PlanetFactoryNoComsumeSand(ref int __result)
@@ -1025,20 +966,6 @@ namespace Multifunction_mod
 
         public class StorageComponentPatch
         {
-            static bool isPatched;
-            public static bool IsPatched
-            {
-                get => isPatched;
-                set
-                {
-                    if (isPatched) return;
-                    isPatched = value;
-                    if (value)
-                    {
-                        harmony.PatchAll(typeof(StorageComponentPatch));
-                    }
-                }
-            }
             [HarmonyPostfix]
             [HarmonyPatch(typeof(StorageComponent), "Import")]
             public static void StorageComponentImportPatch(StorageComponent __instance)
@@ -1100,20 +1027,6 @@ namespace Multifunction_mod
 
         public class StationComponentPatch
         {
-            static bool isPatched;
-            public static bool IsPatched
-            {
-                get => isPatched;
-                set
-                {
-                    if (isPatched) return;
-                    isPatched = value;
-                    if (value)
-                    {
-                        harmony.PatchAll(typeof(StationComponentPatch));
-                    }
-                }
-            }
             [HarmonyPrefix]
             [HarmonyPatch(typeof(StationComponent), "Init")]
             public static void StationComponentInit(ref int _extraStorage, StationComponent __instance)
@@ -1159,20 +1072,6 @@ namespace Multifunction_mod
 
         public class FactorySystemPatch
         {
-            static bool isPatched;
-            public static bool IsPatched
-            {
-                get => isPatched;
-                set
-                {
-                    if (isPatched) return;
-                    isPatched = value;
-                    if (value)
-                    {
-                        harmony.PatchAll(typeof(FactorySystemPatch));
-                    }
-                }
-            }
 
             [HarmonyPostfix]
             [HarmonyPatch(typeof(FactorySystem), "NewEjectorComponent")]
@@ -1212,20 +1111,6 @@ namespace Multifunction_mod
 
         public class SomePatch
         {
-            static bool isPatched;
-            public static bool IsPatched
-            {
-                get => isPatched;
-                set
-                {
-                    if (isPatched) return;
-                    isPatched = value;
-                    if (value)
-                    {
-                        harmony.PatchAll(typeof(SomePatch));
-                    }
-                }
-            }
             [HarmonyPrefix]
             [HarmonyPatch(typeof(DispenserComponent), "InternalTick")]
             public static void DispenserComponentInternalTickPrefix(ref DispenserComponent __instance)
@@ -1568,20 +1453,6 @@ namespace Multifunction_mod
 
         public class SpraycoaterComponentPatch
         {
-            static bool isPatched;
-            public static bool IsPatched
-            {
-                get => isPatched;
-                set
-                {
-                    if (isPatched) return;
-                    isPatched = value;
-                    if (value)
-                    {
-                        harmony.PatchAll(typeof(SpraycoaterComponentPatch));
-                    }
-                }
-            }
             [HarmonyPrefix]
             [HarmonyPatch(typeof(SpraycoaterComponent), "InternalUpdate")]
             public static void SpraycoaterComponentInternalUpdatePrefix(ref SpraycoaterComponent __instance)
@@ -1606,20 +1477,6 @@ namespace Multifunction_mod
 
         public class CargoTrafficPatch
         {
-            static bool isPatched;
-            public static bool IsPatched
-            {
-                get => isPatched;
-                set
-                {
-                    if (isPatched) return;
-                    isPatched = value;
-                    if (value)
-                    {
-                        harmony.PatchAll(typeof(CargoTrafficPatch));
-                    }
-                }
-            }
             [HarmonyPostfix]
             [HarmonyPatch(typeof(CargoTraffic), "SetBeltSignalIcon")]
             public static void SetBeltSignalIconPatch(int signalId, int entityId, CargoTraffic __instance)
@@ -1693,377 +1550,356 @@ namespace Multifunction_mod
                     Beltsignalnumberoutput[factoryIndex].Remove(id);
             }
 
-
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(CargoTraffic), "SplitterGameTick")]
+            public static void CargoTrafficSplitterGameTickPatch(CargoTraffic __instance)
+            {
+                CargoSignalFunction(__instance);
+            }
 
             [HarmonyPrefix]
-            [HarmonyPatch(typeof(GameData), "GameTick")]
-            public static void GameDataGameTickPatch()
+            [HarmonyPatch(typeof(CargoTraffic), "GameTick")]
+            public static void CargoTrafficGameTickPatch(CargoTraffic __instance)
             {
-                if (!BeltSignalFunction.Value || GameMain.instance == null || !GameMain.instance.running || GameMain.galaxy == null || !FinallyInit) return;
-                foreach (KeyValuePair<int, Dictionary<int, int>> wap1 in Beltsignal)
+                CargoSignalFunction(__instance);
+            }
+
+            public static void CargoSignalFunction(CargoTraffic __instance)
+            {
+                if (!BeltSignalFunction.Value || !FinallyInit) return;
+                int factoryIndex = __instance.factory.index;
+                if (!Beltsignal.ContainsKey(factoryIndex)) return;
+                FactorySystem fs = __instance.factory.factorySystem;
+                foreach (KeyValuePair<int, int> wap2 in Beltsignal[factoryIndex])
                 {
-                    FactorySystem fs = GameMain.data.factories[wap1.Key].factorySystem;
-                    foreach (KeyValuePair<int, int> wap2 in wap1.Value)
+                    int signalID = wap2.Value;
+                    if (signalID == 404)
                     {
-                        int signalId = wap2.Value;
-                        byte stack = 1;
-                        byte inc = 0;
-                        if (signalId == 404)
+                        __instance.TryPickItem(wap2.Key, 0, 0, out _, out _);
+                    }
+                    else if (1000 <= signalID && signalID < 20000)
+                    {
+                        int outputbeltID = wap2.Key;
+                        var belt = fs.traffic.beltPool[outputbeltID];
+                        int index = belt.segIndex + belt.segPivotOffset;
+                        int beltnumber = (int)fs.factory.entitySignPool[fs.traffic.beltPool[outputbeltID].entityId].count0;
+                        if (beltnumber == 999999)
                         {
-                            BeltComponent belt = fs.traffic.beltPool[wap2.Key];
-                            CargoPath cargoPath = fs.factory.cargoTraffic.GetCargoPath(belt.segPathId);
-                            cargoPath.TryPickItem(belt.segIndex + belt.segPivotOffset - 5, 12, out stack, out inc);
+                            __instance.TryInsertItem(outputbeltID, 0, signalID, 1, 0);
                         }
-                        else if (1000 <= signalId && signalId < 20000)
+                        else if (beltnumber > 999900 && beltnumber % 10 != 0)
                         {
-                            BeltComponent belt = fs.traffic.beltPool[wap2.Key];
-                            int index = belt.segIndex + belt.segPivotOffset;
-                            int beltnumber = (int)fs.factory.entitySignPool[belt.entityId].count0;
-                            if (beltnumber == 999999)
-                                fs.factory.cargoTraffic.GetCargoPath(belt.segPathId).TryInsertItem(belt.segIndex + belt.segPivotOffset, signalId, 1, 0);
-                            else if (beltnumber > 999900 && beltnumber % 10 != 0)
+                            int t = beltnumber % 100;
+                            int stack1 = t % 10;
+                            int inc1 = ((t / 10 >= 3 ? 4 : t / 10)) * stack1;
+                            __instance.TryInsertItem(outputbeltID, 0, signalID, (byte)stack1, (byte)inc1);
+                        }
+                        else if (beltnumber >= 11 && beltnumber <= 14)
+                        {
+                            bool breakfor = false;
+                            int stackNum = beltnumber % 10;
+                            CargoPath cargoPath = __instance.GetCargoPath(belt.segPathId);
+                            int cargoId = -1;
+                            int offset = -1;
+                            cargoPath.GetCargoAtIndex(index, out Cargo cargo, out cargoId, out offset);
+                            if (cargo.item > 0)
                             {
-                                int t = beltnumber % 100;
-                                int stack1 = t % 10;
-                                int inc1 = ((t / 10 >= 3 ? 4 : t / 10)) * stack1;
-                                fs.factory.cargoTraffic.GetCargoPath(belt.segPathId).TryInsertItem(belt.segIndex + belt.segPivotOffset, signalId, (byte)stack1, (byte)inc1);
+                                continue;
                             }
-                            else if (beltnumber >= 11 && beltnumber <= 14)
+                            if (fs.factory.transport?.stationPool != null)
                             {
-                                bool breakfor = false;
-                                CargoPath cargoPath = fs.factory.cargoTraffic.GetCargoPath(belt.segPathId);
-                                int cargoId = -1;
-                                int offset = -1;
-                                Cargo cargo;
-                                cargoPath.GetCargoAtIndex(index, out cargo, out cargoId, out offset);
-                                if (cargo.item <= 0)
+                                foreach (StationComponent sc in fs.factory.transport.stationPool)
                                 {
-                                    int outputstack = 0;
-                                    int outputinc = 0;
-                                    if (fs.factory.transport != null && fs.factory.transport.stationPool != null)
+                                    if (breakfor) break;
+                                    if (sc == null || sc.storage == null)
                                     {
-                                        foreach (StationComponent sc in fs.factory.transport.stationPool)
-                                        {
-                                            if (breakfor) break;
-                                            if (sc != null && sc.storage != null)
-                                            {
-                                                for (int i = 0; i < sc.storage.Length; i++)
-                                                {
-                                                    if (sc.storage[i].itemId == signalId && sc.storage[i].count > 0)
-                                                    {
-                                                        int stack1 = beltnumber % 10 > sc.storage[i].count ? sc.storage[i].count : beltnumber % 10;
-                                                        int inc1 = sc.storage[i].inc > 3 * stack1 ? 3 * stack1 : sc.storage[i].inc;
-                                                        sc.TakeItem(ref signalId, ref stack1, out inc1);
-                                                        outputstack += stack1;
-                                                        outputinc += inc1;
-                                                        if (outputstack >= beltnumber % 10 && !cargoPath.TryInsertItem(index, signalId, (byte)outputstack, (byte)outputinc))
-                                                        {
-                                                            sc.AddItem(signalId, stack1, inc1);
-                                                            breakfor = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        continue;
                                     }
-                                    if (breakfor) continue;
-                                    if (fs.factory.factoryStorage != null && fs.factory.factoryStorage.storagePool != null)
+                                    for (int i = 0; i < sc.storage.Length; i++)
                                     {
-                                        foreach (StorageComponent sc in fs.factory.factoryStorage.storagePool)
+                                        if (sc.storage[i].itemId != signalID)
                                         {
-                                            if (breakfor) break;
-                                            int itemnum = 0;
-                                            if (sc != null && !sc.isEmpty && (itemnum = sc.GetItemCount(signalId)) > 0)
-                                            {
-                                                int stack1 = (beltnumber % 10 - outputstack) > itemnum ? itemnum : beltnumber % 10;
-                                                sc.TakeItem(signalId, stack1, out int inc1);
-                                                outputstack += stack1;
-                                                outputinc += inc1;
-                                                int remaininc;
-                                                if (outputstack >= beltnumber % 10 && !cargoPath.TryInsertItem(index, signalId, (byte)outputstack, (byte)outputinc))
-                                                    sc.AddItem(signalId, stack1, inc1, out remaininc);
-                                                breakfor = true;
-                                                break;
-                                            }
+                                            continue;
                                         }
-                                    }
-                                    if (breakfor) continue;
-                                    if (fs.factory.factoryStorage != null && fs.factory.factoryStorage.tankPool != null)
-                                    {
-                                        foreach (TankComponent tc in fs.factory.factoryStorage.tankPool)
-                                        {
-                                            if (breakfor) break;
-                                            if (tc.fluidId == signalId && tc.id > 0 && tc.fluidCount > 0)
-                                            {
-                                                int stack1 = (beltnumber % 10 - outputstack) > tc.fluidCount ? tc.fluidCount : beltnumber % 10;
-                                                int inc1 = tc.fluidInc >= 4 * stack1 ? 4 * stack1 : tc.fluidInc;
-                                                outputstack += stack1;
-                                                outputinc += inc1;
-                                                if (outputstack >= beltnumber % 10 && cargoPath.TryInsertItem(index, signalId, (byte)outputstack, (byte)outputinc))
-                                                {
-                                                    fs.factory.factoryStorage.tankPool[tc.id].fluidInc -= inc1;
-                                                    fs.factory.factoryStorage.tankPool[tc.id].fluidCount -= stack1;
-                                                    breakfor = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (breakfor || outputstack == 0) continue;
-                                    else
-                                    {
-                                        cargoPath.TryInsertItem(index, signalId, (byte)outputstack, (byte)outputinc);
+                                        if (sc.storage[i].count < stackNum)
+                                            break;
+                                        int inc1 = Math.Min(sc.storage[i].inc, 4 * stackNum);
+                                        cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1);
+                                        sc.storage[i].count -= stackNum;
+                                        sc.storage[i].inc -= inc1;
+                                        breakfor = true;
                                     }
                                 }
                             }
-                            else if (beltnumber >= 21 && beltnumber <= 24)
+                            if (breakfor) continue;
+                            if (fs.factory.factoryStorage != null)
                             {
-                                if (fs.minerPool != null)
+                                var storagePool = fs.factory.factoryStorage.storagePool;
+                                if (storagePool != null)
                                 {
-                                    foreach (MinerComponent mc in fs.minerPool)
+                                    foreach (StorageComponent sc in storagePool)
                                     {
-                                        if (mc.id > 0 && mc.entityId > 0 && mc.productId == signalId && mc.productCount > 0)
+                                        if (breakfor) break;
+                                        if (sc == null || sc.isEmpty || sc.GetItemCount(signalID) < stackNum)
                                         {
-                                            int count = fs.factory.cargoTraffic.GetCargoPath(belt.segPathId).TryInsertItem(index, signalId, (byte)(beltnumber > 2 ? beltnumber % 20 : 2), 0) ? 1 : 0;
-                                            fs.minerPool[mc.id].productCount -= count--;
+                                            continue;
+                                        }
+                                        sc.TakeItem(signalID, stackNum, out int inc1);
+                                        cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1);
+                                        breakfor = true;
+                                        break;
+                                    }
+                                }
+                                if (breakfor) continue;
+                                var tankPool = fs.factory.factoryStorage.tankPool;
+                                if (tankPool != null)
+                                {
+                                    foreach (TankComponent tc in tankPool)
+                                    {
+                                        if (breakfor) break;
+                                        if (tc.fluidId != signalID || tc.id <= 0 || tc.fluidCount < stackNum)
+                                        {
+                                            continue;
+                                        }
+                                        int inc1 = Math.Min(tc.fluidInc, stackNum * 4);
+                                        cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1);
+                                        fs.factory.factoryStorage.tankPool[tc.id].fluidInc -= inc1;
+                                        fs.factory.factoryStorage.tankPool[tc.id].fluidCount -= stackNum;
+                                        breakfor = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        else if (beltnumber >= 21 && beltnumber <= 24 && fs.minerPool != null)
+                        {
+                            int statckNum = beltnumber % 20;
+                            var cargoPath = __instance.GetCargoPath(belt.segPathId);
+                            foreach (MinerComponent mc in fs.minerPool)
+                            {
+                                if (mc.id > 0 && mc.entityId > 0 && mc.productId == signalID && mc.productCount > statckNum)
+                                {
+                                    fs.minerPool[mc.id].productCount -= cargoPath.TryInsertItem(index, signalID, (byte)statckNum, 0) ? statckNum : 0;
+                                    break;
+                                }
+                            }
+                        }
+
+                    }
+                    else if (signalID == 405)
+                    {
+                        BeltComponent belt = fs.traffic.beltPool[wap2.Key];
+                        CargoPath cargoPath = __instance.GetCargoPath(belt.segPathId);
+                        byte stack;
+                        byte inc;
+                        int num1 = belt.segIndex + belt.segPivotOffset;
+                        cargoPath.GetCargoAtIndex(num1, out Cargo cargo, out _, out _);
+                        int itemid = cargo.item;
+                        if (itemid < 1000) continue;
+                        bool breakfor;
+                        switch (fs.factory.entitySignPool[belt.entityId].count0)
+                        {
+                            case 1:
+                                if (itemid != 1006 && itemid != 1007 && itemid != 1011 && itemid != 1109 && itemid != 1114 && itemid != 1120 && itemid != 1801 && itemid != 1802) continue;
+                                var genPool = fs.factory.powerSystem?.genPool;
+                                if (genPool == null) continue;
+                                foreach (PowerGeneratorComponent pgc in genPool)
+                                {
+                                    if (pgc.id <= 0 || pgc.fuelCount > 2)
+                                    {
+                                        continue;
+                                    }
+                                    if (pgc.fuelMask == 1 && itemid != 1802)
+                                    {
+                                        if (itemid == genPool[pgc.id].fuelId)
+                                        {
+                                            cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                            genPool[pgc.id].SetNewFuel(itemid, (short)(genPool[pgc.id].fuelCount + stack), inc);
+                                            break;
+                                        }
+                                        else if (pgc.fuelCount == 0)
+                                        {
+                                            cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                            genPool[pgc.id].SetNewFuel(itemid, (short)(genPool[pgc.id].fuelCount + stack), inc);
+                                            break;
+                                        }
+                                    }
+                                    if (pgc.fuelMask == 2 && itemid == 1802)
+                                    {
+                                        cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                        genPool[pgc.id].SetNewFuel(1802, (short)(genPool[pgc.id].fuelCount + stack), inc);
+                                        break;
+                                    }
+                                }
+                                break;
+                            case 5:
+                                if (fs.assemblerPool == null) continue;
+                                breakfor = false;
+                                foreach (AssemblerComponent ac in fs.assemblerPool)
+                                {
+                                    if (breakfor) break;
+                                    if (ac.id <= 0 || ac.entityId <= 0 || ac.recipeId <= 0)
+                                    {
+                                        continue;
+                                    }
+                                    for (int i = 0; i < ac.served.Length; i++)
+                                    {
+                                        if (itemid != ac.requires[i]) continue;
+                                        if (ac.served[i] < 0)
+                                        {
+                                            ac.served[i] = 0;
+                                            continue;
+                                        }
+                                        if (ac.served[i] <= ac.requireCounts[i] * 2)
+                                        {
+                                            cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                            ac.served[i] += stack;
+                                            ac.incServed[i] += inc;
+                                            breakfor = true;
                                             break;
                                         }
                                     }
                                 }
-                            }
-
-                        }
-                        else if (signalId == 405)
-                        {
-                            BeltComponent belt = fs.traffic.beltPool[wap2.Key];
-                            CargoPath cargoPath = fs.factory.cargoTraffic.GetCargoPath(belt.segPathId);
-                            int itemid = 0;
-                            int cargoId = -1;
-                            int offset = -1;
-                            int num1 = belt.segIndex + belt.segPivotOffset;
-                            if (cargoPath.GetCargoAtIndex(num1, out Cargo cargo, out cargoId, out offset))
-                            {
-                                itemid = LDB.items.Select(cargo.item).ID;
-                            }
-                            if (itemid < 1000) continue;
-                            bool breakfor = false;
-                            switch (fs.factory.entitySignPool[belt.entityId].count0)
-                            {
-                                case 1:
-                                    if (itemid != 1006 && itemid != 1007 && itemid != 1011 && itemid != 1109 && itemid != 1114 && itemid != 1120 && itemid != 1801 && itemid != 1802) continue;
+                                break;
+                            case 6:
+                                if (fs.factory.transport == null || fs.factory.transport.stationPool == null) continue;
+                                breakfor = false;
+                                foreach (StationComponent sc in fs.factory.transport.stationPool)
+                                {
+                                    if (sc == null || sc.storage == null)
+                                    {
+                                        continue;
+                                    }
+                                    for (int i = 0; i < sc.storage.Length; i++)
+                                    {
+                                        if (sc.storage[i].itemId != itemid || sc.storage[i].count >= sc.storage[i].max) continue;
+                                        cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                        sc.AddItem(itemid, stack, inc);
+                                        breakfor = true;
+                                        break;
+                                    }
+                                    if (breakfor) break;
+                                }
+                                break;
+                            case 7:
+                                if (fs.labPool == null) continue;
+                                breakfor = false;
+                                foreach (LabComponent lc in fs.labPool)
+                                {
+                                    if (breakfor) break;
+                                    if (lc.id <= 0 || lc.entityId <= 0)
+                                    {
+                                        continue;
+                                    }
+                                    if (lc.researchMode)
+                                    {
+                                        if (itemid < 6001 || itemid > 6006) continue;
+                                        for (int i = 0; i < lc.matrixPoints.Length; i++)
+                                        {
+                                            if (itemid != 6001 + i) continue;
+                                            if (lc.matrixServed[i] <= 36000)
+                                            {
+                                                cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                                lc.matrixServed[i] += 3600 * stack;
+                                                lc.matrixIncServed[i] += 3600 * stack;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else if (lc.matrixMode)
+                                    {
+                                        for (int i = 0; i < lc.served.Length; i++)
+                                        {
+                                            if (itemid != lc.requires[i]) continue;
+                                            if (lc.served[i] <= lc.requireCounts[i] * 2)
+                                            {
+                                                cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                                lc.served[i] += stack;
+                                                lc.incServed[i] += inc;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                            case 8:
+                                if (itemid != 1503 && itemid != 1501 && itemid != 1209 && itemid != 1803) continue;
+                                if (itemid == 1209 || itemid == 1803)
+                                {
                                     if (fs.factory.powerSystem == null || fs.factory.powerSystem.genPool == null) continue;
                                     foreach (PowerGeneratorComponent pgc in fs.factory.powerSystem.genPool)
                                     {
-                                        if (pgc.id > 0 && pgc.fuelCount <= 2)
+                                        if (pgc.id <= 0)
                                         {
-                                            if (pgc.fuelMask == 1 && itemid != 1802)
-                                            {
-                                                if (itemid == fs.factory.powerSystem.genPool[pgc.id].fuelId)
-                                                {
-                                                    cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                    fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(itemid, (short)(fs.factory.powerSystem.genPool[pgc.id].fuelCount + stack), inc);
-                                                    break;
-                                                }
-                                                else if (pgc.fuelCount == 0)
-                                                {
-                                                    cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                    fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(itemid, (short)(fs.factory.powerSystem.genPool[pgc.id].fuelCount + stack), inc);
-                                                    break;
-                                                }
-                                            }
-                                            if (pgc.fuelMask == 2 && itemid == 1802)
+                                            continue;
+                                        }
+                                        if (pgc.gamma)
+                                        {
+                                            if (itemid != 1209) continue;
+                                            if (pgc.catalystPoint == 0)
                                             {
                                                 cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(1802, (short)(fs.factory.powerSystem.genPool[pgc.id].fuelCount + stack), inc);
+                                                fs.factory.powerSystem.genPool[pgc.id].catalystPoint += 3600 * stack;
+                                                fs.factory.powerSystem.genPool[pgc.id].catalystIncPoint += 3600 * inc;
                                                 break;
                                             }
-                                        }
-                                    }
-                                    break;
-                                case 5:
-                                    if (fs.assemblerPool == null) continue;
-                                    breakfor = false;
-                                    foreach (AssemblerComponent ac in fs.assemblerPool)
-                                    {
-                                        if (breakfor) break;
-                                        if (ac.id > 0 && ac.entityId > 0 && ac.recipeId > 0)
-                                        {
-                                            for (int i = 0; i < ac.served.Length; i++)
-                                            {
-                                                if (itemid != ac.requires[i]) continue;
-                                                if (ac.served[i] <= ac.requireCounts[i] * 2)
-                                                {
-                                                    cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                    ac.served[i] += stack;
-                                                    ac.incServed[i] += inc;
-                                                    breakfor = true;
-                                                    break;
-                                                }
-                                                if (ac.served[i] < 0) ac.served[i] = 0;
-                                            }
-                                        }
-                                    }
-                                    break;
-                                case 6:
-                                    if (fs.factory.transport == null || fs.factory.transport.stationPool == null) continue;
-                                    breakfor = false;
-                                    foreach (StationComponent sc in fs.factory.transport.stationPool)
-                                    {
-                                        if (breakfor) break;
-                                        if (sc != null && sc.storage != null)
-                                        {
-                                            for (int i = 0; i < sc.storage.Length; i++)
-                                            {
-                                                if (sc.storage[i].itemId != itemid || sc.storage[i].count >= sc.storage[i].max) continue;
-                                                cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                sc.AddItem(itemid, stack, inc);
-                                                breakfor = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    break;
-                                case 7:
-                                    if (fs.labPool == null) continue;
-                                    breakfor = false;
-                                    foreach (LabComponent lc in fs.labPool)
-                                    {
-                                        if (breakfor) break;
-                                        if (lc.id > 0 && lc.entityId > 0)
-                                        {
-                                            if (lc.researchMode)
-                                            {
-                                                if (itemid < 6001 || itemid > 6006) continue;
-                                                for (int i = 0; i < lc.matrixPoints.Length; i++)
-                                                {
-                                                    if (itemid != 6001 + i) continue;
-                                                    if (lc.matrixServed[i] <= 36000)
-                                                    {
-                                                        cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                        lc.matrixServed[i] += 3600 * stack;
-                                                        lc.matrixIncServed[i] += 3600 * stack;
-                                                        breakfor = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            else if (lc.matrixMode)
-                                            {
-                                                for (int i = 0; i < lc.served.Length; i++)
-                                                {
-                                                    if (itemid != lc.requires[i]) continue;
-                                                    if (lc.served[i] <= lc.requireCounts[i] * 2)
-                                                    {
-                                                        cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                        lc.served[i] += stack;
-                                                        lc.incServed[i] += inc;
-                                                        breakfor = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    break;
-                                case 8:
-                                    if (itemid != 1503 && itemid != 1501 && itemid != 1209 && itemid != 1803) continue;
-                                    if (itemid == 1209 || itemid == 1803)
-                                    {
-                                        if (fs.factory.powerSystem == null || fs.factory.powerSystem.genPool == null) continue;
-                                        foreach (PowerGeneratorComponent pgc in fs.factory.powerSystem.genPool)
-                                        {
-                                            if (pgc.id > 0)
-                                            {
-                                                if (pgc.gamma)
-                                                {
-                                                    if (itemid != 1209) continue;
-                                                    if (pgc.catalystPoint == 0)
-                                                    {
-                                                        cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                        fs.factory.powerSystem.genPool[pgc.id].catalystPoint += 3600 * stack;
-                                                        fs.factory.powerSystem.genPool[pgc.id].catalystIncPoint += 3600 * inc;
-                                                        break;
-                                                    }
 
-                                                }
-                                                else if (pgc.fuelMask == 4 && itemid == 1803 && pgc.fuelCount <= 2)
-                                                {
-                                                    if (itemid != 1803) continue;
-                                                    cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                    fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(1803, (short)(fs.factory.powerSystem.genPool[pgc.id].fuelCount + stack), inc);
-                                                    break;
-                                                }
-                                            }
                                         }
-                                    }
-                                    else if (itemid == 1503)
-                                    {
-                                        if (fs.siloPool == null) continue;
-                                        foreach (SiloComponent sc in fs.siloPool)
+                                        else if (pgc.fuelMask == 4 && itemid == 1803 && pgc.fuelCount <= 2)
                                         {
-                                            if (sc.id > 0 && sc.entityId > 0 && sc.bulletCount <= 1)
-                                            {
-                                                cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                fs.siloPool[sc.id].bulletCount += stack;
-                                                fs.siloPool[sc.id].bulletInc += inc;
-                                                break;
-                                            }
+                                            if (itemid != 1803) continue;
+                                            cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                            fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(1803, (short)(fs.factory.powerSystem.genPool[pgc.id].fuelCount + stack), inc);
+                                            break;
                                         }
                                     }
-                                    else if (itemid == 1501)
+                                }
+                                else if (itemid == 1503)
+                                {
+                                    if (fs.siloPool == null) continue;
+                                    foreach (SiloComponent sc in fs.siloPool)
                                     {
-                                        if (fs.ejectorPool == null) continue;
-                                        foreach (EjectorComponent ec in fs.ejectorPool)
+                                        if (sc.id <= 0 || sc.entityId <= 0 || sc.bulletCount > 1)
                                         {
-                                            if (ec.id > 0 && ec.entityId > 0 && ec.bulletCount <= 1)
-                                            {
-                                                cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                                fs.ejectorPool[ec.id].bulletCount += stack;
-                                                fs.ejectorPool[ec.id].bulletInc += inc;
-                                                break;
-                                            }
+                                            continue;
                                         }
+                                        cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                        fs.siloPool[sc.id].bulletCount += stack;
+                                        fs.siloPool[sc.id].bulletInc += inc;
+                                        break;
                                     }
-                                    break;
-                            }
+                                }
+                                else if (itemid == 1501)
+                                {
+                                    if (fs.ejectorPool == null) continue;
+                                    foreach (EjectorComponent ec in fs.ejectorPool)
+                                    {
+                                        if (ec.id <= 0 || ec.entityId <= 0 || ec.bulletCount > 1)
+                                        {
+                                            continue;
+                                        }
+                                        cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                        fs.ejectorPool[ec.id].bulletCount += stack;
+                                        fs.ejectorPool[ec.id].bulletInc += inc;
+                                        break;
+                                    }
+                                }
+                                break;
                         }
-                        else if (signalId == 600)
+                    }
+                    else if (signalID == 600 && Beltsignalnumberoutput.ContainsKey(factoryIndex))
+                    {
+                        int index = (int)fs.factory.entitySignPool[fs.traffic.beltPool[wap2.Key].entityId].count0;
+                        var outputbeltID = Beltsignalnumberoutput[factoryIndex].FirstOrDefault(x => x.Value == index).Key;
+                        if (index <= 0 || outputbeltID <= 0)
                         {
-                            BeltComponent belt = fs.traffic.beltPool[wap2.Key];
-                            int index = (int)fs.factory.entitySignPool[belt.entityId].count0;
-                            if (index > 0)
-                            {
-                                CargoPath cargoPath = fs.factory.cargoTraffic.GetCargoPath(belt.segPathId);
-                                int itemid = 0;
-                                int cargoId = -1;
-                                int offset = -1;
-                                int num1 = belt.segIndex + belt.segPivotOffset;
-                                if (cargoPath.GetCargoAtIndex(num1, out Cargo cargo, out cargoId, out offset))
-                                {
-                                    itemid = cargo.item;
-                                    inc = cargoPath.cargoContainer.cargoPool[cargoId].inc;
-                                    stack = cargoPath.cargoContainer.cargoPool[cargoId].stack;
-                                }
-                                if (itemid < 1000) continue;
-                                if (Beltsignalnumberoutput.ContainsKey(wap1.Key))
-                                {
-                                    foreach (KeyValuePair<int, int> wap3 in Beltsignalnumberoutput[wap1.Key])
-                                    {
-                                        if (wap3.Value == index)
-                                        {
-                                            BeltComponent belt1 = fs.traffic.beltPool[wap3.Key];
-                                            if (fs.factory.cargoTraffic.GetCargoPath(belt1.segPathId).TryInsertItem(belt1.segIndex + belt1.segPivotOffset, itemid, stack, inc))
-                                            {
-                                                cargoPath.TryPickItem(num1 - 5, 12, out byte stack1, out byte inc1);
-                                                if ((inc1 != inc || stack1 != stack))
-                                                    cargoPath.TryPickItem(num1 - 5, 12, out _, out _);
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            continue;
+                        }
+                        int itemId = __instance.TryPickItem(wap2.Key, 0, 0, out byte stack, out byte inc);
+                        if (itemId < 1000) continue;
+                        if (!__instance.TryInsertItem(outputbeltID, 0, itemId, stack, inc))
+                        {
+                            __instance.TryInsertItem(wap2.Key, 0, itemId, stack, inc);
                         }
                     }
                 }
