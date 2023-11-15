@@ -20,7 +20,6 @@ namespace Multifunction_mod
         private Vector2 TabscrollPosition;
         private GameObject ui_MultiFunctionPanel;
         private bool RefreshBaseSize;
-        private bool englishShow;
         private bool ChangePlayerbool;
         private int baseSize;
         private int heightdis;
@@ -192,7 +191,6 @@ namespace Multifunction_mod
                 firstDraw = false;
                 BaseSize = GUI.skin.label.fontSize;
             }
-            englishShow = Localization.language != Language.zhCN;
             if (DisplayingWindow)
             {
                 if (Input.GetKey(KeyCode.LeftControl))
@@ -205,6 +203,23 @@ namespace Multifunction_mod
                     BaseSize = temp;
                 }
             }
+            if (style == null)
+            {
+                style = new GUIStyle
+                {
+                    wordWrap = true,
+                    fontSize = baseSize - 2,
+                };
+                selectedButtonStyle = new GUIStyle(GUI.skin.button);
+                selectedButtonStyle.normal.textColor = new Color32(215, 186, 245, 255);
+                normalStyle = new GUIStyle();
+                selectedIconStyle = new GUIStyle();
+                selectedIconStyle.normal.background = selectedTexture;
+                labelmarginStyle = new GUIStyle(style)
+                {
+                    margin = new RectOffset(0, 0, 3, 0)
+                };
+            }
             if (RefreshBaseSize)
             {
                 RefreshBaseSize = false;
@@ -213,13 +228,8 @@ namespace Multifunction_mod
                 GUI.skin.toggle.fontSize = BaseSize;
                 GUI.skin.textField.fontSize = BaseSize;
                 GUI.skin.textArea.fontSize = BaseSize;
-                if (style != null)
-                {
-                    style.fontSize = BaseSize;
-                    labelmarginStyle.fontSize = BaseSize;
-                }
-                selectedButtonStyle = new GUIStyle(GUI.skin.button);
-                selectedButtonStyle.normal.textColor = new Color32(215, 186, 245, 255);
+                style.fontSize = BaseSize;
+                labelmarginStyle.fontSize = BaseSize;
                 slideroptions = new[] { GUILayout.Width(heightdis * 6) };
                 textfieldoptions = new[] { GUILayout.Width(heightdis * 3) };
                 menusbuttonoptions = new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) };
@@ -233,19 +243,8 @@ namespace Multifunction_mod
                 GUI.skin.textField.normal.textColor = TextColor;
                 GUI.skin.toggle.normal.textColor = TextColor;
                 GUI.skin.toggle.onNormal.textColor = TextColor;
-                style = new GUIStyle
-                {
-                    wordWrap = true,
-                    fontSize = baseSize - 2,
-                };
                 style.normal.textColor = TextColor;
-                normalStyle = new GUIStyle();
-                selectedIconStyle = new GUIStyle();
-                selectedIconStyle.normal.background = selectedTexture;
-                labelmarginStyle = new GUIStyle(style)
-                {
-                    margin = new RectOffset(0, 0, 3, 0)
-                };
+                labelmarginStyle.normal.textColor = TextColor;
             }
             if (DisplayingWindow)
             {
@@ -388,7 +387,7 @@ namespace Multifunction_mod
             //左侧UI
             GUILayout.BeginHorizontal();
 
-            GUILayout.BeginVertical(new[] { GUILayout.Width(englishShow ? 18 * heightdis : 14 * heightdis) });
+            GUILayout.BeginVertical(GUILayout.Width(Localization.language != Language.zhCN ? 18 * heightdis : 14 * heightdis));
             if (GameMain.mainPlayer != null && propertyData != null)
             {
                 var propertydata = propertyData;
@@ -446,7 +445,6 @@ namespace Multifunction_mod
             {
                 Infinitething.Value = GUILayout.Toggle(Infinitething.Value, "无限物品".getTranslate());
                 InfiniteSand.Value = GUILayout.Toggle(InfiniteSand.Value, "无限沙土".getTranslate());
-                lockpackage_bool.Value = GUILayout.Toggle(lockpackage_bool.Value, "锁定背包".getTranslate());
                 Property9999999 = GUILayout.Toggle(Property9999999, "无限元数据".getTranslate());
                 DroneNoenergy_bool.Value = GUILayout.Toggle(DroneNoenergy_bool.Value, "小飞机不耗能".getTranslate());
                 Infiniteplayerpower.Value = GUILayout.Toggle(Infiniteplayerpower.Value, "无限机甲能量".getTranslate());
@@ -764,7 +762,7 @@ namespace Multifunction_mod
             GUILayout.Label("\"生成矿物\":鼠标左键生成矿物，鼠标右键取消。\"删除矿物\"：按x键进入拆除模式可拆除矿物。".getTranslate(), style);
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical();
-            var veinControlProperty = MainFunction.veinproperty;
+            var veinControlProperty = Multifunction.veinproperty;
             veinControlProperty.DeleteVein = GUILayout.Toggle(veinControlProperty.DeleteVein, "删除矿物".getTranslate());
             veinControlProperty.Changeveinpos = GUILayout.Toggle(veinControlProperty.Changeveinpos, "移动单矿".getTranslate());
             veinControlProperty.Changeveingrouppos = GUILayout.Toggle(veinControlProperty.Changeveingrouppos, "移动矿堆".getTranslate());

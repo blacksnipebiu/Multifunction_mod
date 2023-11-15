@@ -73,36 +73,36 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(DysonSwarm), "AbsorbSail")]
             public static bool DysonSwarmPatch1(ref DysonSwarm __instance, ref bool __result, DysonNode node)
             {
-                if (quickabsorbsolar.Value)
+                if (!quickabsorbsolar.Value)
                 {
-                    if (__instance.expiryCursor == __instance.expiryEnding)
-                    {
-                        __result = false;
-                        return false;
-                    }
-                    __instance.expiryEnding--;
-                    if (__instance.expiryEnding < 0)
-                    {
-                        __instance.expiryEnding += __instance.sailCapacity;
-                    }
-                    int num = __instance.expiryEnding;
-                    int index = __instance.expiryOrder[num].index;
-                    if (__instance.expiryOrder[num].time == 0L)
-                    {
-                        Assert.CannotBeReached();
-                        __result = false;
-                        return false;
-                    }
-                    __instance.expiryOrder[num].time = 0L;
-                    __instance.expiryOrder[num].index = 0;
-                    if (node != null && node.ConstructCp() != null)
-                    {
-                        __instance.dysonSphere.productRegister[11903]++;
-                    }
-                    __instance.RemoveSolarSail(index);
+                    return true;
+                }
+                if (__instance.expiryCursor == __instance.expiryEnding)
+                {
+                    __result = false;
                     return false;
                 }
-                return true;
+                __instance.expiryEnding--;
+                if (__instance.expiryEnding < 0)
+                {
+                    __instance.expiryEnding += __instance.sailCapacity;
+                }
+                int num = __instance.expiryEnding;
+                int index = __instance.expiryOrder[num].index;
+                if (__instance.expiryOrder[num].time == 0)
+                {
+                    Assert.CannotBeReached();
+                    __result = false;
+                    return false;
+                }
+                __instance.expiryOrder[num].time = 0;
+                __instance.expiryOrder[num].index = 0;
+                if (node != null && node.ConstructCp() != null)
+                {
+                    __instance.dysonSphere.productRegister[11903]++;
+                }
+                __instance.RemoveSolarSail(index);
+                return false;
             }
 
             [HarmonyPrefix]
@@ -277,7 +277,8 @@ namespace Multifunction_mod
 
         public class PasteAnywayPatch
         {
-            public static bool IsPatched;
+            public static bool IsPatched { get; internal set; }
+
             [HarmonyPrefix]
             [HarmonyPatch(typeof(BuildTool_Inserter), "CheckBuildConditions")]
             public static bool BuildTool_InserterCheckBuildConditionsPatch(ref bool __result)
@@ -415,45 +416,46 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(UIReplicatorWindow), "SetSelectedRecipeIndex")]
             public static void UIReplicatorWindowSetSelectedRecipe(ref UIReplicatorWindow __instance)
             {
-                if (isInstantItem.Value && tempisInstantItem && (Traverse.Create(__instance).Field("selectedRecipe").GetValue() is RecipeProto recipe))
+                if (!isInstantItem.Value || !tempisInstantItem || !(Traverse.Create(__instance).Field("selectedRecipe").GetValue() is RecipeProto recipe))
                 {
-                    Player mainPlayer = GameMain.mainPlayer;
-                    RecipeProto recipeProto = recipe;
-                    if (recipe == null) return;
-                    int num = 1;
-                    if (__instance.multipliers.ContainsKey(recipe.ID))
+                    return;
+                }
+                Player mainPlayer = GameMain.mainPlayer;
+                RecipeProto recipeProto = recipe;
+                if (recipe == null) return;
+                int num = 1;
+                if (__instance.multipliers.ContainsKey(recipe.ID))
+                {
+                    num = __instance.multipliers[recipe.ID];
+                }
+                if (num < 1)
+                {
+                    num = 1;
+                }
+                else if (num > 10)
+                {
+                    num = 10;
+                }
+                for (int i = 0; i < recipeProto.Results.Length; i++)
+                {
+                    int num2 = recipeProto.Results[i];
+                    int stackSize = LDB.items.Select(num2).StackSize;
+                    int num3 = __instance.isBatch ? (num * stackSize) : num;
+                    int num4 = mainPlayer.TryAddItemToPackage(num2, num3, 0, true, 0);
+                    int num5 = num3 - num4;
+                    if (num5 > 0)
                     {
-                        num = __instance.multipliers[recipe.ID];
-                    }
-                    if (num < 1)
-                    {
-                        num = 1;
-                    }
-                    else if (num > 10)
-                    {
-                        num = 10;
-                    }
-                    for (int i = 0; i < recipeProto.Results.Length; i++)
-                    {
-                        int num2 = recipeProto.Results[i];
-                        int stackSize = LDB.items.Select(num2).StackSize;
-                        int num3 = __instance.isBatch ? (num * stackSize) : num;
-                        int num4 = mainPlayer.TryAddItemToPackage(num2, num3, 0, true, 0);
-                        int num5 = num3 - num4;
-                        if (num5 > 0)
+                        ItemProto itemProto = LDB.items.Select(num2);
+                        if (itemProto != null)
                         {
-                            ItemProto itemProto = LDB.items.Select(num2);
-                            if (itemProto != null)
-                            {
-                                UIRealtimeTip.Popup(string.Format("背包已满未添加".Translate(), num5, itemProto.name), true, 0);
-                            }
+                            UIRealtimeTip.Popup(string.Format("背包已满未添加".Translate(), num5, itemProto.name), true, 0);
                         }
-                        if (num4 > 0)
-                        {
-                            UIItemup.Up(num2, num4);
-                        }
-                        mainPlayer.mecha.AddProductionStat(num2, num3, mainPlayer.nearestFactory);
                     }
+                    if (num4 > 0)
+                    {
+                        UIItemup.Up(num2, num4);
+                    }
+                    mainPlayer.mecha.AddProductionStat(num2, num3, mainPlayer.nearestFactory);
                 }
             }
 
@@ -461,33 +463,35 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(UIReplicatorWindow), "_OnOpen")]
             public static void UIReplicatorWindow_OnOpen(ref UIReplicatorWindow __instance)
             {
-                if (isInstantItem.Value)
+                if (!isInstantItem.Value)
                 {
-                    __instance.isInstantItem = tempisInstantItem;
-                    __instance.instantItemSwitch.gameObject.SetActive(true);
-                    __instance.instantItemSwitch.SetToggleNoEvent(tempisInstantItem);
-                    if (tempisInstantItem)
-                    {
-                        Traverse.Create(__instance).Method("RefreshRecipeIcons").GetValue();
-                    }
-                    __instance.instantItemSwitch.SetToggleNoEvent(tempisInstantItem);
-                    __instance.batchSwitch.gameObject.SetActive(tempisInstantItem);
-                    __instance.batchSwitch.SetToggleNoEvent(true);
-                    __instance.sandboxAddUsefulItemButton.gameObject.SetActive(tempisInstantItem);
-                    __instance.sandboxClearPackageButton.gameObject.SetActive(tempisInstantItem);
+                    return;
                 }
+                __instance.isInstantItem = tempisInstantItem;
+                __instance.instantItemSwitch.gameObject.SetActive(true);
+                __instance.instantItemSwitch.SetToggleNoEvent(tempisInstantItem);
+                if (tempisInstantItem)
+                {
+                    Traverse.Create(__instance).Method("RefreshRecipeIcons").GetValue();
+                }
+                __instance.instantItemSwitch.SetToggleNoEvent(tempisInstantItem);
+                __instance.batchSwitch.gameObject.SetActive(tempisInstantItem);
+                __instance.batchSwitch.SetToggleNoEvent(true);
+                __instance.sandboxAddUsefulItemButton.gameObject.SetActive(tempisInstantItem);
+                __instance.sandboxClearPackageButton.gameObject.SetActive(tempisInstantItem);
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(typeof(UIReplicatorWindow), "OnInstantSwitchClick")]
             public static void UIReplicatorWindowOnInstantSwitchClick(ref UIReplicatorWindow __instance)
             {
-                if (isInstantItem.Value)
+                if (!isInstantItem.Value)
                 {
-                    tempisInstantItem = __instance.isInstantItem;
-                    __instance.sandboxAddUsefulItemButton.gameObject.SetActive(tempisInstantItem);
-                    __instance.sandboxClearPackageButton.gameObject.SetActive(tempisInstantItem);
+                    return;
                 }
+                tempisInstantItem = __instance.isInstantItem;
+                __instance.sandboxAddUsefulItemButton.gameObject.SetActive(tempisInstantItem);
+                __instance.sandboxClearPackageButton.gameObject.SetActive(tempisInstantItem);
             }
 
             [HarmonyPrefix]
@@ -547,33 +551,31 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(UITechTree), "_OnUpdate")]
             public static void UITechTreeSelectTechPatch(UITechTree __instance)
             {
-                if (unlockpointtech && __instance.selected != null)
+                if (!unlockpointtech || __instance.selected == null)
                 {
-                    TechProto techProto = __instance.selected.techProto;
-                    if (GameMain.history.techStates[techProto.ID].unlocked) return;
-                    if (techProto.MaxLevel <= 10)
+                    return;
+                }
+                TechProto techProto = __instance.selected.techProto;
+                if (GameMain.history.techStates[techProto.ID].unlocked || techProto.MaxLevel > 10) return;
+                if (techProto.Level < techProto.MaxLevel)
+                {
+                    for (int level = 1; level < techProto.MaxLevel; ++level)
                     {
-                        if (techProto.Level < techProto.MaxLevel)
+                        for (int i = 0; i < techProto.itemArray.Length; i++)
                         {
-                            for (int level = 1; level < techProto.MaxLevel; ++level)
-                            {
-                                for (int i = 0; i < techProto.itemArray.Length; i++)
-                                {
-                                    AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
-                                }
-                                GameMain.history.UnlockTechFunction(techProto.UnlockFunctions[0], techProto.UnlockValues[0], level);
-                            }
-                            GameMain.history.UnlockTech(techProto.ID);
+                            AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
                         }
-                        if (!GameMain.history.techStates[techProto.ID].unlocked)
-                        {
-                            for (int i = 0; i < techProto.itemArray.Length; i++)
-                            {
-                                AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
-                            }
-                            GameMain.history.UnlockTech(techProto.ID);
-                        }
+                        GameMain.history.UnlockTechFunction(techProto.UnlockFunctions[0], techProto.UnlockValues[0], level);
                     }
+                    GameMain.history.UnlockTech(techProto.ID);
+                }
+                if (!GameMain.history.techStates[techProto.ID].unlocked)
+                {
+                    for (int i = 0; i < techProto.itemArray.Length; i++)
+                    {
+                        AddComsumeItemtoTotal(techProto.Items[i], (int)(techProto.ItemPoints[i] * techProto.GetHashNeeded(techProto.Level) / 3600));
+                    }
+                    GameMain.history.UnlockTech(techProto.ID);
                 }
             }
 
@@ -595,11 +597,14 @@ namespace Multifunction_mod
                 __result += StationStoExtra.Value * basemax;
             }
 
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(UIAbnormalityTip), "Determine")]
-            public static bool UIAbnormalityTipDeterminePatch()
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(UIAbnormalityTip), "_OnOpen")]
+            public static void UIAbnormalityTipDeterminePatch(UIAbnormalityTip __instance)
             {
-                return !CloseUIAbnormalityTip.Value;
+                if (CloseUIAbnormalityTip.Value)
+                {
+                    __instance._Close();
+                }
             }
         }
 
@@ -626,13 +631,14 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(PowerSystem), "NewConsumerComponent")]
             public static void PowerSystemNewConsumerComponent(ref int __result, PowerSystem __instance)
             {
-                if (Buildingnoconsume.Value)
+                if (!Buildingnoconsume.Value)
                 {
-                    __instance.consumerPool[__result].requiredEnergy = 0;
-                    __instance.consumerPool[__result].idleEnergyPerTick = 0;
-                    __instance.consumerPool[__result].servedEnergy = 0;
-                    __instance.consumerPool[__result].workEnergyPerTick = 0;
+                    return;
                 }
+                __instance.consumerPool[__result].requiredEnergy = 0;
+                __instance.consumerPool[__result].idleEnergyPerTick = 0;
+                __instance.consumerPool[__result].servedEnergy = 0;
+                __instance.consumerPool[__result].workEnergyPerTick = 0;
             }
 
             [HarmonyPrefix]
@@ -654,54 +660,23 @@ namespace Multifunction_mod
                     cover = GameMain.localPlanet.realRadius * 4;
                 }
             }
+
             [HarmonyPostfix]
             [HarmonyPatch(typeof(PowerSystem), "NewNodeComponent")]
             public static void NewNodeComponentPatchPostfix(ref int __result, PowerSystem __instance)
             {
-                if (Buildingnoconsume.Value && GameMain.localPlanet.factory.entityPool[__instance.nodePool[__result].entityId].stationId <= 0)
+                if (!Buildingnoconsume.Value || GameMain.localPlanet.factory.entityPool[__instance.nodePool[__result].entityId].stationId > 0)
                 {
-                    __instance.nodePool[__result].requiredEnergy = 0;
-                    __instance.nodePool[__result].idleEnergyPerTick = 0;
+                    return;
                 }
+                __instance.nodePool[__result].requiredEnergy = 0;
+                __instance.nodePool[__result].idleEnergyPerTick = 0;
             }
 
         }
 
         public class PlanetFactoryPatch
         {
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
-            public static void PlanetFactoryNoComsumeSand(ref int __result)
-            {
-                if (InfiniteSand.Value)
-                {
-                    __result = 0;
-                }
-            }
-
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(PlanetFactory), "UpgradeEntityWithComponents")]
-            public static void UpgradeEntityWithComponentsPatch(int entityId, PlanetFactory __instance)
-            {
-                if (!Buildingnoconsume.Value || entityId == 0 || __instance.entityPool[entityId].id == 0)
-                    return;
-                if (GameMain.localPlanet.factory.entityPool[entityId].stationId <= 0)
-                {
-                    int powerConId = __instance.entityPool[entityId].powerConId;
-                    if (powerConId > 0)
-                    {
-                        __instance.powerSystem.consumerPool[powerConId].idleEnergyPerTick = 0;
-                        __instance.powerSystem.consumerPool[powerConId].workEnergyPerTick = 0;
-                    }
-                }
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(PlanetFactory), "TakeBackItemsInEntity")]
-            public static bool TakeBackItemsInEntityPatch()
-            {
-                return !entityitemnoneed;
-            }
 
             [HarmonyPrefix]
             [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
@@ -803,6 +778,43 @@ namespace Multifunction_mod
 
             }
 
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
+            public static void PlanetFactoryNoComsumeSand(ref int __result)
+            {
+                if (!InfiniteSand.Value)
+                {
+                    return;
+                }
+                __result = 0;
+            }
+
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(PlanetFactory), "UpgradeEntityWithComponents")]
+            public static void UpgradeEntityWithComponentsPatch(int entityId, PlanetFactory __instance)
+            {
+                if (!Buildingnoconsume.Value || entityId == 0 || __instance.entityPool[entityId].id == 0)
+                    return;
+                if (GameMain.localPlanet.factory.entityPool[entityId].stationId > 0)
+                {
+                    return;
+                }
+                int powerConId = __instance.entityPool[entityId].powerConId;
+                if (powerConId <= 0)
+                {
+                    return;
+                }
+                __instance.powerSystem.consumerPool[powerConId].idleEnergyPerTick = 0;
+                __instance.powerSystem.consumerPool[powerConId].workEnergyPerTick = 0;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(PlanetFactory), "TakeBackItemsInEntity")]
+            public static bool TakeBackItemsInEntityPatch()
+            {
+                return !entityitemnoneed;
+            }
+
         }
 
         public class PlanetTransportPatch
@@ -810,7 +822,7 @@ namespace Multifunction_mod
             //自动改名
             [HarmonyPostfix]
             [HarmonyPatch(typeof(PlanetTransport), "NewStationComponent")]
-            public static void PlanetTransportNewStationComponent(ref StationComponent __result)
+            public static void PlanetTransportNewStationComponent(ref StationComponent __result, PlanetTransport __instance)
             {
                 if (__result.isCollector)
                 {
@@ -962,6 +974,121 @@ namespace Multifunction_mod
                 return false;
             }
 
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(PlanetTransport), "GameTick")]
+            public static void PlanetTransportGameTick(long time, PlanetTransport __instance)
+            {
+                int num = (int)(time % 20L);
+                if (num < 0)
+                {
+                    num += 20;
+                }
+                int num2 = (int)(time % 60L);
+                if (num2 < 0)
+                {
+                    num2 += 60;
+                }
+                bool localTick = num == 0;
+                bool remoteTick = num2 == 0;
+                FactoryProductionStat factoryProductionStat = GameMain.statistics.production.factoryStatPool[__instance.factory.index];
+                int[] productRegister = factoryProductionStat.productRegister;
+                int[] consumeRegister = factoryProductionStat.consumeRegister;
+                for (int i = __instance.stationPool.Length - 1; i > 0; i--)
+                {
+                    StationComponent sc = __instance.stationPool[i];
+                    if (sc == null || sc.id != i)
+                    {
+                        continue;
+                    }
+                    if (localTick)
+                    {
+                        if (Stationfullenergy.Value)
+                        {
+                            sc.energy = sc.energyMax;
+                        }
+                        if (StationMaxproliferator.Value)
+                        {
+                            for (int j = 0; j < sc.storage.Length; j++)
+                                if (sc.storage[j].itemId > 0)
+                                    sc.storage[j].inc = sc.storage[j].count * incAbility;
+                        }
+                        if (StationfullCount)
+                        {
+                            StationComponentPatch.StationFullItemCount(sc);
+                        }
+                    }
+                    if (sc.isCollector || sc.isVeinCollector) continue;
+                    if (StationSpray.Value)
+                    {
+                        StationComponentPatch.StationSprayInc(sc, consumeRegister);
+                    }
+                    if (StationPowerGen.Value)
+                    {
+                        StationComponentPatch.StationPowerGeneration(sc, consumeRegister);
+                    }
+                    if (localTick)
+                    {
+                        if (Station_infiniteWarp_bool.Value && sc.isStellar)
+                            sc.warperCount = 50;
+                    }
+                    if (!string.IsNullOrEmpty(sc?.name))
+                    {
+                        switch (sc.name)
+                        {
+                            case "星球无限供货机":
+                                if (!StationfullCount_bool.Value && remoteTick || StationfullCount)
+                                    continue;
+                                StationComponentPatch.StationFullItemCount(sc);
+                                break;
+                            case "垃圾站":
+                            case "Station_trash":
+                                if (!StationTrash.Value && remoteTick)
+                                    continue;
+                                StationComponentPatch.StationTrashMethod(sc, consumeRegister);
+                                break;
+                            case "喷涂加工厂":
+                                if (!StationSprayer.Value || StationSpray.Value)
+                                    continue;
+                                StationComponentPatch.StationSprayInc(sc, consumeRegister);
+                                break;
+                            case "星球熔炉矿机":
+                                if (!StationMinerSmelter.Value)
+                                    continue;
+                                if (remoteTick)
+                                {
+                                    StationComponentPatch.StationMine(sc, __instance.planet, productRegister);
+                                }
+                                if (!StationPowerGen.Value)
+                                {
+                                    StationComponentPatch.StationPowerGeneration(sc, consumeRegister);
+                                }
+                                StationComponentPatch.StationFurnaceMiner(sc, time, consumeRegister, productRegister);
+                                break;
+                            case "星球矿机":
+                            case "Station_miner":
+                                if (!StationMiner.Value)
+                                    continue;
+                                if (remoteTick)
+                                {
+                                    StationComponentPatch.StationMine(sc, __instance.planet, productRegister);
+                                }
+                                if (!StationPowerGen.Value)
+                                {
+                                    StationComponentPatch.StationPowerGeneration(sc, consumeRegister);
+                                }
+                                break;
+                            case "星球量子传输站":
+                            case "星系量子传输站":
+                                if (remoteTick)
+                                {
+                                    StationComponentPatch.StationPowerGeneration(sc, consumeRegister);
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+
         }
 
         public class StorageComponentPatch
@@ -1002,17 +1129,6 @@ namespace Multifunction_mod
             }
 
             [HarmonyPostfix]
-            [HarmonyPatch(typeof(StorageComponent), "TakeItemFromGrid")]
-            public static void DetermineMoreChainTargetsPatch(StorageComponent __instance, int gridIndex, ref int itemId, ref int count)
-            {
-                if (lockpackage_bool.Value && __instance.id == GameMain.mainPlayer?.package?.id)
-                {
-                    __instance.grids[gridIndex].itemId = itemId;
-                    __instance.grids[gridIndex].count = count;
-                }
-            }
-
-            [HarmonyPostfix]
             [HarmonyPatch(typeof(StorageComponent), "GetItemCount", new Type[] { typeof(int) })]
             public static void GetItemCountPatch(StorageComponent __instance, int itemId, ref int __result)
             {
@@ -1031,29 +1147,323 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(StationComponent), "Init")]
             public static void StationComponentInit(ref int _extraStorage, StationComponent __instance)
             {
-                if (StationStoExtra.Value > 0)
+                if (StationStoExtra.Value <= 0)
                 {
-                    int basemax = __instance.isStellar ? 10000 : 5000;
-                    _extraStorage = (StationStoExtra.Value + 1) * basemax;
+                    return;
                 }
+                int basemax = __instance.isStellar ? 10000 : 5000;
+                _extraStorage = (StationStoExtra.Value + 1) * basemax;
             }
 
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(StationComponent), "InternalTickLocal")]
-            public static void InternalTickLocalPatchPrefix(ref StationComponent __instance)
+            /// <summary>
+            /// 获取目标星球目标矿脉数量
+            /// </summary>
+            /// <param name="itemid" ></param>
+            /// <param name="pdid"></param>
+            /// <returns></returns>
+            public static int GetNumberOfVein(int itemid, PlanetData pd)
             {
-                if (Stationfullenergy.Value)
+                EVeinType evt = LDB.veins.GetVeinTypeByItemId(itemid);
+                if (evt == EVeinType.None)
                 {
-                    __instance.energy = __instance.energyMax;
+                    return 0;
                 }
-                if (StationMaxproliferator.Value)
+                if (evt == EVeinType.Oil)
                 {
-                    for (int i = 0; i < __instance.storage.Length; i++)
-                        if (__instance.storage[i].itemId > 0)
-                            __instance.storage[i].inc = __instance.storage[i].count * incAbility;
+                    long[] veinAmounts = new long[64];
+                    pd.CalcVeinAmounts(ref veinAmounts, new HashSet<int>(), UIRoot.instance.uiGame.veinAmountDisplayFilter);
+                    int collectspeed = (int)(veinAmounts[7] * VeinData.oilSpeedMultiplier + 0.5);
+                    if (collectspeed > 1) return collectspeed;
+                }
+                return pd.factory.veinPool.Count(x => x.type == evt);
+            }
+
+            /// <summary>
+            /// 物流站采矿
+            /// </summary>
+            /// <param name="itemid"></param>
+            /// <param name="minenumber"></param>
+            /// <param name="pdid"></param>
+            /// <returns></returns>
+            public static int MineVein(int itemid, int minenumber, PlanetData pd)
+            {
+                int getmine = 0;
+                if (pd.waterItemId == itemid)
+                {
+                    return (int)(30 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
+                }
+                int neednumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningCostRate / 2) : (int)(minenumber * GameMain.history.miningCostRate);
+                int maxmineNumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningSpeedScale / 2) : (int)(minenumber * GameMain.history.miningSpeedScale); ;
+                if (GameMain.data.gameDesc.isInfiniteResource)
+                    return maxmineNumber;
+                if (LDB.veins.GetVeinTypeByItemId(itemid) == EVeinType.None || pd == null)
+                {
+                    return 0;
+                }
+                if (minenumber > 0 && neednumber == 0) neednumber = 1;
+                foreach (VeinData i in pd.factory.veinPool)
+                {
+                    if (i.type != LDB.veins.GetVeinTypeByItemId(itemid))
+                        continue;
+                    if (i.amount > neednumber - getmine)
+                    {
+                        if (itemid == 1007 && i.amount * VeinData.oilSpeedMultiplier <= 0.1)
+                        {
+                            int dis = veinproperty.oillowerlimit - pd.factory.veinPool[i.id].amount;
+                            pd.factory.veinPool[i.id].amount += dis;
+                            pd.factory.veinGroups[i.groupIndex].amount += dis;
+                            getmine += (int)(0.1 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
+                        }
+                        else
+                        {
+                            pd.factory.veinPool[i.id].amount -= neednumber;
+                            pd.factory.veinGroups[i.groupIndex].amount -= neednumber;
+                            getmine = minenumber;
+                        }
+                    }
+                    else
+                    {
+                        if (itemid != 1007)
+                        {
+                            pd.factory.veinGroups[i.groupIndex].count--;
+                            pd.factory.veinGroups[i.groupIndex].amount -= i.amount;
+                            pd.factory.RemoveVeinWithComponents(i.id);
+                            getmine += i.amount;
+                        }
+                    }
+                    if (pd.factory.veinGroups[i.groupIndex].count == 0)
+                    {
+                        pd.factory.veinGroups[i.groupIndex].type = 0;
+                        pd.factory.veinGroups[i.groupIndex].amount = 0;
+                        pd.factory.veinGroups[i.groupIndex].pos = Vector3.zero;
+                    }
+                    if (getmine == minenumber) break;
+                }
+                return itemid != 1007 ? (int)(getmine * GameMain.history.miningSpeedScale / 2) : (int)(getmine * GameMain.history.miningSpeedScale);
+            }
+
+            /// <summary>
+            /// 物流站星球采矿
+            /// </summary>
+            /// <param name="sc"></param>
+            /// <param name="pd"></param>
+            public static void StationMine(StationComponent sc, PlanetData pd, int[] productRegister)
+            {
+                for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
+                {
+                    ref StationStore store = ref sc.storage[i];
+                    int itemID = store.itemId;
+                    if (itemID <= 0 || store.count >= store.max)
+                        continue;
+                    int veinNumbers = GetNumberOfVein(itemID, pd);
+                    int pointminenum = veinNumbers * Stationminenumber.Value;
+                    if (veinNumbers > 0 && pointminenum == 0) pointminenum = 1;
+                    else if (veinNumbers == 0 && itemID != pd.waterItemId) continue;
+
+                    if (!Stationfullenergy.Value && sc.energy <= pointminenum * GameMain.history.miningSpeedScale * 5000)
+                    {
+                        continue;
+                    }
+                    int minenum = MineVein(itemID, pointminenum, pd);
+                    if (minenum <= 0)
+                    {
+                        continue;
+                    }
+                    lock (productRegister)
+                    {
+                        productRegister[itemID] += minenum;
+                        sc.storage[i].count += minenum;
+                        if (!Stationfullenergy.Value)
+                            sc.energy -= minenum * 5000;
+                    }
                 }
             }
 
+            /// <summary>
+            /// 物流站内置发电
+            /// </summary>
+            /// <param name="sc"></param>
+            /// <param name="planetID"></param>
+            public static void StationPowerGeneration(StationComponent sc, int[] consumeRegister)
+            {
+                if (sc == null || sc.storage == null || sc.energy >= sc.energyMax - 1000000) return;
+                ref StationStore store = ref sc.storage[sc.storage.Length - 1];
+                if (store.itemId <= 0 || store.count <= 0)
+                    return;
+                ItemProto ip = LDB.items.Select(store.itemId);
+                if (ip.HeatValue > 0 && sc.energy + ip.HeatValue < sc.energyMax)
+                {
+                    int num = Math.Min(store.count, (int)((sc.energyMax - sc.energy) / ip.HeatValue));
+                    sc.energy += num * ip.HeatValue;
+                    store.count -= num;
+                    if (num > 0)
+                    {
+                        lock (consumeRegister)
+                        {
+                            consumeRegister[ip.ID] = num;
+                        }
+                    }
+                }
+            }
+
+            /// <summary>
+            /// 物流站内置喷涂
+            /// </summary>
+            /// <param name="sc"></param>
+            public static void StationSprayInc(StationComponent sc, int[] consumeRegister)
+            {
+                int incIndex = -1;
+                for (int i = 0; i < sc.storage.Length; i++)
+                {
+                    if (sc.storage[i].itemId == 1143)
+                    {
+                        incIndex = i;
+                        if (sc.storage[i].count == 0) return;
+                        break;
+                    }
+                }
+                if (incIndex == -1)
+                    return;
+                for (int i = 0; i < sc.storage.Length; i++)
+                {
+                    ref StationStore store = ref sc.storage[i];
+                    ref StationStore incstore = ref sc.storage[incIndex];
+                    if (store.itemId == 1143 || store.itemId <= 0 || store.count <= 0) continue;
+
+                    int needinc = store.count * incAbility - store.inc;
+                    int needNumber = Math.Min((int)Math.Ceiling(needinc / 296.0), incstore.count);
+                    if (needNumber == 0) continue;
+                    lock (consumeRegister)
+                    {
+                        consumeRegister[1143] = needNumber;
+                        store.inc += incstore.count >= needNumber ? needinc : incstore.count * 296;
+                        incstore.count -= needNumber;
+                        store.inc = Math.Min(store.count * incAbility, store.inc);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// 物流站满货物
+            /// </summary>
+            /// <param name="sc"></param>
+            public static void StationFullItemCount(StationComponent sc)
+            {
+                for (int i = 0; i < sc.storage.Length; i++)
+                {
+                    if (sc.storage[i].itemId <= 0)
+                        continue;
+                    sc.storage[i].count = sc.storage[i].max;
+                }
+            }
+
+            /// <summary>
+            /// 物流站垃圾站
+            /// </summary>
+            /// <param name="sc"></param>
+            public static void StationTrashMethod(StationComponent sc, int[] consumeRegister)
+            {
+                for (int i = 0; i < sc.storage.Length && sc.energy > 0; i++)
+                {
+                    ref StationStore store = ref sc.storage[i];
+                    int itemID = store.itemId;
+                    if (itemID <= 0) continue;
+                    int trashnum = store.count;
+                    if (sc.energy > trashnum * 10000)
+                    {
+                        lock (consumeRegister)
+                        {
+                            consumeRegister[itemID] = trashnum;
+                        }
+                        sc.storage[i].count -= trashnum;
+                        if (!Stationfullenergy.Value)
+                            sc.energy -= trashnum * 10000;
+                        if (!noneedtrashsand.Value)
+                            player.SetSandCount(player.sandCount + trashnum * 100);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// 星球熔炉矿机
+            /// </summary>
+            /// <param name="sc"></param>
+            /// <param name="pdId"></param>
+            public static void StationFurnaceMiner(StationComponent sc, long time, int[] consumeRegister, int[] productRegister)
+            {
+                List<int> storageItems = sc.storage.Select(x => x.itemId).ToList();
+                storageItems.ForEach(itemId =>
+                {
+                    if (itemId <= 0 || !smeltRecipes.ContainsKey(itemId)) return;
+                    smeltRecipes[itemId].ForEach(rp =>
+                    {
+                        int spendtime = rp.TimeSpend / 2;
+                        if (spendtime < 2) { }
+                        else if (time % spendtime != 0) return;
+                        if (!rp.Results.All(storageItems.Contains) || !rp.Items.All(storageItems.Contains))
+                            return;
+                        for (int i = 0; i < rp.ResultCounts.Length; i++)
+                        {
+                            int index = storageItems.IndexOf(rp.Results[i]);
+                            if (sc.storage[index].count > sc.storage[index].max)
+                            {
+                                return;
+                            }
+                        }
+                        int smelters = StationMinerSmelterNum.Value;
+                        int costenergypertime = 1440000;
+                        int doublecostenergypertime = 2880000;
+                        int smeltTime = smelters;
+                        int incsmeltTime = smeltTime;
+                        int len = rp.Items.Length;
+                        for (int i = 0; i < len; i++)
+                        {
+                            if (rp.ItemCounts[i] == 0) continue;
+                            int index = storageItems.IndexOf(rp.Items[i]);
+                            int tempcount = sc.storage[index].count / rp.ItemCounts[i];
+                            smeltTime = Math.Min(smeltTime, tempcount);
+                            incsmeltTime = Math.Min(Math.Min(incsmeltTime, tempcount), sc.storage[index].inc / incAbility);
+                        }
+                        if (Stationfullenergy.Value)
+                        {
+                            smeltTime = smeltTime - incsmeltTime;
+                        }
+                        else
+                        {
+                            incsmeltTime = (int)Math.Min(incsmeltTime, sc.energy / doublecostenergypertime);
+                            sc.energy -= incsmeltTime * doublecostenergypertime;
+                            smeltTime = (int)Math.Min(smeltTime - incsmeltTime, sc.energy / costenergypertime);
+                        }
+                        if (smeltTime + incsmeltTime == 0) return;
+                        if (!Stationfullenergy.Value)
+                        {
+                            sc.energy -= smeltTime * costenergypertime;
+                        }
+                        for (int i = 0; i < len; i++)
+                        {
+                            int consumeCount = rp.ItemCounts[i] * (smeltTime + incsmeltTime);
+                            lock (consumeRegister)
+                            {
+                                int index = storageItems.IndexOf(rp.Items[i]);
+                                sc.storage[index].count -= consumeCount;
+                                sc.storage[index].inc -= incsmeltTime * rp.ItemCounts[i] * incAbility;
+                                sc.storage[index].inc = Math.Max(0, Math.Min(sc.storage[index].count * incAbility, sc.storage[index].inc));
+                                consumeRegister[rp.Items[i]] = consumeCount;
+                            }
+                        }
+                        for (int i = 0; i < rp.ResultCounts.Length; i++)
+                        {
+                            lock (productRegister)
+                            {
+                                int addcount = (int)(rp.ResultCounts[i] * (smeltTime + incsmeltTime * (1 + Cargo.incTableMilli[incAbility])));
+                                int index = storageItems.IndexOf(rp.Results[i]);
+                                sc.storage[index].count += addcount;
+                                productRegister[rp.Results[i]] = addcount;
+                            }
+                        }
+                    });
+                });
+            }
         }
 
         public class TankComponentPatch
@@ -1062,10 +1472,11 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(TankComponent), "GameTick")]
             public static void TankComponentGameTickPatchPrefix(ref TankComponent __instance)
             {
-                if (TankMaxproliferator.Value)
+                if (!TankMaxproliferator.Value)
                 {
-                    __instance.fluidInc = __instance.fluidCount * incAbility;
+                    return;
                 }
+                __instance.fluidInc = __instance.fluidCount * incAbility;
             }
 
         }
@@ -1077,26 +1488,28 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(FactorySystem), "NewEjectorComponent")]
             public static void NewEjectorComponentPatch(ref int __result, FactorySystem __instance)
             {
-                if (quickEjector)
+                if (!quickEjector)
                 {
-                    __instance.ejectorPool[__result].bulletCount = int.MaxValue;
-                    __instance.ejectorPool[__result].bulletId = 1501;
-                    __instance.ejectorPool[__result].coldSpend = 5;
-                    __instance.ejectorPool[__result].chargeSpend = 4;
+                    return;
                 }
+                __instance.ejectorPool[__result].bulletCount = int.MaxValue;
+                __instance.ejectorPool[__result].bulletId = 1501;
+                __instance.ejectorPool[__result].coldSpend = 5;
+                __instance.ejectorPool[__result].chargeSpend = 4;
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(typeof(FactorySystem), "NewSiloComponent")]
             public static void NewSiloComponentPatch(ref int __result, FactorySystem __instance)
             {
-                if (quicksilo)
+                if (!quicksilo)
                 {
-                    __instance.siloPool[__result].bulletCount = int.MaxValue;
-                    __instance.siloPool[__result].bulletId = 1503;
-                    __instance.siloPool[__result].coldSpend = 40;
-                    __instance.siloPool[__result].chargeSpend = 80;
+                    return;
                 }
+                __instance.siloPool[__result].bulletCount = int.MaxValue;
+                __instance.siloPool[__result].bulletId = 1503;
+                __instance.siloPool[__result].coldSpend = 40;
+                __instance.siloPool[__result].chargeSpend = 80;
 
             }
 
@@ -1104,8 +1517,9 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(FactoryStorage), "NewTankComponent")]
             public static void NewTankComponentPatch(ref int fCount)
             {
-                if (Infinitestoragetank.Value)
-                    fCount = int.MaxValue - 200;
+                if (!Infinitestoragetank.Value)
+                    return;
+                fCount = int.MaxValue - 200;
             }
         }
 
@@ -1115,289 +1529,247 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(DispenserComponent), "InternalTick")]
             public static void DispenserComponentInternalTickPrefix(ref DispenserComponent __instance)
             {
-                if (Stationfullenergy.Value)
+                if (!Stationfullenergy.Value)
                 {
-                    __instance.energy = __instance.energyMax;
+                    return;
                 }
+                __instance.energy = __instance.energyMax;
             }
 
             [HarmonyPrefix]
             [HarmonyPatch(typeof(EjectorComponent), "InternalUpdate")]
             public static bool EjectorComponentPatch(ref EjectorComponent __instance, AstroData[] astroPoses, AnimData[] animPool, ref DysonSwarm swarm, float power, int[] consumeRegister, ref uint __result)
             {
-                if (playcancelsolarbullet || alwaysemissiontemp)
+                if (!playcancelsolarbullet && !alwaysemissiontemp)
                 {
-                    if (__instance.needs == null)
+                    return true;
+                }
+                if (__instance.needs == null)
+                {
+                    __instance.needs = new int[6];
+                }
+                __instance.needs[0] = ((__instance.bulletCount >= 20) ? 0 : __instance.bulletId);
+                animPool[__instance.entityId].prepare_length = __instance.localDir.x;
+                animPool[__instance.entityId].working_length = __instance.localDir.y;
+                animPool[__instance.entityId].power = __instance.localDir.z;
+                __instance.targetState = EjectorComponent.ETargetState.None;
+                if (__instance.fired)
+                {
+                    int num = __instance.entityId;
+                    animPool[num].time = animPool[num].time + 0.016666668f;
+                    if (animPool[__instance.entityId].time >= 11f)
                     {
-                        __instance.needs = new int[6];
-                    }
-                    __instance.needs[0] = ((__instance.bulletCount >= 20) ? 0 : __instance.bulletId);
-                    animPool[__instance.entityId].prepare_length = __instance.localDir.x;
-                    animPool[__instance.entityId].working_length = __instance.localDir.y;
-                    animPool[__instance.entityId].power = __instance.localDir.z;
-                    __instance.targetState = EjectorComponent.ETargetState.None;
-                    if (__instance.fired)
-                    {
-                        int num = __instance.entityId;
-                        animPool[num].time = animPool[num].time + 0.016666668f;
-                        if (animPool[__instance.entityId].time >= 11f)
-                        {
-                            __instance.fired = false;
-                            animPool[__instance.entityId].time = 0f;
-                        }
-                    }
-                    else if (__instance.direction > 0)
-                    {
-                        animPool[__instance.entityId].time = (float)__instance.time / __instance.chargeSpend;
-                    }
-                    else if (__instance.direction < 0)
-                    {
-                        animPool[__instance.entityId].time = -(float)__instance.time / __instance.coldSpend;
-                    }
-                    else
-                    {
+                        __instance.fired = false;
                         animPool[__instance.entityId].time = 0f;
                     }
-                    if (__instance.orbitId < 0 || __instance.orbitId >= swarm.orbitCursor || swarm.orbits[__instance.orbitId].id != __instance.orbitId || !swarm.orbits[__instance.orbitId].enabled)
+                }
+                else if (__instance.direction > 0)
+                {
+                    animPool[__instance.entityId].time = (float)__instance.time / __instance.chargeSpend;
+                }
+                else if (__instance.direction < 0)
+                {
+                    animPool[__instance.entityId].time = -(float)__instance.time / __instance.coldSpend;
+                }
+                else
+                {
+                    animPool[__instance.entityId].time = 0f;
+                }
+                if (__instance.orbitId < 0 || __instance.orbitId >= swarm.orbitCursor || swarm.orbits[__instance.orbitId].id != __instance.orbitId || !swarm.orbits[__instance.orbitId].enabled)
+                {
+                    __instance.orbitId = 0;
+                }
+                float num2 = (float)Cargo.accTableMilli[__instance.incLevel];
+                int num3 = (int)(power * 10000f * (1f + num2) + 0.1f);
+                if (__instance.orbitId == 0)
+                {
+                    if (__instance.direction == 1)
                     {
-                        __instance.orbitId = 0;
+                        __instance.time = (int)((long)__instance.time * __instance.coldSpend / __instance.chargeSpend);
+                        __instance.direction = -1;
                     }
-                    float num2 = (float)Cargo.accTableMilli[__instance.incLevel];
-                    int num3 = (int)(power * 10000f * (1f + num2) + 0.1f);
-                    if (__instance.orbitId == 0)
+                    if (__instance.direction == -1)
+                    {
+                        __instance.time -= num3;
+                        if (__instance.time <= 0)
+                        {
+                            __instance.time = 0;
+                            __instance.direction = 0;
+                        }
+                    }
+                    if (power >= 0.1f)
+                    {
+                        __instance.localDir.x *= 0.9f;
+                        __instance.localDir.y *= 0.9f;
+                        __instance.localDir.z = __instance.localDir.z * 0.9f + 0.1f;
+                        __result = 1U;
+                        return false;
+                    }
+                    __result = 0U;
+                }
+                else
+                {
+                    if (power < 0.1f)
                     {
                         if (__instance.direction == 1)
                         {
-                            __instance.time = (int)((long)__instance.time * __instance.coldSpend / __instance.chargeSpend);
+                            __instance.time = __instance.time * __instance.coldSpend / __instance.chargeSpend;
                             __instance.direction = -1;
                         }
-                        if (__instance.direction == -1)
+                        __result = 0U;
+                        return false;
+                    }
+                    __instance.targetState = EjectorComponent.ETargetState.OK;
+                    bool flag = true;
+                    int num4 = __instance.planetId / 100 * 100;
+                    float num5 = __instance.localAlt + __instance.pivotY + (__instance.muzzleY - __instance.pivotY) / Mathf.Max(0.1f, Mathf.Sqrt(1f - __instance.localDir.y * __instance.localDir.y));
+
+                    Vector3 vector = new Vector3(__instance.localPosN.x * num5, __instance.localPosN.y * num5, __instance.localPosN.z * num5);
+                    VectorLF3 uPos = astroPoses[num4].uPos;
+                    VectorLF3 vectorLF = astroPoses[__instance.planetId].uPos + Maths.QRotateLF(astroPoses[__instance.planetId].uRot, vector);
+                    VectorLF3 b = uPos - vectorLF;
+                    VectorLF3 vectorLF2 = uPos + VectorLF3.Cross(swarm.orbits[__instance.orbitId].up, b).normalized * swarm.orbits[__instance.orbitId].radius;
+                    if (!alwaysemissiontemp)
+                    {
+                        Quaternion q = astroPoses[__instance.planetId].uRot * __instance.localRot;
+                        VectorLF3 vectorLF3 = vectorLF2 - vectorLF;
+                        __instance.targetDist = vectorLF3.magnitude;
+                        vectorLF3.x /= __instance.targetDist;
+                        vectorLF3.y /= __instance.targetDist;
+                        vectorLF3.z /= __instance.targetDist;
+                        Vector3 vector2 = Maths.QInvRotate(q, vectorLF3);
+                        __instance.localDir.x = __instance.localDir.x * 0.9f + vector2.x * 0.1f;
+                        __instance.localDir.y = __instance.localDir.y * 0.9f + vector2.y * 0.1f;
+                        __instance.localDir.z = __instance.localDir.z * 0.9f + vector2.z * 0.1f;
+                        if (vector2.y < 0.08715574 || vector2.y > 0.8660254f)
                         {
-                            __instance.time -= num3;
-                            if (__instance.time <= 0)
+                            __instance.targetState = EjectorComponent.ETargetState.AngleLimit;
+                            flag = false;
+                        }
+                        if (__instance.bulletCount > 0 && flag)
+                        {
+                            for (int i = num4 + 1; i <= __instance.planetId + 2; i++)
                             {
-                                __instance.time = 0;
-                                __instance.direction = 0;
+                                if (i == __instance.planetId)
+                                {
+                                    continue;
+                                }
+                                double uradius = astroPoses[i].uRadius;
+                                if (uradius <= 1.0)
+                                {
+                                    continue;
+                                }
+                                VectorLF3 vectorLF4 = astroPoses[i].uPos - vectorLF;
+                                double num7 = vectorLF4.x * vectorLF4.x + vectorLF4.y * vectorLF4.y + vectorLF4.z * vectorLF4.z;
+                                double num8 = vectorLF4.x * vectorLF3.x + vectorLF4.y * vectorLF3.y + vectorLF4.z * vectorLF3.z;
+                                if (num8 <= 0.0)
+                                {
+                                    continue;
+                                }
+                                double num9 = num7 - num8 * num8;
+                                uradius += 120.0;
+                                if (num9 >= uradius * uradius)
+                                {
+                                    continue;
+                                }
+                                flag = false;
+                                __instance.targetState = EjectorComponent.ETargetState.Blocked;
+                                break;
                             }
                         }
-                        if (power >= 0.1f)
+                    }
+
+                    bool flag2 = __instance.bulletCount > 0;
+                    bool flag3 = flag && flag2;
+                    if (__instance.direction == 1)
+                    {
+                        if (!flag3)
                         {
-                            __instance.localDir.x = __instance.localDir.x * 0.9f;
-                            __instance.localDir.y = __instance.localDir.y * 0.9f;
-                            __instance.localDir.z = __instance.localDir.z * 0.9f + 0.1f;
-                            __result = 1U;
-                            return false;
+                            __instance.time = __instance.time * __instance.coldSpend / __instance.chargeSpend;
+                            __instance.direction = -1;
                         }
-                        __result = 0U;
+                    }
+                    else if (__instance.direction == 0 && flag3)
+                    {
+                        __instance.direction = 1;
+                    }
+                    if (__instance.direction == 1)
+                    {
+                        __instance.time += num3;
+                        if (__instance.time >= __instance.chargeSpend)
+                        {
+                            __instance.fired = true;
+                            animPool[__instance.entityId].time = 10f;
+                            VectorLF3 uEndVel = VectorLF3.Cross(vectorLF2 - uPos, swarm.orbits[__instance.orbitId].up).normalized * Math.Sqrt((double)(swarm.dysonSphere.gravity / swarm.orbits[__instance.orbitId].radius));
+                            if (playcancelsolarbullet)
+                            {
+                                VectorLF3 vectorLF1 = vectorLF2 - swarm.starData.uPosition;
+                                DysonSail ss = new DysonSail
+                                {
+                                    px = (float)vectorLF1.x,
+                                    py = (float)vectorLF1.y,
+                                    pz = (float)vectorLF1.z,
+                                    vx = (float)uEndVel.x,
+                                    vy = (float)uEndVel.y,
+                                    vz = (float)uEndVel.z,
+                                    gs = 1f
+                                };
+                                lock (tempsails)
+                                {
+                                    tempsails.Add(new Tempsail(ss, __instance.orbitId, (long)(GameMain.history.solarSailLife * 60f + 0.1f), swarm.starData.index));
+                                }
+                            }
+                            else
+                            {
+                                swarm.AddBullet(new SailBullet
+                                {
+                                    maxt = (float)(__instance.targetDist / 5000.0),
+                                    lBegin = vector,
+                                    uEndVel = uEndVel,
+                                    uBegin = vectorLF,
+                                    uEnd = vectorLF2
+                                }, __instance.orbitId);
+
+                            }
+                            __instance.bulletInc -= __instance.bulletInc / __instance.bulletCount;
+                            __instance.bulletCount--;
+                            if (__instance.bulletCount == 0)
+                            {
+                                __instance.bulletInc = 0;
+                            }
+                            lock (consumeRegister)
+                            {
+                                consumeRegister[__instance.bulletId]++;
+                            }
+                            __instance.time = __instance.coldSpend;
+                            __instance.direction = -1;
+                        }
+                    }
+                    else if (__instance.direction == -1)
+                    {
+                        __instance.time -= num3;
+                        if (__instance.time <= 0)
+                        {
+                            __instance.time = 0;
+                            __instance.direction = (flag3 ? 1 : 0);
+                        }
                     }
                     else
                     {
-                        if (power < 0.1f)
-                        {
-                            if (__instance.direction == 1)
-                            {
-                                __instance.time = __instance.time * __instance.coldSpend / __instance.chargeSpend;
-                                __instance.direction = -1;
-                            }
-                            __result = 0U;
-                            return false;
-                        }
-                        __instance.targetState = EjectorComponent.ETargetState.OK;
-                        bool flag = true;
-                        int num4 = __instance.planetId / 100 * 100;
-                        float num5 = __instance.localAlt + __instance.pivotY + (__instance.muzzleY - __instance.pivotY) / Mathf.Max(0.1f, Mathf.Sqrt(1f - __instance.localDir.y * __instance.localDir.y));
-
-                        Vector3 vector = new Vector3(__instance.localPosN.x * num5, __instance.localPosN.y * num5, __instance.localPosN.z * num5);
-                        VectorLF3 uPos = astroPoses[num4].uPos;
-                        VectorLF3 vectorLF = astroPoses[__instance.planetId].uPos + Maths.QRotateLF(astroPoses[__instance.planetId].uRot, vector);
-                        VectorLF3 b = uPos - vectorLF;
-                        VectorLF3 vectorLF2 = uPos + VectorLF3.Cross(swarm.orbits[__instance.orbitId].up, b).normalized * swarm.orbits[__instance.orbitId].radius;
-                        if (!alwaysemissiontemp)
-                        {
-                            Quaternion q = astroPoses[__instance.planetId].uRot * __instance.localRot;
-                            VectorLF3 vectorLF3 = vectorLF2 - vectorLF;
-                            __instance.targetDist = vectorLF3.magnitude;
-                            vectorLF3.x /= __instance.targetDist;
-                            vectorLF3.y /= __instance.targetDist;
-                            vectorLF3.z /= __instance.targetDist;
-                            Vector3 vector2 = Maths.QInvRotate(q, vectorLF3);
-                            __instance.localDir.x = __instance.localDir.x * 0.9f + vector2.x * 0.1f;
-                            __instance.localDir.y = __instance.localDir.y * 0.9f + vector2.y * 0.1f;
-                            __instance.localDir.z = __instance.localDir.z * 0.9f + vector2.z * 0.1f;
-                            if (vector2.y < 0.08715574 || vector2.y > 0.8660254f)
-                            {
-                                __instance.targetState = EjectorComponent.ETargetState.AngleLimit;
-                                flag = false;
-                            }
-                            if (__instance.bulletCount > 0 && flag)
-                            {
-                                for (int i = num4 + 1; i <= __instance.planetId + 2; i++)
-                                {
-                                    if (i != __instance.planetId)
-                                    {
-                                        double num6 = astroPoses[i].uRadius;
-                                        if (num6 > 1.0)
-                                        {
-                                            VectorLF3 vectorLF4 = astroPoses[i].uPos - vectorLF;
-                                            double num7 = vectorLF4.x * vectorLF4.x + vectorLF4.y * vectorLF4.y + vectorLF4.z * vectorLF4.z;
-                                            double num8 = vectorLF4.x * vectorLF3.x + vectorLF4.y * vectorLF3.y + vectorLF4.z * vectorLF3.z;
-                                            if (num8 > 0.0)
-                                            {
-                                                double num9 = num7 - num8 * num8;
-                                                num6 += 120.0;
-                                                if (num9 < num6 * num6)
-                                                {
-                                                    flag = false;
-                                                    __instance.targetState = EjectorComponent.ETargetState.Blocked;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        bool flag2 = __instance.bulletCount > 0;
-                        bool flag3 = flag && flag2;
-                        if (__instance.direction == 1)
-                        {
-                            if (!flag3)
-                            {
-                                __instance.time = __instance.time * __instance.coldSpend / __instance.chargeSpend;
-                                __instance.direction = -1;
-                            }
-                        }
-                        else if (__instance.direction == 0 && flag3)
-                        {
-                            __instance.direction = 1;
-                        }
-                        if (__instance.direction == 1)
-                        {
-                            __instance.time += num3;
-                            if (__instance.time >= __instance.chargeSpend)
-                            {
-                                __instance.fired = true;
-                                animPool[__instance.entityId].time = 10f;
-                                VectorLF3 uEndVel = VectorLF3.Cross(vectorLF2 - uPos, swarm.orbits[__instance.orbitId].up).normalized * Math.Sqrt((double)(swarm.dysonSphere.gravity / swarm.orbits[__instance.orbitId].radius));
-                                if (playcancelsolarbullet)
-                                {
-                                    DysonSail ss = default;
-                                    VectorLF3 vectorLF1 = vectorLF2 - swarm.starData.uPosition;
-                                    ss.px = (float)vectorLF1.x;
-                                    ss.py = (float)vectorLF1.y;
-                                    ss.pz = (float)vectorLF1.z;
-                                    vectorLF1 = uEndVel;
-                                    ss.vx = (float)vectorLF1.x;
-                                    ss.vy = (float)vectorLF1.y;
-                                    ss.vz = (float)vectorLF1.z;
-                                    ss.gs = 1f;
-                                    lock (tempsails)
-                                    {
-                                        tempsails.Add(new Tempsail(ss, __instance.orbitId, (long)(GameMain.history.solarSailLife * 60f + 0.1f), swarm.starData.index));
-                                    }
-                                }
-                                else
-                                {
-                                    swarm.AddBullet(new SailBullet
-                                    {
-                                        maxt = (float)(__instance.targetDist / 5000.0),
-                                        lBegin = vector,
-                                        uEndVel = uEndVel,
-                                        uBegin = vectorLF,
-                                        uEnd = vectorLF2
-                                    }, __instance.orbitId);
-
-                                }
-                                __instance.bulletInc -= __instance.bulletInc / __instance.bulletCount;
-                                __instance.bulletCount--;
-                                if (__instance.bulletCount == 0)
-                                {
-                                    __instance.bulletInc = 0;
-                                }
-                                lock (consumeRegister)
-                                {
-                                    consumeRegister[__instance.bulletId]++;
-                                }
-                                __instance.time = __instance.coldSpend;
-                                __instance.direction = -1;
-                            }
-                        }
-                        else if (__instance.direction == -1)
-                        {
-                            __instance.time -= num3;
-                            if (__instance.time <= 0)
-                            {
-                                __instance.time = 0;
-                                __instance.direction = (flag3 ? 1 : 0);
-                            }
-                        }
-                        else
-                        {
-                            __instance.time = 0;
-                        }
-                        __result = (flag2 ? (flag ? 4U : 3U) : 2U);
+                        __instance.time = 0;
                     }
-                    return false;
+                    __result = (flag2 ? (flag ? 4U : 3U) : 2U);
                 }
-                return true;
+                return false;
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(typeof(PropertySystem), "GetItemTotalProperty")]
             public static void GetItemTotalPropertyPatch(ref int __result)
             {
-                if (Property9999999)
-                    __result = int.MaxValue;
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(ProductionStatistics), "GameTick")]
-            public static bool Prefix(ProductionStatistics __instance)
-            {
-                if (!GameMain.instance.running || !FinallyInit)
-                {
-                    addStatDic = new Dictionary<int, Dictionary<int, long>>();
-                    consumeStatDic = new Dictionary<int, Dictionary<int, long>>();
-                    return true;
-                }
-                if (GameMain.galaxy != null && HalfSecondTimeElapse)
-                {
-                    if (addStatDic != null)
-                    {
-                        var key1s = new List<int>(addStatDic.Keys);
-                        foreach (var key1 in key1s)
-                        {
-                            var key2s = new List<int>(addStatDic[key1].Keys);
-                            int factoryIndex = GameMain.galaxy.PlanetById(key1).factoryIndex;
-                            foreach (var key2 in key2s)
-                            {
-                                if (addStatDic[key1][key2] == 0) continue;
-                                int itemNum = addStatDic[key1][key2] > int.MaxValue ? int.MaxValue : (int)addStatDic[key1][key2];
-                                __instance.factoryStatPool[factoryIndex].productRegister[key2] += itemNum;
-                                addStatDic[key1][key2] -= itemNum;
-                            }
-                        }
-                    }
-                    if (consumeStatDic != null)
-                    {
-                        List<int> key1s = new List<int>(consumeStatDic.Keys);
-                        foreach (var key1 in key1s)
-                        {
-                            int factoryIndex = GameMain.galaxy.PlanetById(key1).factoryIndex;
-                            List<int> key2s = new List<int>(consumeStatDic[key1].Keys);
-                            foreach (var key2 in key2s)
-                            {
-                                if (consumeStatDic[key1][key2] == 0) continue;
-                                int itemNum = consumeStatDic[key1][key2] > int.MaxValue ? int.MaxValue : (int)consumeStatDic[key1][key2];
-                                __instance.factoryStatPool[factoryIndex].consumeRegister[key2] += itemNum;
-                                consumeStatDic[key1][key2] -= itemNum;
-                            }
-                        }
-                    }
-                }
-
-                return true;
+                if (!Property9999999)
+                    return;
+                __result = int.MaxValue;
             }
 
             [HarmonyPrefix]
@@ -1413,41 +1785,44 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(PlatformSystem), "SetReformType")]
             public static void Prefix(ref int type)
             {
-                if (restorewater) type = 0;
+                if (!restorewater)
+                    return;
+                type = 0;
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(typeof(ItemProto), "isFluid")]
             public static void ItemProtoisFluidPatch(ref bool __result)
             {
-                if (Tankcontentall.Value)
+                if (!Tankcontentall.Value)
                 {
-                    __result = true;
+                    return;
                 }
+                __result = true;
             }
 
             [HarmonyPrefix]
             [HarmonyPatch(typeof(BuildTool_Click), "CheckBuildConditions")]
             public static bool CheckBuildConditionsPatchPrefix(BuildTool_Click __instance, ref bool __result)
             {
-                if (PasteBuildAnyWay || build_station_nocondition.Value)
+                if (!PasteBuildAnyWay && !build_station_nocondition.Value)
                 {
-                    for (int i = 0; i < __instance.buildPreviews.Count; i++)
-                    {
-                        var prefab = __instance.buildPreviews[i]?.item?.prefabDesc;
-                        if (prefab != null && prefab.veinMiner)
-                        {
-                            return true;
-                        }
-                        if (build_station_nocondition.Value && !PasteBuildAnyWay && !(prefab.isStation || prefab.isStation || prefab.isCollectStation))
-                        {
-                            return true;
-                        }
-                    }
-                    __result = true;
-                    return false;
+                    return true;
                 }
-                return true;
+                for (int i = 0; i < __instance.buildPreviews.Count; i++)
+                {
+                    var prefab = __instance.buildPreviews[i]?.item?.prefabDesc;
+                    if (prefab != null && prefab.veinMiner)
+                    {
+                        return true;
+                    }
+                    if (build_station_nocondition.Value && !PasteBuildAnyWay && !(prefab.isStation || prefab.isStation || prefab.isCollectStation))
+                    {
+                        return true;
+                    }
+                }
+                __result = true;
+                return false;
             }
         }
 
@@ -1457,21 +1832,23 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(SpraycoaterComponent), "InternalUpdate")]
             public static void SpraycoaterComponentInternalUpdatePrefix(ref SpraycoaterComponent __instance)
             {
-                if (Maxproliferator.Value)
+                if (!Maxproliferator.Value)
                 {
-                    ability = __instance.incAbility;
-                    __instance.incAbility = 10;
+                    return;
                 }
+                ability = __instance.incAbility;
+                __instance.incAbility = 10;
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(typeof(SpraycoaterComponent), "InternalUpdate")]
             public static void SpraycoaterComponentInternalUpdatePostfix(ref SpraycoaterComponent __instance)
             {
-                if (!Maxproliferator.Value && __instance.incAbility > 4)
+                if (Maxproliferator.Value || __instance.incAbility <= 4)
                 {
-                    __instance.incAbility = ability;
+                    return;
                 }
+                __instance.incAbility = ability;
             }
         }
 
@@ -1531,11 +1908,12 @@ namespace Multifunction_mod
             [HarmonyPatch(typeof(CargoTraffic), "TryPickItemAtRear")]
             public static void Prefix(ref int[] needs)
             {
-                if (Tankcontentall.Value && needs != null)
+                if (!Tankcontentall.Value || needs == null)
                 {
-                    if (ItemProto.fluids == needs)
-                        needs = null;
+                    return;
                 }
+                if (ItemProto.fluids == needs)
+                    needs = null;
             }
 
             [HarmonyPrefix]
@@ -1599,9 +1977,7 @@ namespace Multifunction_mod
                             bool breakfor = false;
                             int stackNum = beltnumber % 10;
                             CargoPath cargoPath = __instance.GetCargoPath(belt.segPathId);
-                            int cargoId = -1;
-                            int offset = -1;
-                            cargoPath.GetCargoAtIndex(index, out Cargo cargo, out cargoId, out offset);
+                            cargoPath.GetCargoAtIndex(index, out Cargo cargo, out _, out _);
                             if (cargo.item > 0)
                             {
                                 continue;
@@ -1624,9 +2000,11 @@ namespace Multifunction_mod
                                         if (sc.storage[i].count < stackNum)
                                             break;
                                         int inc1 = Math.Min(sc.storage[i].inc, 4 * stackNum);
-                                        cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1);
-                                        sc.storage[i].count -= stackNum;
-                                        sc.storage[i].inc -= inc1;
+                                        if (cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1))
+                                        {
+                                            sc.storage[i].count -= stackNum;
+                                            sc.storage[i].inc -= inc1;
+                                        }
                                         breakfor = true;
                                     }
                                 }
@@ -1645,7 +2023,10 @@ namespace Multifunction_mod
                                             continue;
                                         }
                                         sc.TakeItem(signalID, stackNum, out int inc1);
-                                        cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1);
+                                        if (!cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1))
+                                        {
+                                            sc.AddItem(signalID, stackNum, inc1, out _);
+                                        }
                                         breakfor = true;
                                         break;
                                     }
@@ -1662,9 +2043,11 @@ namespace Multifunction_mod
                                             continue;
                                         }
                                         int inc1 = Math.Min(tc.fluidInc, stackNum * 4);
-                                        cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1);
-                                        fs.factory.factoryStorage.tankPool[tc.id].fluidInc -= inc1;
-                                        fs.factory.factoryStorage.tankPool[tc.id].fluidCount -= stackNum;
+                                        if (cargoPath.TryInsertItem(index, signalID, (byte)stackNum, (byte)inc1))
+                                        {
+                                            fs.factory.factoryStorage.tankPool[tc.id].fluidInc -= inc1;
+                                            fs.factory.factoryStorage.tankPool[tc.id].fluidCount -= stackNum;
+                                        }
                                         breakfor = true;
                                         break;
                                     }
@@ -1675,9 +2058,14 @@ namespace Multifunction_mod
                         {
                             int statckNum = beltnumber % 20;
                             var cargoPath = __instance.GetCargoPath(belt.segPathId);
+                            cargoPath.GetCargoAtIndex(index, out Cargo cargo, out _, out _);
+                            if (cargo.item > 0)
+                            {
+                                continue;
+                            }
                             foreach (MinerComponent mc in fs.minerPool)
                             {
-                                if (mc.id > 0 && mc.entityId > 0 && mc.productId == signalID && mc.productCount > statckNum)
+                                if (mc.id > 0 && mc.entityId > 0 && mc.productId == signalID && mc.productCount >= statckNum)
                                 {
                                     fs.minerPool[mc.id].productCount -= cargoPath.TryInsertItem(index, signalID, (byte)statckNum, 0) ? statckNum : 0;
                                     break;
