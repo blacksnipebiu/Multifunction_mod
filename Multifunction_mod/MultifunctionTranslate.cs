@@ -7,7 +7,7 @@ namespace Multifunction_mod
         private static Dictionary<string, string> TranslateDict = new Dictionary<string, string>();
         public static string getTranslate(this string s)
         {
-            string result = Localization.language != Language.zhCN && TranslateDict.ContainsKey(s) && TranslateDict[s].Length > 0 ? TranslateDict[s] : s;
+            string result = Multifunction.IsEnglish && TranslateDict.ContainsKey(s) && TranslateDict[s].Length > 0 ? TranslateDict[s] : s;
             //if (!TranslateDict.ContainsKey(s))
             //{
             //    Debug.Log(s);

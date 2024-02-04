@@ -13,7 +13,6 @@ namespace Multifunction_mod
     {
         private bool firstDraw;
         private string stackmultipleStr;
-        private string multipelsmeltStr;
         private Multifunction MainFunction;
         private int whichpannel;
         private Vector2 scrollPosition;
@@ -117,6 +116,7 @@ namespace Multifunction_mod
         private GUIStyle labelmarginStyle;
         private GUIStyle selectedButtonStyle;
         private GUILayoutOption[] slideroptions;
+        private GUILayoutOption[] MoreWidthslideroptions;
         private GUILayoutOption[] textfieldoptions;
         private GUILayoutOption[] menusbuttonoptions;
         private GUILayoutOption[] iconbuttonoptions;
@@ -145,8 +145,7 @@ namespace Multifunction_mod
             RefreshBaseSize = true;
             ColorChanged = true;
             stackmultipleStr = StackMultiple.Value.ToString();
-            multipelsmeltStr = MULTIPELSMELT.Value.ToString();
-            menus = new string[7] { "", "人物", "建筑", "星球", "戴森球", "其它功能", "机甲物流" };
+            menus = new string[8] { "", "人物", "战斗", "建筑", "星球", "戴森球", "其它功能", "机甲物流" };
             TextColor = Textcolor.Value;
             MainWindowTextureColor = mainWindowTextureColor_config.Value;
             MainWindowTexture = new Texture2D(10, 10);
@@ -231,6 +230,7 @@ namespace Multifunction_mod
                 style.fontSize = BaseSize;
                 labelmarginStyle.fontSize = BaseSize;
                 slideroptions = new[] { GUILayout.Width(heightdis * 6) };
+                MoreWidthslideroptions = new[] { GUILayout.Width(heightdis * 8) };
                 textfieldoptions = new[] { GUILayout.Width(heightdis * 3) };
                 menusbuttonoptions = new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis * 4) };
                 iconbuttonoptions = new[] { GUILayout.Height(heightdis), GUILayout.Width(heightdis) };
@@ -288,7 +288,7 @@ namespace Multifunction_mod
                 GUILayout.BeginVertical();
 
                 GUILayout.BeginHorizontal();
-                for (int i = 1; i <= 6; i++)
+                for (int i = 1; i <= 7; i++)
                 {
                     if (whichpannel == i)
                     {
@@ -309,18 +309,21 @@ namespace Multifunction_mod
                         PlayerPannel();
                         break;
                     case 2:
-                        BuildPannel();
+                        BattlePannel();
                         break;
                     case 3:
-                        PlanetPannel();
+                        BuildPannel();
                         break;
                     case 4:
-                        DysonPannel();
+                        PlanetPannel();
                         break;
                     case 5:
-                        OtherPannel();
+                        DysonPannel();
                         break;
                     case 6:
+                        OtherPannel();
+                        break;
+                    case 7:
                         LogisticsPannel();
                         break;
                 }
@@ -343,10 +346,10 @@ namespace Multifunction_mod
         /// <param name="propertyName"></param>
         /// <param name="resulttype"></param>
         /// <returns></returns>
-        public float PropertyDataUIDraw(float num, float left, float right, string propertyName, int resulttype = 0)
+        public float PropertyDataUIDraw(float num, float left, float right, string propertyName, int resulttype = 0, bool morewidth = false)
         {
             GUILayout.BeginHorizontal();
-            float temp = GUILayout.HorizontalSlider(num, left, right, slideroptions);
+            float temp = GUILayout.HorizontalSlider(num, left, right, morewidth ? MoreWidthslideroptions : slideroptions);
             string result;
             if (resulttype == 0)
             {
@@ -356,16 +359,24 @@ namespace Multifunction_mod
             {
                 result = TGMKinttostring(GameMain.mainPlayer.mecha.reactorPowerGen, "W");
             }
-            else
+            else if (resulttype == 2)
             {
                 result = string.Format("{0:N2}", temp);
+            }
+            else if (resulttype == 3)
+            {
+                result = TGMKinttostring(temp, "J");
+            }
+            else
+            {
+                return 0;
             }
             string t = GUILayout.TextField(result, textfieldoptions);
             if (t != result)
             {
                 if (resulttype != 0)
                 {
-                    float.TryParse(Regex.Replace(t, @"^[^0-9]+(.[^0-9]{2})?$", ""), out temp);
+                    temp = ConvertToNumber(t);
                 }
                 else
                 {
@@ -379,6 +390,62 @@ namespace Multifunction_mod
             return temp;
         }
 
+        static float ConvertToNumber(string input)
+        {
+            // 提取数字部分
+            string numberString = "";
+            string tempinput = "";
+            bool dotContain = false;
+            for (int i = 0; i < input.Length; i++)
+            {
+                var c = input[i];
+                if (Char.IsDigit(c))
+                {
+                    numberString += c;
+                }
+                else if (c == '.')
+                {
+                    if (!dotContain)
+                    {
+                        dotContain = true;
+                        numberString += c;
+                    }
+                }
+                else
+                {
+                    tempinput += c;
+                }
+            }
+            input = tempinput;
+            // 提取单位部分
+            string unitString = input.Replace(numberString, "").Replace(".", "").Replace("W", "").Replace("J", "");
+
+            // 将数字字符串转换为双精度浮点数
+            float number = float.Parse(numberString);
+
+            // 根据单位进行相应的转换
+            switch (unitString)
+            {
+                case "":
+                    break;
+                case "K":
+                    number *= 1_000;
+                    break;
+                case "M":
+                    number *= 1_000_000;
+                    break;
+                case "G":
+                    number *= 1_000_000_000;
+                    break;
+                case "T":
+                    number *= 1_000_000_000_000;
+                    break;
+                    // 其他单位的转换逻辑可以在这里添加
+            }
+
+            return number;
+        }
+
         /// <summary>
         /// 玩家面板
         /// </summary>
@@ -387,29 +454,35 @@ namespace Multifunction_mod
             //左侧UI
             GUILayout.BeginHorizontal();
 
-            GUILayout.BeginVertical(GUILayout.Width(Localization.language != Language.zhCN ? 18 * heightdis : 14 * heightdis));
+            GUILayout.BeginVertical(GUILayout.Width(Multifunction.IsEnglish ? 18 * heightdis : 14 * heightdis));
             if (GameMain.mainPlayer != null && propertyData != null)
             {
                 var propertydata = propertyData;
+                if (ChangePlayerbool != GUILayout.Toggle(ChangePlayerbool, "启动属性修改".getTranslate()))
+                {
+                    ChangePlayerbool = !ChangePlayerbool;
+                    if (ChangePlayerbool)
+                    {
+                        propertyData.SetContent(player.mecha, GameMain.history, player.deliveryPackage.stackSizeMultiplier);
+                    }
+                }
                 if (ChangePlayerbool)
                 {
                     propertydata.WalkSpeed = PropertyDataUIDraw(propertydata.WalkSpeed, 1, 100, "走路速度", 2);
                     propertydata.TechSpeed = PropertyDataUIDraw(propertydata.TechSpeed, 1, 10000, "研发速度");
                     propertydata.DroneSpeed = PropertyDataUIDraw(propertydata.DroneSpeed, 1, 100, "小飞机速度");
-                    propertydata.DroneMovement = PropertyDataUIDraw(propertydata.DroneMovement, 1, 100, "小飞机任务点数");
-                    propertydata.DroneCount = PropertyDataUIDraw(propertydata.DroneCount, 1, 400, "小飞机数量");
+                    propertydata.DroneCount = PropertyDataUIDraw(propertydata.DroneCount, 1, 256, "小飞机数量");
                     propertydata.MaxSailSpeed = PropertyDataUIDraw(propertydata.MaxSailSpeed, 1, 10, "最大航行速度");
                     propertydata.MaxWarpSpeed = PropertyDataUIDraw(propertydata.MaxWarpSpeed, 1, 100, "最大曲速");
                     propertydata.BuildArea = PropertyDataUIDraw(propertydata.BuildArea, 80, 400, "建造范围");
-                    propertydata.ReactorPowerGen = PropertyDataUIDraw(propertydata.ReactorPowerGen, 800_000, 500_000_000, "核心功率", 1);
+                    propertydata.ReactorPowerGen = PropertyDataUIDraw(propertydata.ReactorPowerGen, 800_000, 10_000_000_000, "核心功率", 1);
                     propertydata.LogisticCourierSpeed = PropertyDataUIDraw(propertydata.LogisticCourierSpeed, 1, 100, "配送机速度");
-                    propertydata.LogisticDroneSpeedScale = PropertyDataUIDraw(propertydata.LogisticDroneSpeedScale, 1, 100, "运输机速度", 2);
-                    propertydata.LogisticShipSpeedScale = PropertyDataUIDraw(propertydata.LogisticShipSpeedScale, 1, 100, "运输船速度", 2);
+                    propertydata.LogisticDroneSpeedScale = PropertyDataUIDraw(propertydata.LogisticDroneSpeedScale, 1, 10000, "运输机速度", 2);
+                    propertydata.LogisticShipSpeedScale = PropertyDataUIDraw(propertydata.LogisticShipSpeedScale, 1, 10000, "运输船速度", 2);
                     propertydata.LogisticCourierCarries = PropertyDataUIDraw(propertydata.LogisticCourierCarries, 1, 10000, "配送机载量");
                     propertydata.LogisticDroneCarries = PropertyDataUIDraw(propertydata.LogisticDroneCarries, 20, 10000, "运输机载量");
                     propertydata.LogisticShipCarries = PropertyDataUIDraw(propertydata.LogisticShipCarries, 100, 100000, "运输船载量");
-                    propertydata.MiningSpeedScale = PropertyDataUIDraw(propertydata.MiningSpeedScale, 1, 100, "采矿机速度倍率", 2);
-                    propertydata.InserterStackCount = PropertyDataUIDraw(propertydata.InserterStackCount, 1, 100, "极速分拣器数量");
+                    propertydata.MiningSpeedScale = PropertyDataUIDraw(propertydata.MiningSpeedScale, 1, 10000, "采矿机速度倍率", 2);
                     propertydata.LabLevel = PropertyDataUIDraw(propertydata.LabLevel, 2, 100, "建筑堆叠高度");
                     propertydata.StorageLevel = PropertyDataUIDraw(propertydata.StorageLevel, 1, 20, "货物集装数量");
                     propertydata.StackSizeMultiplier = PropertyDataUIDraw(propertydata.StackSizeMultiplier, 1, 20, "物流背包堆叠倍率");
@@ -419,20 +492,18 @@ namespace Multifunction_mod
                     PropertyDataUIDraw(propertydata.WalkSpeed, 1, 100, "走路速度", 2);
                     PropertyDataUIDraw(propertydata.TechSpeed, 1, 10000, "研发速度");
                     PropertyDataUIDraw(propertydata.DroneSpeed, 1, 100, "小飞机速度");
-                    PropertyDataUIDraw(propertydata.DroneMovement, 1, 100, "小飞机任务点数");
                     PropertyDataUIDraw(propertydata.DroneCount, 1, 400, "小飞机数量");
                     PropertyDataUIDraw(propertydata.MaxSailSpeed, 1, 10, "最大航行速度");
                     PropertyDataUIDraw(propertydata.MaxWarpSpeed, 1, 100, "最大曲速");
                     PropertyDataUIDraw(propertydata.BuildArea, 80, 400, "建造范围");
-                    PropertyDataUIDraw(propertydata.ReactorPowerGen, 1000000, 500000000, "核心功率", 1);
+                    PropertyDataUIDraw(propertydata.ReactorPowerGen, 1000000, 10_000_000_000, "核心功率", 1);
                     PropertyDataUIDraw(propertydata.LogisticCourierSpeed, 1, 100, "配送机速度");
-                    PropertyDataUIDraw(propertydata.LogisticDroneSpeedScale, 1, 100, "运输机速度", 2);
-                    PropertyDataUIDraw(propertydata.LogisticShipSpeedScale, 1, 100, "运输船速度", 2);
+                    PropertyDataUIDraw(propertydata.LogisticDroneSpeedScale, 1, 10000, "运输机速度", 2);
+                    PropertyDataUIDraw(propertydata.LogisticShipSpeedScale, 1, 10000, "运输船速度", 2);
                     PropertyDataUIDraw(propertydata.LogisticCourierCarries, 1, 10000, "配送机载量");
                     PropertyDataUIDraw(propertydata.LogisticDroneCarries, 20, 10000, "运输机载量");
                     PropertyDataUIDraw(propertydata.LogisticShipCarries, 100, 100000, "运输船载量");
-                    PropertyDataUIDraw(propertydata.MiningSpeedScale, 1, 100, "采矿机速度倍率", 2);
-                    PropertyDataUIDraw(propertydata.InserterStackCount, 1, 100, "极速分拣器数量");
+                    PropertyDataUIDraw(propertydata.MiningSpeedScale, 1, 10000, "采矿机速度倍率", 2);
                     PropertyDataUIDraw(propertydata.LabLevel, 2, 100, "建筑堆叠高度");
                     PropertyDataUIDraw(propertydata.StorageLevel, 1, 20, "货物集装数量");
                     PropertyDataUIDraw(propertydata.StackSizeMultiplier, 1, 20, "物流背包堆叠倍率");
@@ -448,8 +519,10 @@ namespace Multifunction_mod
                 Property9999999 = GUILayout.Toggle(Property9999999, "无限元数据".getTranslate());
                 DroneNoenergy_bool.Value = GUILayout.Toggle(DroneNoenergy_bool.Value, "小飞机不耗能".getTranslate());
                 Infiniteplayerpower.Value = GUILayout.Toggle(Infiniteplayerpower.Value, "无限机甲能量".getTranslate());
+                EnableTp.Value = GUILayout.Toggle(EnableTp.Value, "启用传送".getTranslate());
                 unlockpointtech = GUILayout.Toggle(unlockpointtech, "科技点击解锁".getTranslate());
                 dismantle_but_nobuild.Value = GUILayout.Toggle(dismantle_but_nobuild.Value, "不往背包放东西".getTranslate());
+                MiddleMouseLockGrid.Value = GUILayout.Toggle(MiddleMouseLockGrid.Value, "鼠标中键锁定玩家背包格子Max".getTranslate());
                 if (QuickHandcraft.Value != GUILayout.Toggle(QuickHandcraft.Value, "机甲制造MAX".getTranslate()))
                 {
                     QuickHandcraft.Value = !QuickHandcraft.Value;
@@ -478,7 +551,6 @@ namespace Multifunction_mod
                 noneedwarp.Value = GUILayout.Toggle(noneedwarp.Value, "无需翘曲器曲速飞行".getTranslate());
             }
             {
-                if (GUILayout.Button((ChangePlayerbool ? "停止修改" : "启动修改").getTranslate())) ChangePlayerbool = !ChangePlayerbool;
                 if (GUILayout.Button("清空背包".getTranslate())) MainFunction.Clearpackage();
                 if (GUILayout.Button("初始化玩家".getTranslate())) MainFunction.InitPlayer();
 
@@ -505,6 +577,174 @@ namespace Multifunction_mod
             GUILayout.EndHorizontal();
 
 
+        }
+
+        /// <summary>
+        /// 战斗面板
+        /// </summary>
+        void BattlePannel()
+        {
+            GUILayout.BeginHorizontal();
+
+            GUILayout.BeginVertical();
+
+            {
+                LockPlayerHp.Value = GUILayout.Toggle(LockPlayerHp.Value, "玩家锁血".getTranslate());
+                LockBuildHp.Value = GUILayout.Toggle(LockBuildHp.Value, "建筑锁血".getTranslate());
+                LockEnemyHp.Value = GUILayout.Toggle(LockEnemyHp.Value, "怪物锁血".getTranslate());
+                PlayerQuickAttack.Value = GUILayout.Toggle(PlayerQuickAttack.Value, "玩家攻速Max".getTranslate());
+                PlayerFakeDeath.Value = GUILayout.Toggle(PlayerFakeDeath.Value, "玩家隐身".getTranslate());
+                TurrentKeepSuperNoval.Value = GUILayout.Toggle(TurrentKeepSuperNoval.Value, "炮塔永久超新星".getTranslate());
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(20);
+                TurrentKeepSuperNovalQuickKey.Value = GUILayout.Toggle(TurrentKeepSuperNovalQuickKey.Value, "启用快捷键(ctrl+s)".getTranslate());
+                GUILayout.EndHorizontal();
+                ClickGenerateDFRelay = GUILayout.Toggle(ClickGenerateDFRelay, "点击生成中继站".getTranslate());
+                ClickKillEnemy.Value = GUILayout.Toggle(ClickKillEnemy.Value, "点击杀死敌人".getTranslate());
+
+                if (ClickKillEnemy.Value)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("点击模式".getTranslate());
+                    bool tempClick = GUILayout.Toggle(ClickKillEnemyMode.Value == 0, "点按".getTranslate());
+                    bool tempJustPress = GUILayout.Toggle(ClickKillEnemyMode.Value == 1, "按压".getTranslate());
+
+                    if (tempClick && ClickKillEnemyMode.Value == 1)
+                    {
+                        ClickKillEnemyMode.Value = 0;
+                    }
+                    else if (tempJustPress && ClickKillEnemyMode.Value == 0)
+                    {
+                        ClickKillEnemyMode.Value = 1;
+                    }
+                    GUILayout.EndHorizontal();
+                    ClickKillEnemyBaseChain = GUILayout.Toggle(ClickKillEnemyBaseChain, "基地核心连锁拆除".getTranslate());
+                }
+                LocalAlwaysClearThreat.Value = GUILayout.Toggle(LocalAlwaysClearThreat.Value, "星球永远0威胁".getTranslate());
+                LocalAlwaysMaxThreat.Value = GUILayout.Toggle(LocalAlwaysMaxThreat.Value, "玩家所在星球永远满威胁".getTranslate());
+                SpaceAlwaysClearThreat.Value = GUILayout.Toggle(SpaceAlwaysClearThreat.Value, "太空永远0威胁".getTranslate());
+                SpaceAlwaysMaxThreat.Value = GUILayout.Toggle(SpaceAlwaysMaxThreat.Value, "玩家所在星系永远满威胁".getTranslate());
+
+                ModifyDarkFogLevel.Value = GUILayout.Toggle(ModifyDarkFogLevel.Value, "调整黑雾怪物等级".getTranslate());
+                GUILayout.Label("黑雾怪物等级".getTranslate() + ":" + ModifyDarkFogLevelValue.Value, style);
+                ModifyDarkFogLevelValue.Value = (int)GUILayout.HorizontalSlider(ModifyDarkFogLevelValue.Value, 0, 30);
+                if (GUILayout.Button("设置当前星球黑雾等级"))
+                {
+                    var dfbases = GameMain.localPlanet?.factory?.enemySystem?.bases;
+                    if (dfbases != null)
+                    {
+                        for (int i = 1; i < dfbases.cursor; i++)
+                        {
+                            DFGBaseComponent dfgbaseComponent2 = dfbases[i];
+                            if (dfgbaseComponent2 != null && dfgbaseComponent2.id == i)
+                            {
+                                Debug.Log(i);
+                                dfgbaseComponent2.evolve.level = ModifyDarkFogLevelValue.Value;
+                            }
+                        }
+                    }
+                }
+                if (GUILayout.Button("设置当前星系太空黑雾等级") && GameMain.localStar != null)
+                {
+                    var dfhives = GameMain.data?.spaceSector?.dfHives;
+                    if (dfhives != null)
+                    {
+                        foreach (var dfhive in dfhives)
+                        {
+                            if (dfhive != null && dfhive.starData != null && dfhive.starData.id == GameMain.localStar.id)
+                            {
+                                dfhive.evolve.level = ModifyDarkFogLevelValue.Value;
+                            }
+                        }
+                    }
+                }
+                //DarkFogBuilderQuickBuild.Value = GUILayout.Toggle(DarkFogBuilderQuickBuild.Value, "黑雾巢穴快速产怪".getTranslate());
+
+            }
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+            GUILayout.BeginVertical();
+
+            {
+
+                var propertydata = propertyData;
+                if (GameMain.mainPlayer != null && propertyData != null)
+                {
+                    if (ChangePlayerbool != GUILayout.Toggle(ChangePlayerbool, "启动属性修改".getTranslate()))
+                    {
+                        ChangePlayerbool = !ChangePlayerbool;
+                        if (ChangePlayerbool)
+                        {
+                            propertyData.SetContent(player.mecha, GameMain.history, player.deliveryPackage.stackSizeMultiplier);
+                        }
+                    }
+                    ModeConfig freeMode = Configs.freeMode;
+                    if (ChangePlayerbool)
+                    {
+                        propertydata.KineticDamageScale = PropertyDataUIDraw(propertydata.KineticDamageScale, 1, 100, "动能武器伤害系数", 2, true);
+                        propertydata.EnergyDamageScale = PropertyDataUIDraw(propertydata.EnergyDamageScale, 1, 100, "能量武器伤害系数", 2, true);
+                        propertydata.BlastDamageScale = PropertyDataUIDraw(propertydata.BlastDamageScale, 1, 100, "爆破武器伤害系数", 2, true);
+                        propertydata.MagneticDamageScale = PropertyDataUIDraw(propertydata.MagneticDamageScale, 1, 100, "电磁武器伤害系数", 2, true);
+
+                        propertydata.GlobalHpEnhancement = PropertyDataUIDraw(propertydata.GlobalHpEnhancement, 0, 100, "全局耐久度倍率", 2, true);
+                        propertydata.EnemyDropScale = PropertyDataUIDraw(propertydata.EnemyDropScale, 0, 1000, "残骸产出倍率", 2, true);
+                        propertydata.EnergyShieldRadius = PropertyDataUIDraw(propertydata.EnergyShieldRadius, freeMode.energyShieldRadius, 450, "玩家护盾半径", 2, true);
+                        propertydata.EnergyShieldCapacity = (long)PropertyDataUIDraw(propertydata.EnergyShieldCapacity, freeMode.energyShieldCapacity, 100_000_000_000, "玩家护盾能量上限", 3, true);
+                        propertydata.HpMaxUpgrade = (int)PropertyDataUIDraw(propertydata.HpMaxUpgrade, 0, 100000, "玩家额外血量", 0, true);
+                        propertydata.LaserAttackLocalRange = PropertyDataUIDraw(propertydata.LaserAttackLocalRange, freeMode.mechaLocalLaserAttackRange, 150, "机甲激光本地攻击范围", 2, true);
+                        propertydata.LaserAttackSpaceRange = PropertyDataUIDraw(propertydata.LaserAttackSpaceRange, freeMode.mechaSpaceLaserAttackRange, 15000, "机甲激光太空攻击范围", 2, true);
+                        propertydata.LaserAttackDamage = PropertyDataUIDraw(propertydata.LaserAttackDamage, 0, 10000, "机甲激光伤害", 2, true);
+                        propertydata.LaserEnergyCost = PropertyDataUIDraw(propertydata.LaserEnergyCost, 0, freeMode.mechaLocalLaserEnergyCost, "机甲激光消耗能量", 3,
+                            true);
+
+                        propertydata.CombatDroneDamageRatio = PropertyDataUIDraw(propertydata.CombatDroneDamageRatio, 1, 100, "战斗飞机伤害倍率", 2, true);
+                        propertydata.CombatDroneROFRatio = PropertyDataUIDraw(propertydata.CombatDroneROFRatio, 1, 100, "战斗飞机攻击速度倍率", 2, true);
+                        propertydata.CombatDroneDurabilityRatio = PropertyDataUIDraw(propertydata.CombatDroneDurabilityRatio, 1, 100, "战斗飞机耐久度倍率", 2, true);
+                        propertydata.CombatDroneSpeedRatio = PropertyDataUIDraw(propertydata.CombatDroneSpeedRatio, 1, 100, "战斗飞机速度倍率", 2, true);
+
+                        propertydata.CombatShipDamageRatio = PropertyDataUIDraw(propertydata.CombatShipDamageRatio, 1, 100, "战斗飞船伤害倍率", 2, true);
+                        propertydata.CombatShipROFRatio = PropertyDataUIDraw(propertydata.CombatShipROFRatio, 1, 100, "战斗飞船攻击速度倍率", 2, true);
+                        propertydata.CombatShipDurabilityRatio = PropertyDataUIDraw(propertydata.CombatShipDurabilityRatio, 1, 100, "战斗飞船耐久度倍率", 2, true);
+                        propertydata.CombatShipSpeedRatio = PropertyDataUIDraw(propertydata.CombatShipSpeedRatio, 1, 100, "战斗飞船速度倍率", 2, true);
+
+                        propertydata.PlanetaryATFieldEnergyRate = (int)PropertyDataUIDraw(propertydata.PlanetaryATFieldEnergyRate, 1, 100, "星球防御盾能量倍率", 2, true);
+                    }
+                    else
+                    {
+                        PropertyDataUIDraw(propertydata.KineticDamageScale, 1, 100, "动能武器伤害系数", 2, true);
+                        PropertyDataUIDraw(propertydata.EnergyDamageScale, 1, 100, "能量武器伤害系数", 2, true);
+                        PropertyDataUIDraw(propertydata.BlastDamageScale, 1, 100, "爆破武器伤害系数", 2, true);
+                        PropertyDataUIDraw(propertydata.MagneticDamageScale, 1, 100, "电磁武器伤害系数", 2, true);
+
+                        PropertyDataUIDraw(propertydata.GlobalHpEnhancement, 0, 100, "全局耐久度倍率", 2, true);
+                        PropertyDataUIDraw(propertydata.EnemyDropScale, 0, 1000, "残骸产出倍率", 2, true);
+                        PropertyDataUIDraw(propertydata.EnergyShieldRadius, freeMode.energyShieldRadius, 450, "玩家护盾半径", 2, true);
+                        PropertyDataUIDraw(propertydata.EnergyShieldCapacity, freeMode.energyShieldCapacity, 100_000_000_000, "玩家护盾能量上限", 3, true);
+                        PropertyDataUIDraw(propertydata.HpMaxUpgrade, 0, 100000, "玩家额外血量", 1, true);
+                        PropertyDataUIDraw(propertydata.LaserAttackLocalRange, freeMode.mechaLocalLaserAttackRange, 150, "机甲激光本地攻击范围", 2, true);
+                        PropertyDataUIDraw(propertydata.LaserAttackSpaceRange, freeMode.mechaSpaceLaserAttackRange, 15000, "机甲激光太空攻击范围", 2, true);
+                        PropertyDataUIDraw(propertydata.LaserAttackDamage, 0, 10000, "机甲激光伤害", 2, true);
+                        //PropertyDataUIDraw(propertydata.LaserEnergyCapacity, freeMode.mechaLaserEnergyCapacity, 1_000_000, "机甲激光能量存储上限", 3, true);
+                        PropertyDataUIDraw(propertydata.LaserEnergyCost, 0, freeMode.mechaLocalLaserEnergyCost, "机甲激光消耗能量", 3, true);
+
+                        PropertyDataUIDraw(propertydata.CombatDroneDamageRatio, 1, 100, "战斗飞机伤害倍率", 2, true);
+                        PropertyDataUIDraw(propertydata.CombatDroneROFRatio, 1, 100, "战斗飞机攻击速度倍率", 2, true);
+                        PropertyDataUIDraw(propertydata.CombatDroneDurabilityRatio, 1, 100, "战斗飞机耐久度倍率", 2, true);
+                        PropertyDataUIDraw(propertydata.CombatDroneSpeedRatio, 1, 100, "战斗飞机速度倍率", 2, true);
+
+                        PropertyDataUIDraw(propertydata.CombatShipDamageRatio, 1, 100, "战斗飞船伤害倍率", 2, true);
+                        PropertyDataUIDraw(propertydata.CombatShipROFRatio, 1, 100, "战斗飞船攻击速度倍率", 2, true);
+                        PropertyDataUIDraw(propertydata.CombatShipDurabilityRatio, 1, 100, "战斗飞船耐久度倍率", 2, true);
+                        PropertyDataUIDraw(propertydata.CombatShipSpeedRatio, 1, 100, "战斗飞船速度倍率", 2, true);
+
+                        PropertyDataUIDraw(propertydata.PlanetaryATFieldEnergyRate, 1, 100, "星球防御盾能量倍率", 2, true);
+                    }
+                }
+            }
+            GUILayout.EndVertical();
+
+            GUILayout.EndHorizontal();
         }
 
         /// <summary>
@@ -540,7 +780,7 @@ namespace Multifunction_mod
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.Space(BaseSize);
-                    noneedtrashsand.Value = GUILayout.Toggle(noneedtrashsand.Value, "不需要沙土".getTranslate());
+                    needtrashsand.Value = GUILayout.Toggle(needtrashsand.Value, "需要沙土".getTranslate());
                     GUILayout.EndHorizontal();
                 }
                 StationMiner.Value = GUILayout.Toggle(StationMiner.Value, "星球矿机".getTranslate());
@@ -843,45 +1083,8 @@ namespace Multifunction_mod
 
             GUILayout.Space(heightdis);
             GUILayout.BeginVertical();
+
             restorewater = GUILayout.Toggle(restorewater, "还原海洋".getTranslate());
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("地基类型");
-            if (GUILayout.Button("<"))
-            {
-                MainFunction.ReformType--;
-                if (MainFunction.ReformType < 0)
-                {
-                    MainFunction.ReformType = 7;
-                }
-            }
-            GUILayout.Label(MainFunction.ReformType.ToString());
-            if (GUILayout.Button(">"))
-            {
-                MainFunction.ReformType++;
-                MainFunction.ReformType %= 8;
-            }
-
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("颜色类型");
-            if (GUILayout.Button("<"))
-            {
-                MainFunction.ReformColor--;
-                if (MainFunction.ReformColor < 0)
-                {
-                    MainFunction.ReformColor = 31;
-                }
-            }
-            GUILayout.Label(MainFunction.ReformColor.ToString());
-            if (GUILayout.Button(">"))
-            {
-                MainFunction.ReformColor++;
-                MainFunction.ReformColor %= 32;
-            }
-            ReformTypeConfig.Value = MainFunction.ReformType;
-            ReformColorConfig.Value = MainFunction.ReformColor;
-
-            GUILayout.EndHorizontal();
             var tempstr = new string[8] { !restorewater ? "铺平整个星球" : "还原全部海洋", "掩埋全部矿", "删除全部矿", "超密铺采集器", "删除当前星球所有建筑", "删除当前星球所有建筑(不掉落)", "初始化当前星球", "初始化当前星球(不要海洋)" };
             for (int i = 0; i < tempstr.Length; i++)
             {
@@ -889,7 +1092,7 @@ namespace Multifunction_mod
                 {
                     switch (i)
                     {
-                        case 0: MainFunction.OnSetBase(0); break;
+                        case 0: MainFunction.OnSetBase(); break;
                         case 1: veinControlProperty.BuryAllvein(); break;
                         case 2: veinControlProperty.RemoveAllvein(); break;
                         case 3: MainFunction.SetMaxGasStation(); break;
@@ -1096,16 +1299,6 @@ namespace Multifunction_mod
                     if (GUILayout.Button("设置".getTranslate()))
                     {
                         MainFunction.SetmultipleItemStatck(multiple);
-                    }
-                    GUILayout.EndHorizontal();
-                    GUILayout.Label("冶炼倍数".getTranslate() + ":", style);
-                    GUILayout.BeginHorizontal();
-                    multipelsmeltStr = Regex.Replace(GUILayout.TextField(multipelsmeltStr, 10, GUILayout.MinWidth(heightdis * 3)), @"[^0-9]", "");
-                    multiple = IntParseLimit(multipelsmeltStr, 1, 100);
-                    multipelsmeltStr = multiple.ToString();
-                    if (GUILayout.Button("设置".getTranslate()))
-                    {
-                        MainFunction.Setmultiplesmelt(multiple);
                     }
                     GUILayout.EndHorizontal();
                     if (GUILayout.Button("取消所有勾选".getTranslate()))
@@ -1346,7 +1539,7 @@ namespace Multifunction_mod
             int t = 0;
             if (num < 1000)
                 return num + unit;
-            while (tempcoreEnergyCap >= 1000)
+            while (tempcoreEnergyCap >= 999.9)
             {
                 t += 1;
                 tempcoreEnergyCap /= 1000;

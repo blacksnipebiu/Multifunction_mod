@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using static Multifunction_mod.Multifunction;
+using Quaternion = UnityEngine.Quaternion;
+using Vector3 = UnityEngine.Vector3;
 
 namespace Multifunction_mod
 {
@@ -36,9 +38,7 @@ namespace Multifunction_mod
                 if (i.Name == "TakeTailItems" && i.ReturnType == typeof(void))
                 {
                     var prefix = typeof(Multifunctionpatch).GetMethod("TakeTailItemsPatch");
-                    var harmonyMethod = new HarmonyMethod(prefix);
-                    harmony.Patch(i, harmonyMethod);
-                    break;
+                    harmony.Patch(i, new HarmonyMethod(prefix));
                 }
             }
 
@@ -55,6 +55,7 @@ namespace Multifunction_mod
             harmony.PatchAll(typeof(PlanetTransportPatch));
             harmony.PatchAll(typeof(TankComponentPatch));
             harmony.PatchAll(typeof(SpraycoaterComponentPatch));
+            harmony.PatchAll(typeof(CombatPatch));
         }
 
         public static bool TakeTailItemsPatch(StorageComponent __instance, ref int itemId)
@@ -269,6 +270,37 @@ namespace Multifunction_mod
                         }
                     }
                     __result = true;
+                    return false;
+                }
+                return true;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(Player), "TryAddItemToPackage")]
+            public static bool PlayerTryAddItemToPackage(int itemId)
+            {
+                if (!dismantle_but_nobuild.Value || itemId == 1099)
+                {
+                    return true;
+                }
+                return false;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(Player), "SendItemToPlayer")]
+            public static bool PlayerSendItemToPlayer(ref int itemId, ref int itemCount, ref int itemInc, bool toPackage, ItemBundle sentList)
+            {
+                if (!dismantle_but_nobuild.Value || itemId == 1099)
+                {
+                    return true;
+                }
+
+                if (itemId > 0 && itemCount > 0 && toPackage)
+                {
+                    sentList?.Alter(itemId, itemCount);
+                    itemId = 0;
+                    itemCount = 0;
+                    itemInc = 0;
                     return false;
                 }
                 return true;
@@ -606,6 +638,33 @@ namespace Multifunction_mod
                     __instance._Close();
                 }
             }
+
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(UIStarmap), "UpdateCursorView")]
+            public static void UIStarmapUpdateCursorView(UIStarmap __instance)
+            {
+                if (EnableTp.Value)
+                {
+                    if (__instance.focusPlanet != null)
+                    {
+                        Player mainPlayer = GameMain.mainPlayer;
+                        __instance.fastTravelButton.gameObject.SetActive(mainPlayer.planetId != __instance.focusPlanet.planet.id && !mainPlayer.warping);
+                    }
+                }
+            }
+
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(UIStarmap), "OnFastTravelButtonClick")]
+            public static void UIStarmapOnFastTravelButtonClick(UIStarmap __instance)
+            {
+                if (EnableTp.Value)
+                {
+                    if (__instance.focusPlanet != null)
+                    {
+                        GameMain.mainPlayer.controller.actionSail.StartFastTravelToPlanet(__instance.focusPlanet.planet);
+                    }
+                }
+            }
         }
 
         public class PowerSystemPatch
@@ -635,9 +694,19 @@ namespace Multifunction_mod
                 {
                     return;
                 }
+                int entityId = __instance.consumerPool[__result].entityId;
+                int modelIndex = __instance.factory.entityPool[entityId].modelIndex;
+
+                if (modelIndex > 0)
+                {
+                    ModelProto modelProto = LDB.models.modelArray[modelIndex];
+                    if (modelProto?.prefabDesc != null && modelProto.prefabDesc.isFieldGenerator)
+                    {
+                        return;
+                    }
+                }
                 __instance.consumerPool[__result].requiredEnergy = 0;
                 __instance.consumerPool[__result].idleEnergyPerTick = 0;
-                __instance.consumerPool[__result].servedEnergy = 0;
                 __instance.consumerPool[__result].workEnergyPerTick = 0;
             }
 
@@ -677,107 +746,6 @@ namespace Multifunction_mod
 
         public class PlanetFactoryPatch
         {
-
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
-            public static void ComputeFlattenTerrainReformPatch(PlanetFactory __instance, Vector3[] points, Vector3 center, float radius, int pointsCount, float fade0 = 3f)
-            {
-                if (!restorewater) return;
-                PlanetRawData data = __instance.planet.data;
-                if (tmp_levelChanges == null)
-                    tmp_levelChanges = new Dictionary<int, int>();
-                tmp_levelChanges.Clear();
-                Quaternion quaternion = Maths.SphericalRotation(center, 22.5f);
-                float realRadius = __instance.planet.realRadius;
-                Vector3[] vertices = data.vertices;
-                ushort[] heightData = data.heightData;
-                float num1 = Mathf.Min(9f, Mathf.Abs((float)((heightData[data.QueryIndex(center)] - (double)__instance.planet.realRadius * 100.0 + 20.0) * 0.00999999977648258 * 2.0)));
-                fade0 += num1;
-                float num2 = radius + fade0;
-                float num3 = num2 * num2;
-                float num4 = (float)((double)realRadius * 3.14159274101257 / (__instance.planet.precision * 2.0));
-                int num5 = Mathf.CeilToInt((float)((double)num2 * 1.41400003433228 / (double)num4 * 1.5 + 0.5));
-                Vector3[] vector3Array = new Vector3[9]
-                {
-                    center,
-                    center + quaternion * (new Vector3(0.0f, 0.0f, 1.414f) * num2),
-                    center + quaternion * (new Vector3(0.0f, 0.0f, -1.414f) * num2),
-                    center + quaternion * (new Vector3(1.414f, 0.0f, 0.0f) * num2),
-                    center + quaternion * (new Vector3(-1.414f, 0.0f, 0.0f) * num2),
-                    center + quaternion * (new Vector3(1f, 0.0f, 1f) * num2),
-                    center + quaternion * (new Vector3(-1f, 0.0f, -1f) * num2),
-                    center + quaternion * (new Vector3(1f, 0.0f, -1f) * num2),
-                    center + quaternion * (new Vector3(-1f, 0.0f, 1f) * num2)
-                };
-                int stride = data.stride;
-                int dataLength = data.dataLength;
-                float num6 = 8f;
-                foreach (Vector3 vpos in vector3Array)
-                {
-                    int num8 = data.QueryIndex(vpos);
-                    for (int index1 = -num5; index1 <= num5; ++index1)
-                    {
-                        int num9 = num8 + index1 * stride;
-                        if (num9 >= 0 && num9 < dataLength)
-                        {
-                            for (int index2 = -num5; index2 <= num5; ++index2)
-                            {
-                                int index3 = num9 + index2;
-                                if ((uint)index3 < dataLength)
-                                {
-                                    Vector3 vector3_1;
-                                    vector3_1.x = vertices[index3].x * realRadius;
-                                    vector3_1.y = vertices[index3].y * realRadius;
-                                    vector3_1.z = vertices[index3].z * realRadius;
-                                    Vector3 vector3_2;
-                                    vector3_2.x = vector3_1.x - center.x;
-                                    vector3_2.y = vector3_1.y - center.y;
-                                    vector3_2.z = vector3_1.z - center.z;
-                                    if (!tmp_levelChanges.ContainsKey(index3))
-                                    {
-                                        float num10 = float.PositiveInfinity;
-                                        for (int index4 = 0; index4 < pointsCount; ++index4)
-                                        {
-                                            double num11 = points[index4].x - vector3_1.x;
-                                            float num12 = points[index4].y - vector3_1.y;
-                                            float num13 = points[index4].z - vector3_1.z;
-                                            float num14 = (float)(num11 * num11 + (double)num12 * (double)num12 + (double)num13 * (double)num13);
-                                            num10 = (double)num10 < (double)num14 ? num10 : num14;
-                                        }
-                                        int num15;
-                                        if ((double)num10 <= (double)num6)
-                                        {
-                                            num15 = 3;
-                                        }
-                                        else
-                                        {
-                                            float num11 = num10 - num6;
-                                            if ((double)num11 <= (double)fade0 * (double)fade0)
-                                            {
-                                                float num12 = num11 / (fade0 * fade0);
-                                                if ((double)num12 <= 0.111111097037792)
-                                                    num15 = 2;
-                                                else if ((double)num12 <= 0.444444388151169)
-                                                    num15 = 1;
-                                                else if ((double)num12 < 1.0)
-                                                    num15 = 0;
-                                                else
-                                                    continue;
-                                            }
-                                            else
-                                                continue;
-                                        }
-                                        tmp_levelChanges[index3] = num15;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-
-            }
-
             [HarmonyPostfix]
             [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
             public static void PlanetFactoryNoComsumeSand(ref int __result)
@@ -785,6 +753,10 @@ namespace Multifunction_mod
                 if (!InfiniteSand.Value)
                 {
                     return;
+                }
+                if (GameMain.mainPlayer != null && GameMain.mainPlayer.sandCount < int.MaxValue)
+                {
+                    GameMain.mainPlayer.SetSandCount(int.MaxValue);
                 }
                 __result = 0;
             }
@@ -815,6 +787,61 @@ namespace Multifunction_mod
                 return !entityitemnoneed;
             }
 
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(PlanetFactory), "CreateEntityLogicComponents")]
+            public static void CreateEntityLogicComponentsPatch(PlanetFactory __instance, int entityId, PrefabDesc desc, int prebuildId)
+            {
+                if (desc.isStation && !string.IsNullOrEmpty(AutoChangeStationName.Value))
+                {
+                    __instance.WriteExtraInfoOnPrebuild(prebuildId, AutoChangeStationName.Value.getTranslate());
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(ConstructionSystem), "GameTick")]
+            public static void ConstructionSystemGameTick(ConstructionSystem __instance)
+            {
+                if (BuildNotime_bool.Value)
+                {
+                    PlanetFactory planetFactory = player?.factory;
+                    if (GameMain.localPlanet == null || planetFactory == null)
+                    {
+                        return;
+                    }
+
+                    PrebuildData[] prebuildPool = planetFactory.prebuildPool;
+                    if (planetFactory.prebuildCount <= 0)
+                    {
+                        return;
+                    }
+
+                    int num = 0;
+                    PlanetFactory.batchBuild = true;
+                    HighStopwatch highStopwatch = new HighStopwatch();
+                    highStopwatch.Begin();
+                    planetFactory.BeginFlattenTerrain();
+                    for (int i = planetFactory.prebuildCursor - 1; i > 0; i--)
+                    {
+                        if (prebuildPool[i].itemRequired > 0 && !Infinitething.Value && !ArchitectMode.Value) continue;
+                        if (prebuildPool[i].id == i && !prebuildPool[i].isDestroyed)
+                        {
+                            planetFactory.BuildFinally(GameMain.mainPlayer, prebuildPool[i].id, false);
+                            num++;
+                        }
+                    }
+
+                    planetFactory.EndFlattenTerrain();
+
+                    PlanetFactory.batchBuild = false;
+                    if (num > 0)
+                    {
+                        GameMain.localPlanet.physics?.raycastLogic?.NotifyBatchObjectRemove();
+                        GameMain.localPlanet.audio?.SetPlanetAudioDirty();
+                    }
+                }
+            }
+
+
         }
 
         public class PlanetTransportPatch
@@ -822,7 +849,7 @@ namespace Multifunction_mod
             //自动改名
             [HarmonyPostfix]
             [HarmonyPatch(typeof(PlanetTransport), "NewStationComponent")]
-            public static void PlanetTransportNewStationComponent(ref StationComponent __result, PlanetTransport __instance)
+            public static void PlanetTransportNewStationComponent(ref StationComponent __result, PlanetTransport __instance, int _entityId)
             {
                 if (__result.isCollector)
                 {
@@ -835,13 +862,17 @@ namespace Multifunction_mod
                 }
                 if (!string.IsNullOrEmpty(AutoChangeStationName.Value))
                 {
-                    __result.name = AutoChangeStationName.Value.getTranslate();
+                    Console.WriteLine(AutoChangeStationName.Value.getTranslate() + " " + _entityId + " " + __instance.factory.entityPool[_entityId].id);
+                    __instance.factory.WriteExtraInfoOnEntity(_entityId, AutoChangeStationName.Value.getTranslate());
+                    Console.WriteLine(__instance.factory.ReadExtraInfoOnEntity(_entityId));
                 }
                 if (Buildingnoconsume.Value)
                 {
                     GameMain.localPlanet.factory.powerSystem.consumerPool[__result.pcId].idleEnergyPerTick = 1000;
                 }
             }
+
+
 
             [HarmonyPrefix]
             [HarmonyPatch(typeof(PlanetTransport), "RemoveStationComponent")]
@@ -1031,9 +1062,10 @@ namespace Multifunction_mod
                         if (Station_infiniteWarp_bool.Value && sc.isStellar)
                             sc.warperCount = 50;
                     }
-                    if (!string.IsNullOrEmpty(sc?.name))
+                    string stationComponentName = __instance.factory.ReadExtraInfoOnEntity(sc.entityId);
+                    if (!string.IsNullOrEmpty(stationComponentName))
                     {
-                        switch (sc.name)
+                        switch (stationComponentName)
                         {
                             case "星球无限供货机":
                                 if (!StationfullCount_bool.Value && remoteTick || StationfullCount)
@@ -1200,7 +1232,10 @@ namespace Multifunction_mod
                 {
                     return 0;
                 }
-                if (minenumber > 0 && neednumber == 0) neednumber = 1;
+                if (minenumber > 0 && neednumber == 0)
+                {
+                    return itemid != 1007 ? (int)(minenumber * GameMain.history.miningSpeedScale / 2) : (int)(minenumber * GameMain.history.miningSpeedScale);
+                }
                 foreach (VeinData i in pd.factory.veinPool)
                 {
                     if (i.type != LDB.veins.GetVeinTypeByItemId(itemid))
@@ -1336,9 +1371,12 @@ namespace Multifunction_mod
                     lock (consumeRegister)
                     {
                         consumeRegister[1143] = needNumber;
-                        store.inc += incstore.count >= needNumber ? needinc : incstore.count * 296;
+                        store.inc += (incstore.count >= needNumber ? needNumber : incstore.count) * 296;
                         incstore.count -= needNumber;
-                        store.inc = Math.Min(store.count * incAbility, store.inc);
+                    }
+                    if (store.count == 0)
+                    {
+                        store.inc = 0;
                     }
                 }
             }
@@ -1374,12 +1412,12 @@ namespace Multifunction_mod
                         lock (consumeRegister)
                         {
                             consumeRegister[itemID] = trashnum;
+                            sc.storage[i].count -= trashnum;
+                            if (!Stationfullenergy.Value)
+                                sc.energy -= trashnum * 10000;
+                            if (needtrashsand.Value)
+                                player.TryAddItemToPackage(1099, trashnum * 100, 0, false);
                         }
-                        sc.storage[i].count -= trashnum;
-                        if (!Stationfullenergy.Value)
-                            sc.energy -= trashnum * 10000;
-                        if (!noneedtrashsand.Value)
-                            player.SetSandCount(player.sandCount + trashnum * 100);
                     }
                 }
             }
@@ -1772,24 +1810,6 @@ namespace Multifunction_mod
                 __result = int.MaxValue;
             }
 
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(PlanetRawData), "AddModLevel")]
-            public static void Prefix(int index, ref int level, PlanetRawData __instance)
-            {
-                if (!restorewater) return;
-                int num1 = __instance.modData[index >> 1] >> ((index & 1) << 2) & 3;
-                level = -4 - num1;
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(PlatformSystem), "SetReformType")]
-            public static void Prefix(ref int type)
-            {
-                if (!restorewater)
-                    return;
-                type = 0;
-            }
-
             [HarmonyPostfix]
             [HarmonyPatch(typeof(ItemProto), "isFluid")]
             public static void ItemProtoisFluidPatch(ref bool __result)
@@ -1859,7 +1879,7 @@ namespace Multifunction_mod
             public static void SetBeltSignalIconPatch(int signalId, int entityId, CargoTraffic __instance)
             {
                 if (!BeltSignalFunction.Value) return;
-                int factoryIndex = GameMain.localPlanet.factoryIndex;
+                int factoryIndex = __instance.factory.index;
                 int beltid = __instance.factory.entityPool[entityId].beltId;
                 if (!Beltsignal.ContainsKey(factoryIndex))
                     Beltsignal.Add(factoryIndex, new Dictionary<int, int>());
@@ -1880,7 +1900,7 @@ namespace Multifunction_mod
                 if (!BeltSignalFunction.Value) return;
                 if (__instance.factory.entitySignPool[entityId].iconType != 0U && __instance.factory.entitySignPool[entityId].iconId0 != 0U)
                 {
-                    int factoryIndex = GameMain.localPlanet.factoryIndex;
+                    int factoryIndex = __instance.factory.index;
                     int beltid = __instance.factory.entityPool[entityId].beltId;
                     if (__instance.factory.entitySignPool[entityId].iconId0 == 600) { }
                     else if (__instance.factory.entitySignPool[entityId].iconId0 == 601)
@@ -1918,10 +1938,10 @@ namespace Multifunction_mod
 
             [HarmonyPrefix]
             [HarmonyPatch(typeof(CargoTraffic), "RemoveBeltComponent")]
-            public static void Prefix(int id)
+            public static void Prefix(CargoTraffic __instance, int id)
             {
                 if (!BeltSignalFunction.Value) return;
-                int factoryIndex = GameMain.localPlanet.factoryIndex;
+                int factoryIndex = __instance.factory.index;
                 if (Beltsignal.ContainsKey(factoryIndex) && Beltsignal[factoryIndex].ContainsKey(id))
                     Beltsignal[factoryIndex].Remove(id);
                 if (Beltsignalnumberoutput.ContainsKey(factoryIndex) && Beltsignalnumberoutput[factoryIndex].ContainsKey(id))
@@ -2140,7 +2160,8 @@ namespace Multifunction_mod
                                         }
                                         if (ac.served[i] <= ac.requireCounts[i] * 2)
                                         {
-                                            cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                            var itemId = cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                            if (itemId == 0) return;
                                             ac.served[i] += stack;
                                             ac.incServed[i] += inc;
                                             breakfor = true;
@@ -2169,7 +2190,7 @@ namespace Multifunction_mod
                                     if (breakfor) break;
                                 }
                                 break;
-                            case 7:
+                            case 8:
                                 if (fs.labPool == null) continue;
                                 breakfor = false;
                                 foreach (LabComponent lc in fs.labPool)
@@ -2187,9 +2208,10 @@ namespace Multifunction_mod
                                             if (itemid != 6001 + i) continue;
                                             if (lc.matrixServed[i] <= 36000)
                                             {
-                                                cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                                int itemId = cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                                if (itemId == 0) return;
                                                 lc.matrixServed[i] += 3600 * stack;
-                                                lc.matrixIncServed[i] += 3600 * stack;
+                                                lc.matrixIncServed[i] += inc;
                                                 break;
                                             }
                                         }
@@ -2201,7 +2223,8 @@ namespace Multifunction_mod
                                             if (itemid != lc.requires[i]) continue;
                                             if (lc.served[i] <= lc.requireCounts[i] * 2)
                                             {
-                                                cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                                int itemId = cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                                if (itemId == 0) return;
                                                 lc.served[i] += stack;
                                                 lc.incServed[i] += inc;
                                                 break;
@@ -2209,10 +2232,9 @@ namespace Multifunction_mod
                                         }
                                     }
                                 }
-                                break;
-                            case 8:
-                                if (itemid != 1503 && itemid != 1501 && itemid != 1209 && itemid != 1803) continue;
-                                if (itemid == 1209 || itemid == 1803)
+
+                                if (itemid != 1503 && itemid != 1501 && itemid != 1209 && itemid != 1803 && itemid != 1804) continue;
+                                if (itemid == 1209 || itemid == 1803 || itemid == 1804)
                                 {
                                     if (fs.factory.powerSystem == null || fs.factory.powerSystem.genPool == null) continue;
                                     foreach (PowerGeneratorComponent pgc in fs.factory.powerSystem.genPool)
@@ -2226,18 +2248,22 @@ namespace Multifunction_mod
                                             if (itemid != 1209) continue;
                                             if (pgc.catalystPoint == 0)
                                             {
-                                                cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                                int itemId = cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                                if (itemId == 0) return;
                                                 fs.factory.powerSystem.genPool[pgc.id].catalystPoint += 3600 * stack;
                                                 fs.factory.powerSystem.genPool[pgc.id].catalystIncPoint += 3600 * inc;
+                                                breakfor = true;
                                                 break;
                                             }
 
                                         }
-                                        else if (pgc.fuelMask == 4 && itemid == 1803 && pgc.fuelCount <= 2)
+                                        else if (pgc.fuelMask == 4 && (itemid == 1803 || itemid == 1804) && pgc.fuelCount <= 2)
                                         {
-                                            if (itemid != 1803) continue;
-                                            cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
-                                            fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(1803, (short)(fs.factory.powerSystem.genPool[pgc.id].fuelCount + stack), inc);
+                                            if (itemid != 1803 && itemid != 1804) continue;
+                                            int itemId = cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
+                                            if (itemId == 0) return;
+                                            fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(itemid, (short)(fs.factory.powerSystem.genPool[pgc.id].fuelCount + stack), inc);
+                                            breakfor = true;
                                             break;
                                         }
                                     }
@@ -2273,6 +2299,8 @@ namespace Multifunction_mod
                                     }
                                 }
                                 break;
+                            case 9:
+                                break;
                         }
                     }
                     else if (signalID == 600 && Beltsignalnumberoutput.ContainsKey(factoryIndex))
@@ -2292,6 +2320,235 @@ namespace Multifunction_mod
                     }
                 }
             }
+        }
+
+        public class CombatPatch
+        {
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(Mecha), "TakeDamage")]
+            public static bool MechaTakeDamage(Mecha __instance)
+            {
+                if (LockPlayerHp.Value)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(Mecha), "UpdateCombatStats")]
+            public static void MechaTakeUpdateCombatStats(Mecha __instance)
+            {
+                if (LockPlayerHp.Value)
+                {
+                    __instance.energyShieldEnergy = __instance.energyShieldCapacity;
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(ConstructionSystem), "GameTick")]
+            public static void PlanetFactoryGameTick(ConstructionSystem __instance)
+            {
+                if (LockBuildHp.Value || LockEnemyHp.Value)
+                {
+                    CombatStat[] buffer = __instance.factory.skillSystem.combatStats.buffer;
+                    foreach (CombatStat combatStat in buffer)
+                    {
+                        if (LockBuildHp.Value && combatStat.objectType == 0)
+                        {
+                            buffer[combatStat.id].hp = combatStat.hpMax;
+                        }
+                        if (LockEnemyHp.Value && combatStat.objectType == 4)
+                        {
+                            buffer[combatStat.id].hp = combatStat.hpMax;
+                        }
+                    }
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(Mecha), "TickLaserFireCondition")]
+            public static void MechaTickLaserFireCondition(Mecha __instance)
+            {
+                if (PlayerQuickAttack.Value)
+                {
+                    __instance.laserFire = 0;
+                    __instance.laserEnergy = __instance.laserEnergyCapacity;
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(Mecha), "TestLaserTurretEnergy")]
+            public static bool MechaTestLaserTurretEnergy(ref bool __result)
+            {
+                if (PlayerQuickAttack.Value)
+                {
+                    __result = true;
+                    return false;
+                }
+                return true;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(SkillSystem), "GameTick")]
+            public static void SkillSystemGameTick(SkillSystem __instance)
+            {
+                if (killEnemys.Count > 0)
+                {
+                    var enemydata = killEnemys.Dequeue();
+
+                    if (enemydata.id > 0)
+                    {
+                        if (enemydata.combatStatId > 0 && __instance.combatStats.buffer[enemydata.combatStatId].id == enemydata.combatStatId)
+                        {
+                            __instance.combatStats.buffer[enemydata.combatStatId].hp = 0;
+                        }
+                        else if (enemydata.originAstroId > 1000000)
+                        {
+                            ref EnemyData reference = ref __instance.sector.enemyPool[enemydata.id];
+                            __instance.sector.KillEnemyFinal(reference.id, ref CombatStat.empty);
+                        }
+                        else if (enemydata.originAstroId > 100 && enemydata.originAstroId <= 204899 && enemydata.originAstroId % 100 > 0)
+                        {
+                            PlanetFactory planetFactory = __instance.astroFactories[enemydata.originAstroId];
+                            ref EnemyData reference = ref planetFactory.enemyPool[enemydata.id];
+                            planetFactory.KillEnemyFinally(GameMain.data.mainPlayer, reference.id, ref CombatStat.empty);
+                        }
+                    }
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(EnemyDFHiveSystem), "GameTickLogic")]
+            public static void EnemyDFHiveSystemPreGameTickLogic(EnemyDFHiveSystem __instance)
+            {
+                if (SpaceAlwaysClearThreat.Value)
+                {
+                    __instance.evolve.threat = 0;
+                    __instance.evolve.threatshr = 0;
+                }
+                if (SpaceAlwaysMaxThreat.Value && __instance.evolve.threat < __instance.evolve.maxThreat && __instance.evolve.waveTicks == 0)
+                {
+                    if (GameMain.localStar != null && __instance.starData.index == GameMain.localStar.index)
+                    {
+                        __instance.evolve.threat = __instance.evolve.maxThreat * 2 + 1;
+                        __instance.evolve.threatshr = __instance.evolve.maxThreat * 2 + 1;
+                    }
+                }
+            }
+
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(EnemyDFHiveSystem), "GameTickLogic")]
+            public static void EnemyDFHiveSystemGameTickLogic(EnemyDFHiveSystem __instance)
+            {
+                if (SpaceAlwaysClearThreat.Value)
+                {
+                    __instance.evolve.threat = 0;
+                    __instance.evolve.threatshr = 0;
+                }
+                if (SpaceAlwaysMaxThreat.Value && __instance.evolve.threat < __instance.evolve.maxThreat && __instance.evolve.waveTicks == 0)
+                {
+                    if (GameMain.localStar != null && __instance.starData.index == GameMain.localStar.index)
+                    {
+                        __instance.evolve.threat = __instance.evolve.maxThreat * 2 + 1;
+                        __instance.evolve.threatshr = __instance.evolve.maxThreat * 2 + 1;
+                    }
+                }
+
+                if (PlayerFakeDeath.Value && __instance.isLocal)
+                {
+                    __instance.local_player_exist_alive = false;
+                    __instance.local_player_in_range = false;
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(DFGBaseComponent), "UpdateFactoryThreat")]
+            public static void DFGBaseComponentPreLogicTick(DFGBaseComponent __instance, ref float power_threat_factor, ref float player_threat)
+            {
+                if (LocalAlwaysClearThreat.Value)
+                {
+                    power_threat_factor = 0;
+                    player_threat = 0;
+                    __instance.evolve.threat = 0;
+                    __instance.evolve.threatshr = 0;
+                }
+                if (LocalAlwaysMaxThreat.Value && __instance.evolve.threat < __instance.evolve.maxThreat && __instance.evolve.waveTicks == 0)
+                {
+                    if (GameMain.localPlanet != null && __instance.groundSystem.factory.planet.index == GameMain.localPlanet.index)
+                    {
+                        __instance.evolve.threat = __instance.evolve.maxThreat * 2 + 1;
+                        __instance.evolve.threatshr = __instance.evolve.maxThreat * 2 + 1;
+                    }
+                }
+            }
+
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(DFGBaseComponent), "UpdateFactoryThreat")]
+            public static void DFGBaseComponentLogicTick(DFGBaseComponent __instance, ref float power_threat_factor, ref float player_threat)
+            {
+                if (LocalAlwaysClearThreat.Value)
+                {
+                    power_threat_factor = 0;
+                    player_threat = 0;
+                    __instance.evolve.threat = 0;
+                    __instance.evolve.threatshr = 0;
+                }
+                if (LocalAlwaysMaxThreat.Value && __instance.evolve.threat < __instance.evolve.maxThreat && __instance.evolve.waveTicks == 0)
+                {
+                    if (GameMain.localPlanet != null && __instance.groundSystem.factory.planet.index == GameMain.localPlanet.index)
+                    {
+                        __instance.evolve.threat = __instance.evolve.maxThreat * 2 + 1;
+                        __instance.evolve.threatshr = __instance.evolve.maxThreat * 2 + 1;
+                    }
+                }
+            }
+
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(EnemyBuilderComponent), "LogicTick")]
+            public static void EnemyBuilderComponentBuildLogic_Ground(EnemyBuilderComponent __instance)
+            {
+                if (DarkFogBuilderQuickBuild.Value)
+                {
+                    __instance.energy = __instance.maxEnergy;
+                    __instance.matter = __instance.maxMatter;
+                    __instance.sp = __instance.spMax;
+                    __instance.buildCDTime = 0;
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(TurretComponent), "InternalUpdate")]
+            public static void TurretComponentInternalUpdate(ref TurretComponent __instance)
+            {
+                if (TurrentKeepSuperNoval.Value)
+                {
+                    __instance.supernovaTick = 901;
+                    __instance.supernovaStrength = 30f;
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(HatredList), "HateTarget", new Type[] { typeof(ETargetType), typeof(int), typeof(int), typeof(int), typeof(EHatredOperation), })]
+            public static bool HatredListHateTarget(ETargetType type)
+            {
+                if (PlayerFakeDeath.Value && type == ETargetType.Player)
+                {
+                    return false;
+                }
+                return true;
+            }
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(EnemyDFGroundSystem), "GameTickLogic")]
+            public static void EnemyDFGroundSystemGameTickLogic(EnemyDFGroundSystem __instance)
+            {
+                if (PlayerFakeDeath.Value && __instance.isLocalLoaded)
+                {
+                    __instance.local_player_exist_alive = false;
+                }
+            }
+
         }
 
     }
