@@ -19,7 +19,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "3.3.9";
+        public const string VERSION = "3.4.3";
 
         #region 临时变量
 
@@ -92,7 +92,7 @@ namespace Multifunction_mod
         public static Dictionary<int, Dictionary<int, int>> Beltsignalnumberoutput = new Dictionary<int, Dictionary<int, int>>();
         #endregion
         #region 配置菜单
-        public static ConfigEntry<KeyboardShortcut> WindowQuickKey;
+        public static ConfigEntry<KeyboardShortcut> QuickKey;
         public static ConfigEntry<int> veinlines;
         public static ConfigEntry<int> scale;
         public static ConfigEntry<int> StackMultiple;
@@ -319,9 +319,13 @@ namespace Multifunction_mod
                 MainWindow_y_config = Config.Bind("第一窗口y", "xl_SimpleUI_1_y_config", 199.0f);
                 MainWindow_width = Config.Bind("第一窗口宽度", "xl_SimpleUI_1_x_config", 1400.0f);
                 MainWindow_height = Config.Bind("第一窗口高度", "xl_SimpleUI_1_y_config", 1000.0f);
-                WindowQuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt));
+                QuickKey = Config.Bind("打开窗口快捷键", "Key", new BepInEx.Configuration.KeyboardShortcut(KeyCode.LeftAlt, KeyCode.Alpha1));
             }
             #endregion
+            if (QuickKey.Value.MainKey == KeyCode.Alpha1 && QuickKey.Value.Modifiers.Count() == 1 && QuickKey.Value.Modifiers.ElementAt(0) == KeyCode.LeftAlt)
+            {
+                QuickKey.Value = new KeyboardShortcut(KeyCode.LeftAlt, KeyCode.Alpha1);
+            }
             AssetBundle assetBundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("Multifunction_mod.multifunctionpanel"));
             var MultiFunctionPanel = assetBundle.LoadAsset<GameObject>("MultiFunctionPanel");
             var temppanel = Instantiate<GameObject>(MultiFunctionPanel, UIRoot.instance.overlayCanvas.transform);
@@ -336,7 +340,7 @@ namespace Multifunction_mod
                 NotTidyVein = NotTidyVein.Value
             };
             incAbility = Maxproliferator.Value ? 10 : 4;
-            tempShowWindow = WindowQuickKey.Value;
+            tempShowWindow = QuickKey.Value;
 
             CollectorStation = new List<int>();
             InitWaterTypes();
@@ -673,7 +677,21 @@ namespace Multifunction_mod
                         if (itemid > 0 && pgc.fuelCount <= 2)
                         {
                             int[] takeitem = doitemfromPlanetSuper(itemid, 20, pdid);
-                            fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(itemid, (short)takeitem[0], (short)takeitem[1]);
+                            short fuelcount = (short)takeitem[0];
+                            if (fuelcount == 0)
+                            {
+                                return;
+                            }
+                            short inc = (short)takeitem[1];
+                            if (pgc.fuelCount == 0)
+                            {
+                                fs.factory.powerSystem.genPool[pgc.id].SetNewFuel(itemid, fuelcount, inc);
+                            }
+                            else
+                            {
+                                fs.factory.powerSystem.genPool[pgc.id].fuelCount += fuelcount;
+                                fs.factory.powerSystem.genPool[pgc.id].fuelInc += inc;
+                            }
                         }
                     }
                 }
@@ -957,8 +975,6 @@ namespace Multifunction_mod
             {
                 InfiniteAllThingInPackage();
             }
-
-
             SetDronenocomsume();
             DriftBuild();
         }
@@ -1266,9 +1282,34 @@ namespace Multifunction_mod
             {
                 guidraw.CloseMainWindow();
             }
-            if (WindowQuickKey.Value.IsDown() && !ChangingQuickKey)
+            if (!ChangingQuickKey)
             {
-                guidraw.MainWindowKeyInvoke();
+                bool isClick = false;
+                if (QuickKey.Value.Modifiers.Count() == 0)
+                {
+                    if (Input.GetKeyDown(QuickKey.Value.MainKey))
+                    {
+                        isClick = true;
+                    }
+                }
+                else
+                {
+                    if (Input.GetKey(QuickKey.Value.MainKey))
+                    {
+                        isClick = true;
+                        foreach (var modify in QuickKey.Value.Modifiers)
+                        {
+                            if (!Input.GetKeyDown(modify))
+                            {
+                                isClick = false;
+                            }
+                        }
+                    }
+                }
+                if (isClick)
+                {
+                    guidraw.MainWindowKeyInvoke();
+                }
             }
             if (TurrentKeepSuperNovalQuickKey.Value)
             {
@@ -1292,7 +1333,7 @@ namespace Multifunction_mod
             }
             else if (!ChangeQuickKey && ChangingQuickKey)
             {
-                WindowQuickKey.Value = tempShowWindow;
+                QuickKey.Value = tempShowWindow;
                 ChangingQuickKey = false;
             }
         }
@@ -1373,7 +1414,7 @@ namespace Multifunction_mod
         /// </summary>
         public void InitPlayer()
         {
-            if (player == null || player.mecha == null || player.mecha.constructionModule.droneIdleCount < player.mecha.constructionModule.droneCount) return;
+            if (player == null || player.mecha == null || player.mecha.constructionModule.droneIdleCount < player.mecha.constructionModule.droneAliveCount) return;
             refreshPlayerData = true;
             ModeConfig freeMode = Configs.freeMode;
             GameHistoryData historyData = GameMain.history;
@@ -2099,7 +2140,7 @@ namespace Multifunction_mod
                 end = false;
                 foreach (TechProto techProto in new List<TechProto>(LDB.techs.dataArray))
                 {
-                    if (GameMain.data.history.TechUnlocked(techProto.ID)) continue;
+                    if (GameMain.data.history.TechUnlocked(techProto.ID) || techProto.IsObsolete) continue;
                     if (!GameMain.data.history.CanEnqueueTech(techProto.ID)) continue;
                     if (techProto.MaxLevel > 15) continue;
                     end = true;

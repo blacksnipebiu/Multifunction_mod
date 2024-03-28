@@ -11,7 +11,7 @@ namespace Multifunction_mod.Models
         private int veinLines;
         private int cuttingveinNumbers;
 
-        private bool addVein;
+        private bool AddVein;
         private bool deleteVein;
         private bool nottidyvein;
         private bool changeveinpos;
