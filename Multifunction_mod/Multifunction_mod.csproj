@@ -85,6 +85,23 @@
     <Compile Include="Multifunction.cs" />
     <Compile Include="Multifunctionpatch.cs" />
     <Compile Include="MultifunctionTranslate.cs" />
+    <Compile Include="Patchs\BuildTool_ClickPatch.cs" />
+    <Compile Include="Patchs\CargoTrafficPatch.cs" />
+    <Compile Include="Patchs\CombatPatch.cs" />
+    <Compile Include="Patchs\DriftBuildingsPatch.cs" />
+    <Compile Include="Patchs\DysonPatch.cs" />
+    <Compile Include="Patchs\FactorySystemPatch.cs" />
+    <Compile Include="Patchs\PasteAnywayPatch.cs" />
+    <Compile Include="Patchs\PlanetFactoryPatch.cs" />
+    <Compile Include="Patchs\PlanetTransportPatch.cs" />
+    <Compile Include="Patchs\PlayerPatch.cs" />
+    <Compile Include="Patchs\PowerSystemPatch.cs" />
+    <Compile Include="Patchs\SomePatch.cs" />
+    <Compile Include="Patchs\SpraycoaterComponentPatch.cs" />
+    <Compile Include="Patchs\StationComponentPatch.cs" />
+    <Compile Include="Patchs\StorageComponentPatch.cs" />
+    <Compile Include="Patchs\TankComponentPatch.cs" />
+    <Compile Include="Patchs\UIPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
