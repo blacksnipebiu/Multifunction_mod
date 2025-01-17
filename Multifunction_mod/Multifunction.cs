@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using Multifunction_mod.Models;
+using Multifunction_mod.Patchs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "3.4.4";
+        public const string VERSION = "3.4.5";
 
         #region 临时变量
 
@@ -171,6 +172,7 @@ namespace Multifunction_mod
         public static ConfigEntry<bool> StationPowerGen;
         public static ConfigEntry<bool> ChangeDysonradius;
         public static ConfigEntry<bool> CloseUIAbnormalityTip;
+        public static ConfigEntry<bool> IgnoreControlPanelLocalLimit;
         public static ConfigEntry<bool> QuantumtransportstationSupply;
         public static ConfigEntry<bool> QuantumtransportCollectorSupply;
         public static ConfigEntry<bool> QuantumtransportlabSupply;
@@ -313,6 +315,7 @@ namespace Multifunction_mod
                 seedPlanetWater = Config.Bind("海洋类型修改", "seedPlanetWater", "");
                 AutoChangeStationName = Config.Bind("物流站自动改名", "AutoChangeStationName", "");
                 Solarsailsabsorbeveryframe = Config.Bind("每帧吸收个数", "Solarsailsabsorbeveryframe", 1);
+                IgnoreControlPanelLocalLimit = Config.Bind("取消总控面板本地限制", "IgnoreControlPanelLocalLimit", false);
 
 
                 MainWindow_x_config = Config.Bind("第一窗口x", "xl_SimpleUI_1_x_config", 448.0f);
@@ -344,6 +347,11 @@ namespace Multifunction_mod
 
             CollectorStation = new List<int>();
             InitWaterTypes();
+            IgnoreControlPanelLocalLimit.SettingChanged += (sender, args) =>
+            {
+                UIControlPanelPatch.Enable = IgnoreControlPanelLocalLimit.Value;
+            };
+            UIControlPanelPatch.Enable = IgnoreControlPanelLocalLimit.Value;
             Multifunctionpatch.Patchallmethod();
         }
         int dockindex = -1;
@@ -367,6 +375,11 @@ namespace Multifunction_mod
             QuickKeyOpenWindow();
             FirstStartGame();
             AfterGameStart();
+
+            if (Input.GetKeyDown(KeyCode.F9))
+            {
+                //UIRoot.instance.uiGame.controlPanelWindow.stationInspector.isLocal = true;
+            }
         }
 
         void OnGUI()
@@ -1815,6 +1828,7 @@ namespace Multifunction_mod
             if (!blueprintpastenoneed_bool.Value) return;
 
             var factory = GameMain.localPlanet?.factory;
+            if (factory==null) return;
             for (int i = 1; i < factory.prebuildCursor; i++)
             {
                 if (factory.prebuildPool[i].protoId > 0)

@@ -1265,6 +1265,7 @@ namespace Multifunction_mod
                 if (GameMain.mainPlayer != null)
                 {
                     CloseUIAbnormalityTip.Value = GUILayout.Toggle(CloseUIAbnormalityTip.Value, "关闭异常提示".getTranslate());
+                    IgnoreControlPanelLocalLimit.Value = GUILayout.Toggle(IgnoreControlPanelLocalLimit.Value, "取消总控面板本地限制".getTranslate());
                     Maxproliferator.Value = GUILayout.Toggle(Maxproliferator.Value, "增产点数上限10".getTranslate());
                     incAbility = Maxproliferator.Value ? 10 : 4;
                     pasteanyway = GUILayout.Toggle(pasteanyway, "蓝图强制粘贴".getTranslate());

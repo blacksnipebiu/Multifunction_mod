@@ -5,6 +5,37 @@ namespace Multifunction_mod.Patchs
 {
     public class DysonPatch
     {
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(DysonSphere), "Init")]
+        public static void DysonSphereInit(ref DysonSphere __instance)
+        {
+            if (ChangeDysonradius.Value)
+            {
+                __instance.minOrbitRadius = 100;
+                __instance.maxOrbitRadius = MaxOrbitRadiusConfig.Value;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(DysonSphereLayer), "GameTick")]
+        public static void DysonSphereLayerGameTick(ref DysonSphereLayer __instance, long gameTick)
+        {
+            if (!QuickabortSwarm.Value)
+                return;
+            int num = (int)(gameTick % 120L);
+            for (int i = 1; i < __instance.nodeCursor; i++)
+            {
+                DysonNode dysonNode = __instance.nodePool[i];
+                if (dysonNode?.id == i && dysonNode.id % 120 == num && dysonNode.sp == dysonNode.spMax)
+                {
+                    for (int j = 1; j <= Solarsailsabsorbeveryframe.Value; j++)
+                    {
+                        dysonNode.OrderConstructCp(gameTick, __instance.dysonSphere.swarm);
+                    }
+                }
+            }
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DysonSwarm), "AbsorbSail")]
         public static bool DysonSwarmPatch1(ref DysonSwarm __instance, ref bool __result, DysonNode node)
@@ -143,37 +174,6 @@ namespace Multifunction_mod.Patchs
                     __instance.AddSolarSail(tempsail.ss, tempsail.orbitid, tempsail.time + time);
                 }
                 tempsails.RemoveAt(i);
-            }
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(DysonSphere), "Init")]
-        public static void DysonSphereInit(ref DysonSphere __instance)
-        {
-            if (ChangeDysonradius.Value)
-            {
-                __instance.minOrbitRadius = 100;
-                __instance.maxOrbitRadius = MaxOrbitRadiusConfig.Value;
-            }
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(DysonSphereLayer), "GameTick")]
-        public static void DysonSphereLayerGameTick(ref DysonSphereLayer __instance, long gameTick)
-        {
-            if (!QuickabortSwarm.Value)
-                return;
-            int num = (int)(gameTick % 120L);
-            for (int i = 1; i < __instance.nodeCursor; i++)
-            {
-                DysonNode dysonNode = __instance.nodePool[i];
-                if (dysonNode?.id == i && dysonNode.id % 120 == num && dysonNode.sp == dysonNode.spMax)
-                {
-                    for (int j = 1; j <= Solarsailsabsorbeveryframe.Value; j++)
-                    {
-                        dysonNode.OrderConstructCp(gameTick, __instance.dysonSphere.swarm);
-                    }
-                }
             }
         }
     }
