@@ -20,7 +20,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "3.4.5";
+        public const string VERSION = "3.4.7";
 
         #region 临时变量
 

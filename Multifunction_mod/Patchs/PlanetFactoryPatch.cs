@@ -7,7 +7,7 @@ namespace Multifunction_mod.Patchs
     {
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlanetFactory), "ComputeFlattenTerrainReform")]
-        public static void PlanetFactoryNoComsumeSand(ref int __result)
+        public static void PlanetFactoryNoComsumeSand(ref int costSandCount)
         {
             if (!InfiniteSand.Value)
             {
@@ -17,7 +17,7 @@ namespace Multifunction_mod.Patchs
             {
                 GameMain.mainPlayer.SetSandCount(int.MaxValue);
             }
-            __result = 0;
+            costSandCount = 0;
         }
 
         [HarmonyPostfix]
