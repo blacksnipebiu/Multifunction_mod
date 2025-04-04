@@ -1,5 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
+using HarmonyLib;
 using Multifunction_mod.Models;
 using Multifunction_mod.Patchs;
 using System;
@@ -20,7 +21,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "3.4.7";
+        public const string VERSION = "3.5.3";
 
         #region 临时变量
 
@@ -44,7 +45,6 @@ namespace Multifunction_mod
 
         public RecipeProto[] originRecipeProtos;
         public static Player player;
-        public static List<Tempsail> tempsails = new List<Tempsail>();
         public static Queue<EnemyData> killEnemys = new Queue<EnemyData>();
         public static KeyboardShortcut tempShowWindow;
         private static int driftBuildingLevel;
@@ -71,7 +71,6 @@ namespace Multifunction_mod
         public static bool blueprintPasteToolActive;
         public static bool DriftBuildings;
         public static bool Property9999999;
-        public static bool playcancelsolarbullet;
         public static bool alwaysemissiontemp;
         public static bool FinallyInit;
         public static bool restorewater;
@@ -130,6 +129,7 @@ namespace Multifunction_mod
         public static ConfigEntry<bool> Infinitestoragetank;
         public static ConfigEntry<bool> QuickHandcraft;
         public static ConfigEntry<bool> QuickPlayerMine;
+        public static ConfigEntry<bool> QuickResearch;
         public static ConfigEntry<bool> TankMaxproliferator;
         public static ConfigEntry<bool> Quantumtransport_bool;
         public static ConfigEntry<bool> Quantumtransportbuild_bool;
@@ -261,7 +261,8 @@ namespace Multifunction_mod
                 quickproduce = Config.Bind("快速生产", "quickproduce", false);
                 noneedwarp = Config.Bind("无翘曲器曲速", "noneedwarp", false);
                 isInstantItem = Config.Bind("直接获取物品", "isInstantItem", false);
-                MiddleMouseLockGrid = Config.Bind("鼠标中间锁定格子", "MiddleMouseLockGrid", false);
+                QuickResearch = Config.Bind("鼠标中键锁定格子", "QuickResearch", false);
+                MiddleMouseLockGrid = Config.Bind("鼠标中键锁定格子", "MiddleMouseLockGrid", false);
 
                 Mechalogneed = Config.Bind("机甲物流需求情况", "Mechalogneed", "");
                 CuttingVeinNumbers = Config.Bind("切割矿脉数量", "CuttingVeinNumbers", 3);
@@ -338,7 +339,7 @@ namespace Multifunction_mod
             {
                 VeinLines = veinlines.Value,
                 CuttingVeinNumbers = CuttingVeinNumbers.Value,
-                oillowerlimit = (int)(1 / VeinData.oilSpeedMultiplier),
+                oillowerlimit = (int)(0.1f / VeinData.oilSpeedMultiplier),
                 DeleteVein = deleteveinbool.Value,
                 NotTidyVein = NotTidyVein.Value
             };
@@ -347,10 +348,21 @@ namespace Multifunction_mod
 
             CollectorStation = new List<int>();
             InitWaterTypes();
-            IgnoreControlPanelLocalLimit.SettingChanged += (sender, args) =>
+            IgnoreControlPanelLocalLimit.SettingChanged += (_, _) =>
             {
                 UIControlPanelPatch.Enable = IgnoreControlPanelLocalLimit.Value;
             };
+
+            alwaysemission.SettingChanged += (_, _) =>
+            {
+                EjectAnywayPatch.Enable = alwaysemission.Value;
+            };
+            cancelsolarbullet.SettingChanged += (_, _) =>
+            {
+                SkipBulletPatch.Enable = cancelsolarbullet.Value;
+            };
+            SkipBulletPatch.Enable = cancelsolarbullet.Value;
+            EjectAnywayPatch.Enable = alwaysemission.Value;
             UIControlPanelPatch.Enable = IgnoreControlPanelLocalLimit.Value;
             Multifunctionpatch.Patchallmethod();
         }
@@ -885,7 +897,6 @@ namespace Multifunction_mod
                 GameRunning = false;
                 FinallyInit = false;
                 closeallcollider = false;
-                tempsails = new List<Tempsail>();
                 Beltsignal = new Dictionary<int, Dictionary<int, int>>();
                 Beltsignalnumberoutput = new Dictionary<int, Dictionary<int, int>>();
                 StarSuperStation = new List<int>();
@@ -895,7 +906,6 @@ namespace Multifunction_mod
                 CollectorStation.Clear();
                 SuperStation = new List<int>();
                 StarSuperStation = new List<int>();
-                playcancelsolarbullet = false;
                 alwaysemissiontemp = false;
                 originWaterTypes = new SeedPlanetWater();
                 GC.Collect();
@@ -943,7 +953,6 @@ namespace Multifunction_mod
                     //更改配方相关
                     ChangeRecipe();
                 }
-                playcancelsolarbullet = cancelsolarbullet.Value;
                 alwaysemissiontemp = alwaysemission.Value;
                 //更改物品相关
                 SetmultipleItemStatck(StackMultiple.Value);
@@ -987,6 +996,10 @@ namespace Multifunction_mod
             if (Infinitething.Value)
             {
                 InfiniteAllThingInPackage();
+            }
+            if (QuickResearch.Value)
+            {
+                GameMain.history.AddTechHash(600_000_000_000_000);
             }
             SetDronenocomsume();
             DriftBuild();
@@ -1501,6 +1514,7 @@ namespace Multifunction_mod
             historyData.solarSailLife = freeMode.solarSailLife;
             historyData.localStationExtraStorage = 0;
             historyData.remoteStationExtraStorage = 0;
+            historyData.autoReconstructSpeed = 0;
 
             historyData.kineticDamageScale = 1;
             historyData.energyDamageScale = 1;
@@ -1648,7 +1662,7 @@ namespace Multifunction_mod
                 if (item.recycleCount < exsitcount)
                 {
                     int recyclenum = exsitcount - item.recycleCount;
-                    player.packageUtility.TakeItemFromAllPackages(i, ref itemId, ref recyclenum, out int inc1);
+                    player.packageUtility.TakeItemFromAllPackages(i, ref itemId, ref recyclenum, out int inc1,true);
                     if (itemId == 0 || recyclenum == 0) continue;
                     foreach (StarData sd in GameMain.galaxy.stars)
                     {
@@ -1891,129 +1905,6 @@ namespace Multifunction_mod
         {
             if (GameMain.localPlanet != null && GameMain.localPlanet.factory != null)
             {
-                if (type == 2 || type == 3)
-                {
-                    PlanetData planet = GameMain.localPlanet;
-                    //planet.data = new PlanetRawData(planet.precision);
-                    //planet.data.CalcVerts();
-                    foreach (EntityData ed in planet.factory.entityPool)
-                    {
-                        if (ed.id != 0)
-                        {
-                            if (ed.colliderId != 0)
-                            {
-                                planet.physics.RemoveLinkedColliderData(ed.colliderId);
-                                planet.physics.NotifyObjectRemove(EObjectType.Entity, ed.id);
-                            }
-                            if (ed.modelId != 0)
-                            {
-                                GameMain.gpuiManager.RemoveModel(ed.modelIndex, ed.modelId, true);
-                            }
-                            if (ed.mmblockId != 0)
-                            {
-                                planet.factory.blockContainer.RemoveMiniBlock(ed.mmblockId);
-                            }
-                            if (ed.audioId != 0)
-                            {
-                                if (planet.audio != null)
-                                {
-                                    planet.audio.RemoveAudioData(ed.audioId);
-                                }
-                            }
-                        }
-                    }
-                    if (planet.factory.enemyPool != null)
-                    {
-                        for (int i = 1; i < planet.factory.enemyCursor; i++)
-                        {
-                            ref EnemyData ptr13 = ref planet.factory.enemyPool[i];
-                            if (ptr13.id == i)
-                            {
-                                int combatStatId = ptr13.combatStatId;
-                                planet.factory.skillSystem.OnRemovingSkillTarget(combatStatId, planet.factory.skillSystem.combatStats.buffer[combatStatId].originAstroId, ETargetType.CombatStat);
-                                planet.factory.skillSystem.combatStats.Remove(combatStatId);
-                                planet.factory.KillEnemyFinally(player, i, ref CombatStat.empty);
-                            }
-                        }
-                        planet.factory.enemySystem.Free();
-                        UIRoot.instance.uiGame.dfAssaultTip.ClearAllSpots();
-                    }
-
-                    if (planet.factory.transport != null && planet.factory.transport.stationPool != null)
-                    {
-                        foreach (StationComponent sc in planet.factory.transport.stationPool)
-                        {
-                            if (sc != null && sc.id > 0)
-                            {
-                                sc.storage = new StationStore[sc.storage.Length];
-                                sc.needs = new int[sc.needs.Length];
-                                int protoId = planet.factory.entityPool[sc.entityId].protoId;
-                                planet.factory.DismantleFinally(player, sc.entityId, ref protoId);
-                            }
-                        }
-                    }
-                    if (GameMain.gameScenario != null)
-                    {
-                        if (planet.factory.powerSystem != null && planet.factory.powerSystem.genPool != null)
-                        {
-                            foreach (PowerGeneratorComponent pgc in planet.factory.powerSystem.genPool)
-                            {
-                                if (pgc.id > 0)
-                                {
-                                    int protoId = planet.factory.entityPool[pgc.entityId].protoId;
-                                    GameMain.gameScenario.achievementLogic.NotifyBeforeDismantleEntity(planet.id, protoId, pgc.entityId);
-                                    GameMain.gameScenario.NotifyOnDismantleEntity(planet.id, protoId, pgc.entityId);
-                                }
-                            }
-                        }
-                    }
-
-                    #region 初始化坑
-                    if (type == 2)
-                    {
-                        byte[] modData = planet.modData;
-                        bool temprestorewater = restorewater;
-                        restorewater = true;
-                        for (int i = 0; i < modData.Length * 2; i++)
-                            planet.AddHeightMapModLevel(i, 3);
-                        if (planet.UpdateDirtyMeshes())
-                            planet.factory.RenderLocalPlanetHeightmap();
-                        if (planet.factory.platformSystem.reformData == null)
-                            planet.factory.platformSystem.InitReformData();
-                        restorewater = temprestorewater;
-                    }
-                    #endregion
-
-                    planet.UnloadFactory();
-                    int index = planet.factory.index;
-
-                    for (int i = 1; i < GameMain.data.warningSystem.warningCursor; i++)
-                    {
-                        if (GameMain.data.warningSystem.warningPool[i].factoryId == index)
-                        {
-                            GameMain.data.warningSystem.RemoveWarningData(GameMain.data.warningSystem.warningPool[i].id);
-                        }
-                    }
-                    lock (Beltsignal)
-                    {
-                        Beltsignal.Remove(index);
-                    }
-                    PlanetFactory planetFactory = new PlanetFactory();
-                    PlanetAlgorithm planetAlgorithm = PlanetModelingManager.Algorithm(planet);
-                    planetAlgorithm.GenerateVeins();
-                    //PlanetModelingManager.Algorithm(planet).GenerateVegetables();
-                    planetAlgorithm.GenerateTerrain(planet.mod_x, planet.mod_y);
-                    planetAlgorithm.CalcWaterPercent();
-                    planet.data.vegeCursor = 1;
-                    planet.CalculateVeinGroups();
-                    planetFactory.Init(GameMain.data, planet, index);
-                    GameMain.data.factories[index] = planetFactory;
-                    planet.factoryIndex = index;
-                    planet.factory.platformSystem.EnsureReformData();
-                    //GameMain.data.statistics.production.CreateFactoryStat(index);
-                    planet.LoadFactory();
-                    return;
-                }
                 if (type == 1) entityitemnoneed = true;
                 foreach (EntityData etd in GameMain.localPlanet.factory.entityPool)
                 {

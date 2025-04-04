@@ -368,6 +368,10 @@ namespace Multifunction_mod
             {
                 result = TGMKinttostring(temp, "J");
             }
+            else if (resulttype == 4)
+            {
+                result = string.Format("{0:N6}", temp);
+            }
             else
             {
                 return 0;
@@ -483,6 +487,7 @@ namespace Multifunction_mod
                     propertydata.LogisticCourierCarries = PropertyDataUIDraw(propertydata.LogisticCourierCarries, 1, 10000, "配送机载量");
                     propertydata.LogisticDroneCarries = PropertyDataUIDraw(propertydata.LogisticDroneCarries, 20, 10000, "运输机载量");
                     propertydata.LogisticShipCarries = PropertyDataUIDraw(propertydata.LogisticShipCarries, 100, 100000, "运输船载量");
+                    propertydata.MiningCostRate = PropertyDataUIDraw(propertydata.MiningCostRate, 0, 1, "采矿消耗矿物比例", 4);
                     propertydata.MiningSpeedScale = PropertyDataUIDraw(propertydata.MiningSpeedScale, 1, 10000, "采矿机速度倍率", 2);
                     propertydata.LabLevel = PropertyDataUIDraw(propertydata.LabLevel, 2, 100, "建筑堆叠高度");
                     propertydata.StorageLevel = PropertyDataUIDraw(propertydata.StorageLevel, 1, 20, "货物集装数量");
@@ -504,6 +509,7 @@ namespace Multifunction_mod
                     PropertyDataUIDraw(propertydata.LogisticCourierCarries, 1, 10000, "配送机载量");
                     PropertyDataUIDraw(propertydata.LogisticDroneCarries, 20, 10000, "运输机载量");
                     PropertyDataUIDraw(propertydata.LogisticShipCarries, 100, 100000, "运输船载量");
+                    PropertyDataUIDraw(propertydata.MiningCostRate, 0, 1, "采矿消耗矿物比例", 4);
                     PropertyDataUIDraw(propertydata.MiningSpeedScale, 1, 10000, "采矿机速度倍率", 2);
                     PropertyDataUIDraw(propertydata.LabLevel, 2, 100, "建筑堆叠高度");
                     PropertyDataUIDraw(propertydata.StorageLevel, 1, 20, "货物集装数量");
@@ -548,6 +554,8 @@ namespace Multifunction_mod
                         GameMain.mainPlayer.mecha.miningSpeed = Configs.freeMode.mechaReplicateSpeed;
                     }
                 }
+
+                QuickResearch.Value = GUILayout.Toggle(QuickResearch.Value,"研究秒完成".Translate());
                 isInstantItem.Value = GUILayout.Toggle(isInstantItem.Value, "直接获取物品".getTranslate());
                 noneedwarp.Value = GUILayout.Toggle(noneedwarp.Value, "无需翘曲器曲速飞行".getTranslate());
             }
@@ -1056,7 +1064,7 @@ namespace Multifunction_mod
                 GUILayout.Label("添加油井速率".getTranslate());
                 for (int i = 0; i < 3; i++)
                 {
-                    bool temp = GUILayout.Toggle(veinControlProperty.OilAddIntervalBool[i], veinControlProperty.OilAddIntervalValue[i] + "/s");
+                    bool temp = GUILayout.Toggle(veinControlProperty.OilAddIntervalBool[i], veinControlProperty.OilAddIntervalValue[i]/10f + "/s");
                     if (temp != veinControlProperty.OilAddIntervalBool[i] && temp)
                     {
                         veinControlProperty.SetOilAddInterval(i);
@@ -1086,7 +1094,7 @@ namespace Multifunction_mod
             GUILayout.BeginVertical();
 
             restorewater = GUILayout.Toggle(restorewater, "还原海洋".getTranslate());
-            var tempstr = new string[8] { !restorewater ? "铺平整个星球" : "还原全部海洋", "掩埋全部矿", "删除全部矿", "超密铺采集器", "删除当前星球所有建筑", "删除当前星球所有建筑(不掉落)", "初始化当前星球", "初始化当前星球(不要海洋)" };
+            var tempstr = new string[6] { !restorewater ? "铺平整个星球" : "还原全部海洋", "掩埋全部矿", "删除全部矿", "超密铺采集器", "删除当前星球所有建筑", "删除当前星球所有建筑(不掉落)" };
             for (int i = 0; i < tempstr.Length; i++)
             {
                 if (GUILayout.Button(tempstr[i].getTranslate(), GUILayout.Height(heightdis)))
@@ -1099,8 +1107,6 @@ namespace Multifunction_mod
                         case 3: MainFunction.SetMaxGasStation(); break;
                         case 4: MainFunction.RemoveAllBuild(0); break;
                         case 5: MainFunction.RemoveAllBuild(1); break;
-                        case 6: MainFunction.RemoveAllBuild(2); break;
-                        case 7: MainFunction.RemoveAllBuild(3); break;
                     }
                 }
             }
@@ -1193,7 +1199,6 @@ namespace Multifunction_mod
             if (cancelsolarbullet.Value != GUILayout.Toggle(cancelsolarbullet.Value, "跳过太阳帆子弹阶段".getTranslate()))
             {
                 cancelsolarbullet.Value = !cancelsolarbullet.Value;
-                playcancelsolarbullet = cancelsolarbullet.Value;
             }
             quickabsorbsolar.Value = GUILayout.Toggle(quickabsorbsolar.Value, "跳过太阳帆吸收阶段".getTranslate());
             QuickabortSwarm.Value = GUILayout.Toggle(QuickabortSwarm.Value, "太阳帆帧吸收".getTranslate() + ":" + Solarsailsabsorbeveryframe.Value);

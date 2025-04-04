@@ -11,6 +11,7 @@ namespace Multifunction_mod.Patchs
 {
     public class StationComponentPatch
     {
+        private static HashSet<int> tempids=new HashSet<int>();
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StationComponent), "Init")]
         public static void StationComponentInit(ref int _extraStorage, StationComponent __instance)
@@ -39,7 +40,7 @@ namespace Multifunction_mod.Patchs
             if (evt == EVeinType.Oil)
             {
                 long[] veinAmounts = new long[64];
-                pd.CalcVeinAmounts(ref veinAmounts, new HashSet<int>(), UIRoot.instance.uiGame.veinAmountDisplayFilter);
+                pd.SummarizeVeinAmountsByFilter(ref veinAmounts, tempids, UIRoot.instance.uiGame.veinAmountDisplayFilter);
                 int collectspeed = (int)(veinAmounts[7] * VeinData.oilSpeedMultiplier + 0.5);
                 if (collectspeed > 1) return collectspeed;
             }
@@ -55,32 +56,37 @@ namespace Multifunction_mod.Patchs
         /// <returns></returns>
         public static int MineVein(int itemid, int minenumber, PlanetData pd)
         {
-            int getmine = 0;
             if (pd.waterItemId == itemid)
             {
                 return (int)(30 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
             }
-            int neednumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningCostRate / 2) : (int)(minenumber * GameMain.history.miningCostRate);
-            int maxmineNumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningSpeedScale / 2) : (int)(minenumber * GameMain.history.miningSpeedScale); ;
+            if (minenumber <= 0) return 0;
+            int getmine = 0;
+            int maxmineNumber = itemid != 1007 ? (int)(minenumber * GameMain.history.miningSpeedScale / 2) : (int)(minenumber * GameMain.history.miningSpeedScale);
+            int neednumber = itemid != 1007 ? (int)(maxmineNumber * GameMain.history.miningCostRate / 2) : (int)(maxmineNumber * GameMain.history.miningCostRate);
             if (GameMain.data.gameDesc.isInfiniteResource)
                 return maxmineNumber;
             if (LDB.veins.GetVeinTypeByItemId(itemid) == EVeinType.None || pd == null)
             {
                 return 0;
             }
-            if (minenumber > 0 && neednumber == 0)
+            if (maxmineNumber > 0 && neednumber == 0)
             {
-                return itemid != 1007 ? (int)(minenumber * GameMain.history.miningSpeedScale / 2) : (int)(minenumber * GameMain.history.miningSpeedScale);
+                return maxmineNumber;
             }
             foreach (VeinData i in pd.factory.veinPool)
             {
                 if (i.type != LDB.veins.GetVeinTypeByItemId(itemid))
                     continue;
+                if (i.amount == 1)
+                {
+                    continue;
+                }
                 if (i.amount > neednumber - getmine)
                 {
                     if (itemid == 1007 && i.amount * VeinData.oilSpeedMultiplier <= 0.1)
                     {
-                        int dis = veinproperty.oillowerlimit - pd.factory.veinPool[i.id].amount;
+                        int dis = veinproperty.oillowerlimit - i.amount;
                         pd.factory.veinPool[i.id].amount += dis;
                         pd.factory.veinGroups[i.groupIndex].amount += dis;
                         getmine += (int)(0.1 * GameMain.history.miningSpeedScale * Stationminenumber.Value);
@@ -89,26 +95,16 @@ namespace Multifunction_mod.Patchs
                     {
                         pd.factory.veinPool[i.id].amount -= neednumber;
                         pd.factory.veinGroups[i.groupIndex].amount -= neednumber;
-                        getmine = minenumber;
+                        getmine = maxmineNumber;
                     }
                 }
                 else
                 {
-                    if (itemid != 1007)
-                    {
-                        pd.factory.veinGroups[i.groupIndex].count--;
-                        pd.factory.veinGroups[i.groupIndex].amount -= i.amount;
-                        pd.factory.RemoveVeinWithComponents(i.id);
-                        getmine += i.amount;
-                    }
+                    getmine += i.amount - 1;
+                    pd.factory.veinPool[i.id].amount = 1;
+                    pd.factory.veinGroups[i.groupIndex].amount -= i.amount - 1;
                 }
-                if (pd.factory.veinGroups[i.groupIndex].count == 0)
-                {
-                    pd.factory.veinGroups[i.groupIndex].type = 0;
-                    pd.factory.veinGroups[i.groupIndex].amount = 0;
-                    pd.factory.veinGroups[i.groupIndex].pos = Vector3.zero;
-                }
-                if (getmine == minenumber) break;
+                if (getmine >= maxmineNumber) break;
             }
             return itemid != 1007 ? (int)(getmine * GameMain.history.miningSpeedScale / 2) : (int)(getmine * GameMain.history.miningSpeedScale);
         }
@@ -133,7 +129,7 @@ namespace Multifunction_mod.Patchs
 
                 if (!Stationfullenergy.Value && sc.energy <= pointminenum * GameMain.history.miningSpeedScale * 5000)
                 {
-                    continue;
+                    pointminenum = (int)(sc.energy*0.9f / (GameMain.history.miningSpeedScale * 5000));
                 }
                 int minenum = MineVein(itemID, pointminenum, pd);
                 if (minenum <= 0)

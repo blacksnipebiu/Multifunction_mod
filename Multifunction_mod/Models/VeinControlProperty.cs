@@ -162,7 +162,7 @@ namespace Multifunction_mod.Models
         /// </summary>
         public bool[] OilAddIntervalBool;
 
-        public float[] OilAddIntervalValue;
+        public int[] OilAddIntervalValue;
 
         public float OilAddInterval;
 
@@ -192,7 +192,7 @@ namespace Multifunction_mod.Models
         public VeinControlProperty()
         {
             OilAddIntervalBool = new bool[3];
-            OilAddIntervalValue = new float[3] { 0.1f, 1, 10 };
+            OilAddIntervalValue = new int[3] { 1, 10, 100 };
             SetOilAddInterval(1);
             AddVeinNumber = 1000000000;
         }

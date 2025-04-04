@@ -4,21 +4,6 @@ using static Multifunction_mod.Multifunction;
 
 namespace Multifunction_mod
 {
-    public class Tempsail
-    {
-        public DysonSail ss;
-        public int orbitid;
-        public int index;
-        public long time;
-
-        public Tempsail(DysonSail ss, int orbitId, long time, int index)
-        {
-            this.ss = ss;
-            orbitid = orbitId;
-            this.time = time;
-            this.index = index;
-        }
-    }
     public class Multifunctionpatch
     {
         public static Harmony harmony;
@@ -38,6 +23,7 @@ namespace Multifunction_mod
                 }
             }
 
+            harmony.PatchAll(typeof(GameLogic));
             harmony.PatchAll(typeof(DysonPatch));
             harmony.PatchAll(typeof(PlayerPatch));
             harmony.PatchAll(typeof(PowerSystemPatch));

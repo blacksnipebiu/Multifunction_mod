@@ -10,6 +10,7 @@
     <RootNamespace>Multifunction_mod</RootNamespace>
     <AssemblyName>Multifunction_mod</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <LangVersion>10.0</LangVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
@@ -98,6 +99,7 @@
     <Compile Include="Patchs\DriftBuildingsPatch.cs" />
     <Compile Include="Patchs\DysonPatch.cs" />
     <Compile Include="Patchs\FactorySystemPatch.cs" />
+    <Compile Include="Patchs\GameLogic.cs" />
     <Compile Include="Patchs\PasteAnywayPatch.cs" />
     <Compile Include="Patchs\PlanetFactoryPatch.cs" />
     <Compile Include="Patchs\PlanetTransportPatch.cs" />

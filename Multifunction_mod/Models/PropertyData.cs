@@ -17,6 +17,7 @@
         private float logisticCourierCarries;
         private float logisticDroneCarries;
         private float logisticShipCarries;
+        private float miningCostRate;
         private float miningSpeedScale;
         private float labLevel;
         private float storageLevel;
@@ -288,6 +289,22 @@
                 logisticShipCarries = (int)(value / 500) * 500;
                 if (!CheckCondition()) return;
                 GameMain.history.logisticShipCarries = (int)value;
+            }
+        }
+
+        public float MiningCostRate
+        {
+            get
+            {
+                return miningCostRate;
+            }
+
+            set
+            {
+                if (value == 0 || value == miningCostRate) return;
+                miningCostRate = value;
+                if (!CheckCondition()) return;
+                GameMain.history.miningCostRate = value;
             }
         }
 
@@ -784,6 +801,7 @@
             logisticCourierCarries = historyData.logisticCourierCarries > 0 ? historyData.logisticDroneCarries : 3;
             logisticDroneCarries = historyData.logisticDroneCarries > 0 ? historyData.logisticDroneCarries : 100;
             logisticShipCarries = historyData.logisticShipCarries > 0 ? historyData.logisticShipCarries : 100;
+            miningCostRate = historyData.miningCostRate;
             miningSpeedScale = historyData.miningSpeedScale;
             labLevel = historyData.labLevel;
             storageLevel = historyData.storageLevel;
