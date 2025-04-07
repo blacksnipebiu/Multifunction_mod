@@ -1401,6 +1401,26 @@ namespace Multifunction_mod
                         player.deliveryPackage.NotifySizeChange();
                     }
                 }
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("所有物品(优先度）");
+                MechalogPlayerStorageFirst_bool.Value = GUILayout.Toggle(MechalogPlayerStorageFirst_bool.Value, "玩家背包".getTranslate(), options);
+                if(GUILayout.Toggle(!MechalogPlayerStorageFirst_bool.Value, "物流背包".getTranslate(), options) == MechalogPlayerStorageFirst_bool.Value)
+                {
+                    MechalogPlayerStorageFirst_bool.Value = false;
+                }
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("建筑物品(优先度）");
+                MechalogBuildGotoPlayerStorageFirst_bool.Value = GUILayout.Toggle(MechalogBuildGotoPlayerStorageFirst_bool.Value, "玩家背包".getTranslate(), options);
+                if (GUILayout.Toggle(!MechalogBuildGotoPlayerStorageFirst_bool.Value, "物流背包".getTranslate(), options) == MechalogBuildGotoPlayerStorageFirst_bool.Value)
+                {
+                    MechalogBuildGotoPlayerStorageFirst_bool.Value = false;
+                }
+                if (MechalogPlayerStorageFirst_bool.Value)
+                {
+                    MechalogBuildGotoPlayerStorageFirst_bool.Value = true;
+                }
+                GUILayout.EndHorizontal();
                 MechalogisticsPlanet_bool.Value = GUILayout.Toggle(MechalogisticsPlanet_bool.Value, "机甲物流专用星".getTranslate(), options);
                 MechalogStoragerecycle_bool.Value = GUILayout.Toggle(MechalogStoragerecycle_bool.Value, "回收使用储物仓".getTranslate(), options);
                 MechalogStorageprovide_bool.Value = GUILayout.Toggle(MechalogStorageprovide_bool.Value, "需求使用储物仓".getTranslate(), options);

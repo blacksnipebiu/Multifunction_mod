@@ -113,6 +113,7 @@
     <Compile Include="Patchs\UIControlPanelPatch.cs" />
     <Compile Include="Patchs\UIPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utils\SplitIncUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="multifunctionpanel" />
