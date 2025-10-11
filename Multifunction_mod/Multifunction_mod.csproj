@@ -65,6 +65,9 @@
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>E:\Game\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>E:\Game\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.InputModule">
       <HintPath>E:\Game\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.InputModule.dll</HintPath>
     </Reference>
@@ -99,7 +102,7 @@
     <Compile Include="Patchs\DriftBuildingsPatch.cs" />
     <Compile Include="Patchs\DysonPatch.cs" />
     <Compile Include="Patchs\FactorySystemPatch.cs" />
-    <Compile Include="Patchs\GameLogic.cs" />
+    <Compile Include="Patchs\Multifunction_modGameLogic.cs" />
     <Compile Include="Patchs\PasteAnywayPatch.cs" />
     <Compile Include="Patchs\PlanetFactoryPatch.cs" />
     <Compile Include="Patchs\PlanetTransportPatch.cs" />

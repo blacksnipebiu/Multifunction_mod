@@ -70,7 +70,7 @@ namespace Multifunction_mod.Patchs
             {
                 return 0;
             }
-            if (maxmineNumber > 0 && neednumber == 0)
+            if (neednumber == 0)
             {
                 return maxmineNumber;
             }
@@ -106,7 +106,7 @@ namespace Multifunction_mod.Patchs
                 }
                 if (getmine >= maxmineNumber) break;
             }
-            return itemid != 1007 ? (int)(getmine * GameMain.history.miningSpeedScale / 2) : (int)(getmine * GameMain.history.miningSpeedScale);
+            return getmine;
         }
 
         /// <summary>

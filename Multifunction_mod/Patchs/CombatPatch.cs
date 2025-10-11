@@ -95,7 +95,7 @@ namespace Multifunction_mod.Patchs
                     {
                         PlanetFactory planetFactory = __instance.astroFactories[enemydata.originAstroId];
                         ref EnemyData reference = ref planetFactory.enemyPool[enemydata.id];
-                        planetFactory.KillEnemyFinally(GameMain.data.mainPlayer, reference.id, ref CombatStat.empty);
+                        planetFactory.KillEnemyFinally(reference.id, ref CombatStat.empty);
                     }
                 }
             }
@@ -222,7 +222,7 @@ namespace Multifunction_mod.Patchs
             return true;
         }
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(EnemyDFGroundSystem), "GameTickLogic")]
+        [HarmonyPatch(typeof(EnemyDFGroundSystem), "GameTickLogic_Prepare")]
         public static void EnemyDFGroundSystemGameTickLogic(EnemyDFGroundSystem __instance)
         {
             if (PlayerFakeDeath.Value && __instance.isLocalLoaded)

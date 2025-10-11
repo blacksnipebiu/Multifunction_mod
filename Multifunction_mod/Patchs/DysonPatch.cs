@@ -164,13 +164,13 @@ namespace Multifunction_mod.Patchs
                 if (enable)
                 {
                     _patch = Harmony.CreateAndPatchAll(typeof(SkipBulletPatch),Patchid);
-                    GameLogic.OnGameBegin += GameMain_Begin_Postfix;
+                    Multifunction_modGameLogic.OnGameBegin += GameMain_Begin_Postfix;
                     UpdateSailLifeTime();
                 }
                 else
                 {
                     _patch?.UnpatchSelf();
-                    GameLogic.OnGameBegin -= GameMain_Begin_Postfix;
+                    Multifunction_modGameLogic.OnGameBegin -= GameMain_Begin_Postfix;
                 }
             }
         }

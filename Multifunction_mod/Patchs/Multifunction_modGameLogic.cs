@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Multifunction_mod.Patchs
 {
-    internal class GameLogic
+    internal class Multifunction_modGameLogic
     {
         public static Action OnDataLoaded;
         public static Action OnGameBegin;

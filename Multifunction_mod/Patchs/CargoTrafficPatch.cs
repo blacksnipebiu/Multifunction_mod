@@ -89,11 +89,17 @@ namespace Multifunction_mod.Patchs
             CargoSignalFunction(__instance);
         }
 
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(CargoTraffic), "GameTick")]
-        public static void CargoTrafficGameTickPatch(CargoTraffic __instance)
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(GameMain), "FixedUpdate")]
+        public static void CargoTrafficGameTickPatch()
         {
-            CargoSignalFunction(__instance);
+            if (!GameMain.isPaused)
+            {
+                for (int i = 0; i < GameMain.data.factoryCount; i++)
+                {
+                    CargoSignalFunction(GameMain.data.factories[i].cargoTraffic);
+                }
+            }
         }
 
         public static void CargoSignalFunction(CargoTraffic __instance)
