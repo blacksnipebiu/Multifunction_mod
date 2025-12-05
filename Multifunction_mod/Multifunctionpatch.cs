@@ -23,7 +23,7 @@ namespace Multifunction_mod
                 }
             }
 
-            harmony.PatchAll(typeof(GameLogic));
+            harmony.PatchAll(typeof(Multifunction_modGameLogic));
             harmony.PatchAll(typeof(DysonPatch));
             harmony.PatchAll(typeof(PlayerPatch));
             harmony.PatchAll(typeof(PowerSystemPatch));

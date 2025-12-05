@@ -22,9 +22,7 @@ namespace Multifunction_mod.Patchs
             }
             if (!string.IsNullOrEmpty(AutoChangeStationName.Value))
             {
-                Console.WriteLine(AutoChangeStationName.Value.getTranslate() + " " + _entityId + " " + __instance.factory.entityPool[_entityId].id);
                 __instance.factory.WriteExtraInfoOnEntity(_entityId, AutoChangeStationName.Value.getTranslate());
-                Console.WriteLine(__instance.factory.ReadExtraInfoOnEntity(_entityId));
             }
             if (Buildingnoconsume.Value)
             {

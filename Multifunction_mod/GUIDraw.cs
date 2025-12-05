@@ -12,6 +12,28 @@ namespace Multifunction_mod
 {
     public class GUIDraw
     {
+        private bool isDragging;
+        public float DragStartWindowX = 200;
+        public float DragStartWindowY = 200;
+        public float DragStartMouseX = 10;
+        public float DragStartMouseY = 200;
+        private const float TitleBarHeight = 20f;
+        private const float BorderMargin = 10f;
+        private const float EdgeTolerance = 10f;
+        GUIStyle style;
+        GUIStyle normalStyle;
+        GUIStyle selectedIconStyle;
+        Texture2D selectedTexture;
+        private GUIStyle labelmarginStyle;
+        private GUIStyle selectedButtonStyle;
+        private GUILayoutOption[] slideroptions;
+        private GUILayoutOption[] MoreWidthslideroptions;
+        private GUILayoutOption[] textfieldoptions;
+        private GUILayoutOption[] menusbuttonoptions;
+        private GUILayoutOption[] iconbuttonoptions;
+        private bool leftscaling;
+        private bool rightscaling;
+        private bool bottomscaling;
         private bool firstDraw;
         private string stackmultipleStr;
         private Multifunction MainFunction;
@@ -108,27 +130,6 @@ namespace Multifunction_mod
                 mainWindowTexture = value;
             }
         }
-
-
-        GUIStyle style;
-        GUIStyle normalStyle;
-        GUIStyle selectedIconStyle;
-        Texture2D selectedTexture;
-        private GUIStyle labelmarginStyle;
-        private GUIStyle selectedButtonStyle;
-        private GUILayoutOption[] slideroptions;
-        private GUILayoutOption[] MoreWidthslideroptions;
-        private GUILayoutOption[] textfieldoptions;
-        private GUILayoutOption[] menusbuttonoptions;
-        private GUILayoutOption[] iconbuttonoptions;
-        private float MainWindow_x_move;
-        private float MainWindow_y_move;
-        private float temp_MainWindow_x;
-        private float temp_MainWindow_y;
-        private bool moving;
-        private bool leftscaling;
-        private bool rightscaling;
-        private bool bottomscaling;
 
         public GUIDraw(int baseSize, GameObject panel, Multifunction multifunction)
         {
@@ -249,12 +250,12 @@ namespace Multifunction_mod
             }
             if (DisplayingWindow)
             {
-                UIPanelSet();
-                MoveWindow();
-                Scaling_window();
+                bool _moved = MoveWindow();
+                bool _scaled = Scaling_window();
                 Rect windowRect1 = new Rect(MainWindow_x, MainWindow_y, MainWindowWidth, MainWindowHeight);
                 GUI.DrawTexture(windowRect1, mainWindowTexture);
                 GUI.Window(20210218, windowRect1, MainWindow, "OP面板".getTranslate() + "(" + VERSION + ")" + "ps:ctrl+↑↓");
+                if (_moved || _scaled) UIPanelSet();
                 if (MainWindow_x < 0 || MainWindow_x > Screen.width)
                 {
                     MainWindow_x = 100;
@@ -1435,66 +1436,39 @@ namespace Multifunction_mod
         #endregion
 
         #region 窗口操作
-        /// <summary>
-        /// Rect变形
-        /// </summary>
-        /// <param name="rect"></param>
-        /// <param name="changevalue"></param>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public Rect RectChanged(Rect rect, int changevalue, int index)
-        {
-            if (index <= 0 || index > 4) return rect;
-            switch (index)
-            {
-                case 1: rect.x += changevalue; break;
-                case 2: rect.y += changevalue; break;
-                case 3: rect.width += changevalue; break;
-                case 4: rect.height += changevalue; break;
-            }
-            return rect;
-        }
 
         /// <summary>
         /// 移动窗口
         /// </summary>
-        private void MoveWindow()
+        private bool MoveWindow()
         {
-            if (leftscaling || rightscaling || bottomscaling) return;
-            Vector2 temp = Input.mousePosition;
-            bool horizontal = MainWindow_x <= temp.x && MainWindow_x + MainWindowWidth >= temp.x;
-            bool vertical = Screen.height >= MainWindow_y + temp.y && Screen.height <= MainWindowHeight + MainWindow_y + temp.y;
-            MouseInWindow = horizontal && vertical;
-            if (temp.x > MainWindow_x && temp.x < MainWindow_x + MainWindowWidth && Screen.height - temp.y > MainWindow_y && Screen.height - temp.y < MainWindow_y + 20)
+            float _prevX = MainWindow_x;
+            float _prevY = MainWindow_y;
+            if (leftscaling || rightscaling || bottomscaling) return false;
+            Vector2 mouse = Input.mousePosition;
+            float mouseX = mouse.x;
+            float mouseY = Screen.height - mouse.y;
+            bool overTitle = mouseX > MainWindow_x && mouseX < MainWindow_x + MainWindowWidth && mouseY > MainWindow_y && mouseY < MainWindow_y + TitleBarHeight;
+            if (Input.GetMouseButtonDown(0) && overTitle)
             {
-                if (Input.GetMouseButton(0))
-                {
-                    if (!moving)
-                    {
-                        MainWindow_x_move = MainWindow_x;
-                        MainWindow_y_move = MainWindow_y;
-                        temp_MainWindow_x = temp.x;
-                        temp_MainWindow_y = Screen.height - temp.y;
-                    }
-                    moving = true;
-                    MainWindow_x = MainWindow_x_move + temp.x - temp_MainWindow_x;
-                    MainWindow_y = MainWindow_y_move + (Screen.height - temp.y) - temp_MainWindow_y;
-                }
-                else
-                {
-                    moving = false;
-                    temp_MainWindow_x = MainWindow_x;
-                    temp_MainWindow_y = MainWindow_y;
-                }
+                DragStartWindowX = MainWindow_x;
+                DragStartWindowY = MainWindow_y;
+                DragStartMouseX = mouseX;
+                DragStartMouseY = mouseY;
+                isDragging = true;
             }
-            else if (moving)
+            if (isDragging && Input.GetMouseButton(0))
             {
-                moving = false;
-                MainWindow_x = MainWindow_x_move + temp.x - temp_MainWindow_x;
-                MainWindow_y = MainWindow_y_move + (Screen.height - temp.y) - temp_MainWindow_y;
+                MainWindow_x = DragStartWindowX + mouseX - DragStartMouseX;
+                MainWindow_y = DragStartWindowY + mouseY - DragStartMouseY;
             }
-            MainWindow_y = Math.Max(10, Math.Min(Screen.height - 10, MainWindow_y));
-            MainWindow_x = Math.Max(10, Math.Min(Screen.width - 10, MainWindow_x));
+            if (Input.GetMouseButtonUp(0))
+            {
+                isDragging = false;
+            }
+            MainWindow_y = Math.Max(BorderMargin, Math.Min(Screen.height - BorderMargin, MainWindow_y));
+            MainWindow_x = Math.Max(BorderMargin, Math.Min(Screen.width - BorderMargin, MainWindow_x));
+            return MainWindow_x != _prevX || MainWindow_y != _prevY;
         }
 
         /// <summary>
@@ -1504,27 +1478,29 @@ namespace Multifunction_mod
         /// <param name="y"></param>
         /// <param name="window_x"></param>
         /// <param name="window_y"></param>
-        private void Scaling_window()
+        private bool Scaling_window()
         {
+            float _prevW = MainWindowWidth;
+            float _prevH = MainWindowHeight;
             Vector2 temp = Input.mousePosition;
             float x = MainWindowWidth;
             float y = MainWindowHeight;
             if (Input.GetMouseButton(0))
             {
-                if ((temp.x + 10 > MainWindow_x && temp.x - 10 < MainWindow_x) && (Screen.height - temp.y >= MainWindow_y && Screen.height - temp.y <= MainWindow_y + y) || leftscaling)
+                if ((temp.x + EdgeTolerance > MainWindow_x && temp.x - EdgeTolerance < MainWindow_x) && (Screen.height - temp.y >= MainWindow_y && Screen.height - temp.y <= MainWindow_y + y) || leftscaling)
                 {
                     x -= temp.x - MainWindow_x;
                     MainWindow_x = temp.x;
                     leftscaling = true;
                     rightscaling = false;
                 }
-                if ((temp.x + 10 > MainWindow_x + x && temp.x - 10 < MainWindow_x + x) && (Screen.height - temp.y >= MainWindow_y && Screen.height - temp.y <= MainWindow_y + y) || rightscaling)
+                if ((temp.x + EdgeTolerance > MainWindow_x + x && temp.x - EdgeTolerance < MainWindow_x + x) && (Screen.height - temp.y >= MainWindow_y && Screen.height - temp.y <= MainWindow_y + y) || rightscaling)
                 {
                     x += temp.x - MainWindow_x - x;
                     rightscaling = true;
                     leftscaling = false;
                 }
-                if ((Screen.height - temp.y + 10 > y + MainWindow_y && Screen.height - temp.y - 10 < y + MainWindow_y) && (temp.x >= MainWindow_x && temp.x <= MainWindow_x + x) || bottomscaling)
+                if ((Screen.height - temp.y + EdgeTolerance > y + MainWindow_y && Screen.height - temp.y - EdgeTolerance < y + MainWindow_y) && (temp.x >= MainWindow_x && temp.x <= MainWindow_x + x) || bottomscaling)
                 {
                     y += Screen.height - temp.y - (MainWindow_y + y);
                     bottomscaling = true;
@@ -1536,8 +1512,9 @@ namespace Multifunction_mod
                 leftscaling = false;
                 bottomscaling = false;
             }
-            MainWindowWidth = x;
-            MainWindowHeight = y;
+            MainWindowWidth = Math.Max(100f, x);
+            MainWindowHeight = Math.Max(100f, y);
+            return MainWindowWidth != _prevW || MainWindowHeight != _prevH;
         }
         #endregion
 
