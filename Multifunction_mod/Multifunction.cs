@@ -22,7 +22,7 @@ namespace Multifunction_mod
     {
         public const string GUID = "cn.blacksnipe.dsp.Multfuntion_mod";
         public const string NAME = "Multfuntion_mod";
-        public const string VERSION = "4.0.2";
+        public const string VERSION = "4.0.6";
 
         #region 临时变量
 
@@ -614,21 +614,25 @@ namespace Multifunction_mod
                 {
                     if (QuantumtransportassembleDemand.Value)
                     {
-                        for (int i = 0; i < ac.productCounts.Length; i++)
+                        int[] productCounts = ac.recipeExecuteData.productCounts;
+                        int[] products = ac.recipeExecuteData.products;
+                        for (int i = 0; i < productCounts.Length; i++)
                         {
                             int produced = ac.produced[i];
                             if (produced > 500) produced = 200;
-                            if (produced > 0) produced -= doitemfromPlanetSuper(ac.products[i], produced, pdid, 0, false)[0];
+                            if (produced > 0) produced -= doitemfromPlanetSuper(products[i], produced, pdid, 0, false)[0];
                             ac.produced[i] = produced;
                         }
                     }
                     if (QuantumtransportassembleSupply.Value)
                     {
+                        int[] requireCounts = ac.recipeExecuteData.requireCounts;
+                        int[] requires = ac.recipeExecuteData.requires;
                         for (int i = 0; i < ac.served.Length; i++)
                         {
-                            if (ac.served[i] <= ac.requireCounts[i] * 2)
+                            if (ac.served[i] <= requireCounts[i] * 2)
                             {
-                                int[] takeitem = doitemfromPlanetSuper(ac.requires[i], 20, pdid);
+                                int[] takeitem = doitemfromPlanetSuper(requires[i], 20, pdid);
                                 ac.served[i] += takeitem[0];
                                 ac.incServed[i] += takeitem[1];
                             }
@@ -646,7 +650,7 @@ namespace Multifunction_mod
                 {
                     if (QuantumtransportlabSupply.Value && lc.researchMode)
                     {
-                        for (int i = 0; i < lc.matrixPoints.Length; i++)
+                        for (int i = 0; i < lc.matrixServed.Length; i++)
                         {
                             if (lc.matrixServed[i] > 288000) continue;
                             int[] takeitem = doitemfromPlanetSuper(6001 + i, 20, pdid);
@@ -658,9 +662,9 @@ namespace Multifunction_mod
                     {
                         if (QuantumtransportlabDemand.Value)
                         {
-                            for (int i = 0; i < lc.productCounts.Length; i++)
+                            for (int i = 0; i < lc.recipeExecuteData.productCounts.Length; i++)
                             {
-                                if (lc.produced[i] > 5) lc.produced[i] -= doitemfromPlanetSuper(lc.products[i], lc.produced[i], pdid, 0, false)[0];
+                                if (lc.produced[i] > 5) lc.produced[i] -= doitemfromPlanetSuper(lc.recipeExecuteData.products[i], lc.produced[i], pdid, 0, false)[0];
                             }
                         }
                         if (QuantumtransportlabSupply.Value)
@@ -668,7 +672,7 @@ namespace Multifunction_mod
                             for (int i = 0; i < lc.served.Length; i++)
                             {
                                 if (lc.served[i] > 20) continue;
-                                int[] takeitem = doitemfromPlanetSuper(lc.requires[i], 20, pdid);
+                                int[] takeitem = doitemfromPlanetSuper(lc.recipeExecuteData.requires[i], 20, pdid);
                                 lc.served[i] += takeitem[0];
                                 lc.incServed[i] += takeitem[1];
                             }
@@ -690,7 +694,7 @@ namespace Multifunction_mod
                         {
                             int[] takeitem = doitemfromPlanetSuper(1209, 5, pdid);
                             fs.factory.powerSystem.genPool[pgc.id].catalystPoint += takeitem[0] * 3600;
-                            fs.factory.powerSystem.genPool[pgc.id].catalystIncPoint += takeitem[1] * 3600;
+                            fs.factory.powerSystem.genPool[pgc.id].catalystInc += (short)(takeitem[1] * 3600);
                         }
                     }
                     else if (QuantumtransportpowerSupply.Value)

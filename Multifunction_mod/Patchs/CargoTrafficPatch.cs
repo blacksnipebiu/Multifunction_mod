@@ -292,13 +292,13 @@ namespace Multifunction_mod.Patchs
                                 }
                                 for (int i = 0; i < ac.served.Length; i++)
                                 {
-                                    if (itemid != ac.requires[i]) continue;
+                                    if (itemid != ac.recipeExecuteData.requires[i]) continue;
                                     if (ac.served[i] < 0)
                                     {
                                         ac.served[i] = 0;
                                         continue;
                                     }
-                                    if (ac.served[i] <= ac.requireCounts[i] * 2)
+                                    if (ac.served[i] <= ac.recipeExecuteData.requireCounts[i] * 2)
                                     {
                                         var itemId = cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
                                         if (itemId == 0) return;
@@ -343,7 +343,7 @@ namespace Multifunction_mod.Patchs
                                 if (lc.researchMode)
                                 {
                                     if (itemid < 6001 || itemid > 6006) continue;
-                                    for (int i = 0; i < lc.matrixPoints.Length; i++)
+                                    for (int i = 0; i < lc.matrixServed.Length; i++)
                                     {
                                         if (itemid != 6001 + i) continue;
                                         if (lc.matrixServed[i] <= 36000)
@@ -360,8 +360,8 @@ namespace Multifunction_mod.Patchs
                                 {
                                     for (int i = 0; i < lc.served.Length; i++)
                                     {
-                                        if (itemid != lc.requires[i]) continue;
-                                        if (lc.served[i] <= lc.requireCounts[i] * 2)
+                                        if (itemid != lc.recipeExecuteData.requires[i]) continue;
+                                        if (lc.served[i] <= lc.recipeExecuteData.requireCounts[i] * 2)
                                         {
                                             int itemId = cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
                                             if (itemId == 0) return;
@@ -391,7 +391,7 @@ namespace Multifunction_mod.Patchs
                                             int itemId = cargoPath.TryPickItem(num1 - 5, 12, out stack, out inc);
                                             if (itemId == 0) return;
                                             fs.factory.powerSystem.genPool[pgc.id].catalystPoint += 3600 * stack;
-                                            fs.factory.powerSystem.genPool[pgc.id].catalystIncPoint += 3600 * inc;
+                                            fs.factory.powerSystem.genPool[pgc.id].catalystInc += (short)(3600 * inc);
                                             breakfor = true;
                                             break;
                                         }

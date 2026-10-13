@@ -1,4 +1,6 @@
-﻿using Multifunction_mod.Patchs;
+﻿using Multifunction_mod.API;
+using Multifunction_mod.Patchs;
+using Multifunction_mod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,7 +51,6 @@ namespace Multifunction_mod
         private float mainWindow_y;
         private float mainWindowWidth;
         private float mainWindowHeight;
-        private string[] menus;
         private Color textColor;
         private Color mainWindowTextureColor;
         private Texture2D mainWindowTexture;
@@ -141,13 +142,24 @@ namespace Multifunction_mod
 
         void Init()
         {
-            whichpannel = 1;
+            whichpannel = 0;
             scrollPosition[0] = 0;
             TabscrollPosition[0] = 0;
             RefreshBaseSize = true;
             ColorChanged = true;
             stackmultipleStr = StackMultiple.Value.ToString();
-            menus = new string[8] { "", "人物", "战斗", "建筑", "星球", "戴森球", "其它功能", "机甲物流" };
+            
+            // 注册所有菜单
+            MultifunctionAPI.ClearMenus();
+            
+            MultifunctionAPI.RegisterMenu("人物", PlayerPannel);
+            MultifunctionAPI.RegisterMenu("战斗", BattlePannel);
+            MultifunctionAPI.RegisterMenu("建筑", BuildPannel);
+            MultifunctionAPI.RegisterMenu("星球", PlanetPannel);
+            MultifunctionAPI.RegisterMenu("戴森球", DysonPannel);
+            MultifunctionAPI.RegisterMenu("其它功能", OtherPannel);
+            MultifunctionAPI.RegisterMenu("机甲物流", LogisticsPannel);
+            
             TextColor = Textcolor.Value;
             MainWindowTextureColor = mainWindowTextureColor_config.Value;
             MainWindowTexture = new Texture2D(10, 10);
@@ -290,45 +302,30 @@ namespace Multifunction_mod
                 GUILayout.BeginVertical();
 
                 GUILayout.BeginHorizontal();
-                for (int i = 1; i <= 7; i++)
+                
+                var allMenus = MultifunctionAPI.ExternalMenus;
+                
+                for (int i = 0; i < allMenus.Count; i++)
                 {
                     if (whichpannel == i)
                     {
-                        GUILayout.Button(menus[i].getTranslate(), selectedButtonStyle, menusbuttonoptions);
+                        GUILayout.Button(allMenus[i].Name.getTranslate(), selectedButtonStyle, menusbuttonoptions);
                     }
                     else
                     {
-                        if (GUILayout.Button(menus[i].getTranslate(), menusbuttonoptions)) { whichpannel = i; }
+                        if (GUILayout.Button(allMenus[i].Name.getTranslate(), menusbuttonoptions)) { whichpannel = i; }
                     }
                 }
                 GUILayout.EndHorizontal();
 
                 #region 面板内容
                 scrollPosition = GUILayout.BeginScrollView(scrollPosition, new[] { GUILayout.Width(MainWindowWidth - 20), GUILayout.Height(MainWindowHeight - heightdis * 2) });
-                switch (whichpannel)
+                
+                if (whichpannel >= 0 && whichpannel < allMenus.Count)
                 {
-                    case 1:
-                        PlayerPannel();
-                        break;
-                    case 2:
-                        BattlePannel();
-                        break;
-                    case 3:
-                        BuildPannel();
-                        break;
-                    case 4:
-                        PlanetPannel();
-                        break;
-                    case 5:
-                        DysonPannel();
-                        break;
-                    case 6:
-                        OtherPannel();
-                        break;
-                    case 7:
-                        LogisticsPannel();
-                        break;
+                    allMenus[whichpannel].OnDraw?.Invoke();
                 }
+
                 GUILayout.EndScrollView();
                 #endregion
                 GUILayout.EndVertical();
@@ -359,7 +356,7 @@ namespace Multifunction_mod
             }
             else if (resulttype == 1)
             {
-                result = TGMKinttostring(GameMain.mainPlayer.mecha.reactorPowerGen, "W");
+                result = NumberUtils.TGMKinttostring(GameMain.mainPlayer.mecha.reactorPowerGen, "W");
             }
             else if (resulttype == 2)
             {
@@ -367,7 +364,7 @@ namespace Multifunction_mod
             }
             else if (resulttype == 3)
             {
-                result = TGMKinttostring(temp, "J");
+                result = NumberUtils.TGMKinttostring(temp, "J");
             }
             else if (resulttype == 4)
             {
@@ -382,7 +379,7 @@ namespace Multifunction_mod
             {
                 if (resulttype != 0)
                 {
-                    temp = ConvertToNumber(t);
+                    temp = NumberUtils.ConvertToNumber(t);
                 }
                 else
                 {
@@ -394,62 +391,6 @@ namespace Multifunction_mod
             GUILayout.EndHorizontal();
             temp = Math.Max(left, Math.Min(right, temp));
             return temp;
-        }
-
-        static float ConvertToNumber(string input)
-        {
-            // 提取数字部分
-            string numberString = "";
-            string tempinput = "";
-            bool dotContain = false;
-            for (int i = 0; i < input.Length; i++)
-            {
-                var c = input[i];
-                if (Char.IsDigit(c))
-                {
-                    numberString += c;
-                }
-                else if (c == '.')
-                {
-                    if (!dotContain)
-                    {
-                        dotContain = true;
-                        numberString += c;
-                    }
-                }
-                else
-                {
-                    tempinput += c;
-                }
-            }
-            input = tempinput;
-            // 提取单位部分
-            string unitString = input.Replace(numberString, "").Replace(".", "").Replace("W", "").Replace("J", "");
-
-            // 将数字字符串转换为双精度浮点数
-            float number = float.Parse(numberString);
-
-            // 根据单位进行相应的转换
-            switch (unitString)
-            {
-                case "":
-                    break;
-                case "K":
-                    number *= 1_000;
-                    break;
-                case "M":
-                    number *= 1_000_000;
-                    break;
-                case "G":
-                    number *= 1_000_000_000;
-                    break;
-                case "T":
-                    number *= 1_000_000_000_000;
-                    break;
-                    // 其他单位的转换逻辑可以在这里添加
-            }
-
-            return number;
         }
 
         /// <summary>
@@ -988,7 +929,7 @@ namespace Multifunction_mod
 
                     GUILayout.BeginHorizontal();
                     Quantumenergy.Value = (int)GUILayout.HorizontalSlider(Quantumenergy.Value, 0, 1_000_000, tempoptions);
-                    GUILayout.Label(TGMKinttostring(Quantumenergy.Value, "J") + " " + "量子耗能/个".getTranslate(), style);
+                    GUILayout.Label(NumberUtils.TGMKinttostring(Quantumenergy.Value, "J") + " " + "量子耗能/个".getTranslate(), style);
                     GUILayout.EndHorizontal();
 
                     if (tempplanetquamaxpowerpertick != planetquamaxpowerpertick.Value || tempstarquamaxpowerpertick != starquamaxpowerpertick.Value)
@@ -1217,9 +1158,9 @@ namespace Multifunction_mod
             }
             var temp = GUILayout.Toggle(ChangeDysonradius.Value, "开放戴森壳半径上下限(用前存档)".getTranslate());
             GUILayout.Label("最小半径".getTranslate() + ":100", style);
-            GUILayout.Label("最大半径".getTranslate() + ":" + TGMKinttostring(MaxOrbitRadiusConfig.Value, ""), style);
+            GUILayout.Label("最大半径".getTranslate() + ":" + NumberUtils.TGMKinttostring(MaxOrbitRadiusConfig.Value, ""), style);
             var tempvalue = Regex.Replace(GUILayout.TextField(MaxOrbitRadiusConfig.Value + "", 10), @"[^0-9]", "");
-            MaxOrbitRadiusConfig.Value = IntParseLimit(tempvalue, 100000, 10_000_000);
+            MaxOrbitRadiusConfig.Value = NumberUtils.IntParseLimit(tempvalue, 100000, 10_000_000);
             if (temp != ChangeDysonradius.Value)
             {
                 ChangeDysonradius.Value = temp;
@@ -1302,7 +1243,7 @@ namespace Multifunction_mod
                     GUILayout.Label("堆叠倍率".getTranslate() + ":", style);
                     GUILayout.BeginHorizontal();
                     stackmultipleStr = Regex.Replace(GUILayout.TextField(stackmultipleStr, 10, GUILayout.MinWidth(heightdis * 3)), @"[^0-9]", "");
-                    int multiple = IntParseLimit(stackmultipleStr, 1, 5000000);
+                    int multiple = NumberUtils.IntParseLimit(stackmultipleStr, 1, 5000000);
                     stackmultipleStr = multiple.ToString();
                     if (GUILayout.Button("设置".getTranslate()))
                     {
@@ -1518,44 +1459,5 @@ namespace Multifunction_mod
         }
         #endregion
 
-        /// <summary>
-        /// 整形转化，设置上下限
-        /// </summary>
-        /// <param name="valueStr"></param>
-        /// <param name="lowlimit"></param>
-        /// <param name="highlimit"></param>
-        /// <returns></returns>
-        public int IntParseLimit(string valueStr, int lowlimit, int highlimit)
-        {
-            int.TryParse(valueStr, out int value);
-            return Math.Max(lowlimit, Math.Min(value, highlimit));
-        }
-
-        /// <summary>
-        /// 数量单位转化
-        /// </summary>
-        /// <param name="num"></param>
-        /// <param name="unit"></param>
-        /// <returns></returns>
-        public string TGMKinttostring(double num, string unit)
-        {
-            double tempcoreEnergyCap = num;
-            int t = 0;
-            if (num < 1000)
-                return num + unit;
-            while (tempcoreEnergyCap >= 999.9)
-            {
-                t += 1;
-                tempcoreEnergyCap /= 1000;
-            }
-            string coreEnergyCap = string.Format("{0:N2}", tempcoreEnergyCap);
-            if (t == 0) return coreEnergyCap + "" + unit;
-            if (t == 1) return coreEnergyCap + "K" + unit;
-            if (t == 2) return coreEnergyCap + "M" + unit;
-            if (t == 3) return coreEnergyCap + "G" + unit;
-            if (t == 4) return coreEnergyCap + "T" + unit;
-
-            return "";
-        }
     }
 }

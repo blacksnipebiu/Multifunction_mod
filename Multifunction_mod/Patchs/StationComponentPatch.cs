@@ -258,7 +258,7 @@ namespace Multifunction_mod.Patchs
             if (addSand > 0)
             {
                 player.sandCountChanged -= UIRoot.instance.uiGame.OnSandCountChanged;
-                player.SetSandCount(player.sandCount + addSand);
+                player.SetSandCount(player.sandCount + addSand,ESandSource.Other);
                 player.sandCountChanged += UIRoot.instance.uiGame.OnSandCountChanged;
             }
         }

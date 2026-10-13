@@ -1,12 +1,5 @@
 ﻿using HarmonyLib;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Reflection.Emit;
-using UnityEngine;
 using static Multifunction_mod.Multifunction;
-using Quaternion = UnityEngine.Quaternion;
-using Vector3 = UnityEngine.Vector3;
 
 namespace Multifunction_mod.Patchs
 {
@@ -27,7 +20,7 @@ namespace Multifunction_mod.Patchs
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PropertySystem), "GetItemTotalProperty")]
-        public static void GetItemTotalPropertyPatch(ref int __result)
+        public static void GetItemTotalPropertyPatch(ref long __result)
         {
             if (!Property9999999)
                 return;

@@ -16,7 +16,7 @@ namespace Multifunction_mod.Patchs
             }
             if (GameMain.mainPlayer != null && GameMain.mainPlayer.sandCount < int.MaxValue)
             {
-                GameMain.mainPlayer.SetSandCount(int.MaxValue);
+                GameMain.mainPlayer.SetSandCount(int.MaxValue,ESandSource.Other);
             }
             costSandCount = 0;
         }
