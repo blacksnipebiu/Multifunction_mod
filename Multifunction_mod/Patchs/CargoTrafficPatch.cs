@@ -104,7 +104,7 @@ namespace Multifunction_mod.Patchs
 
         public static void CargoSignalFunction(CargoTraffic __instance)
         {
-            if (!BeltSignalFunction.Value || !FinallyInit) return;
+            if (!BeltSignalFunction.Value || !GameRunning) return;
             int factoryIndex = __instance.factory.index;
             if (!Beltsignal.ContainsKey(factoryIndex)) return;
             FactorySystem fs = __instance.factory.factorySystem;

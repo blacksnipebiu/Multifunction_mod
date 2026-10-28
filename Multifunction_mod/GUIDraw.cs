@@ -1,5 +1,11 @@
-﻿using Multifunction_mod.API;
+using Multifunction_mod.API;
+using Multifunction_mod.Meta;
+using Multifunction_mod.GameModify;
 using Multifunction_mod.Patchs;
+using Multifunction_mod.Patchs.Build;
+using Multifunction_mod.Patchs.MechaPatches;
+using Multifunction_mod.Patchs.Misc;
+using Multifunction_mod.Patchs.UI;
 using Multifunction_mod.Utils;
 using System;
 using System.Collections.Generic;
@@ -37,6 +43,15 @@ namespace Multifunction_mod
         private bool rightscaling;
         private bool bottomscaling;
         private bool firstDraw;
+        private bool panelSynced;
+        private float panelSyncedX;
+        private float panelSyncedY;
+        private float panelSyncedW;
+        private float panelSyncedH;
+        private float panelSyncedScreenW;
+        private float panelSyncedScreenH;
+        private float panelSyncedCanvasW;
+        private float panelSyncedCanvasH;
         private string stackmultipleStr;
         private Multifunction MainFunction;
         private int whichpannel;
@@ -173,6 +188,9 @@ namespace Multifunction_mod
             textColor = Textcolor.Value;
             MainWindow_x = MainWindow_x_config.Value;
             MainWindow_y = MainWindow_y_config.Value;
+
+            //补一个可拦截鼠标的 UI 图元，避免点面板时穿透到背后的建筑
+            EnsurePanelBlocker();
         }
 
         public void MainWindowKeyInvoke()
@@ -183,18 +201,28 @@ namespace Multifunction_mod
                 firstDraw = true;
             }
             ui_MultiFunctionPanel.SetActive(DisplayingWindow);
+            if (DisplayingWindow)
+            {
+                UIPanelSet(true);
+            }
+            else
+            {
+                MouseInWindow = false;
+            }
         }
 
         public void OpenMainWindow()
         {
             DisplayingWindow = true;
             ui_MultiFunctionPanel.SetActive(true);
+            UIPanelSet(true);
         }
 
         public void CloseMainWindow()
         {
             DisplayingWindow = false;
             ui_MultiFunctionPanel.SetActive(false);
+            MouseInWindow = false;
         }
 
         public void Draw()
@@ -262,12 +290,17 @@ namespace Multifunction_mod
             }
             if (DisplayingWindow)
             {
-                bool _moved = MoveWindow();
-                bool _scaled = Scaling_window();
+                MoveWindow();
+                Scaling_window();
                 Rect windowRect1 = new Rect(MainWindow_x, MainWindow_y, MainWindowWidth, MainWindowHeight);
                 GUI.DrawTexture(windowRect1, mainWindowTexture);
-                GUI.Window(20210218, windowRect1, MainWindow, "OP面板".getTranslate() + "(" + VERSION + ")" + "ps:ctrl+↑↓");
-                if (_moved || _scaled) UIPanelSet();
+                GUI.Window(20210218, windowRect1, MainWindow, "OP面板".getTranslate() + "(" + ModInfo.VERSION + ")" + "ps:ctrl+↑↓");
+
+                //拦截图元必须每帧跟窗口对齐：窗口刚打开、改字号、移动或缩放后，
+                //如果它还停在 prefab 的默认位置，点面板就会穿透到背后的建筑
+                UIPanelSet();
+                MouseInWindow = windowRect1.Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
+
                 if (MainWindow_x < 0 || MainWindow_x > Screen.width)
                 {
                     MainWindow_x = 100;
@@ -277,16 +310,75 @@ namespace Multifunction_mod
                     MainWindow_y = 100;
                 }
             }
+            else
+            {
+                MouseInWindow = false;
+            }
         }
 
-        private void UIPanelSet()
+        private void UIPanelSet(bool force = false)
         {
+            if (ui_MultiFunctionPanel == null || UIRoot.instance == null || UIRoot.instance.overlayCanvas == null) return;
             var rt = ui_MultiFunctionPanel.GetComponent<RectTransform>();
             var Canvasrt = UIRoot.instance.overlayCanvas.GetComponent<RectTransform>();
+            if (rt == null || Canvasrt == null) return;
+
+            //窗口位置/大小、屏幕分辨率、UI 画布尺寸任何一个变了都要重新对齐，
+            //只按窗口矩形缓存的话，切分辨率或改 UI 缩放后拦截区会错位
+            if (!force && panelSynced
+                && panelSyncedX == MainWindow_x && panelSyncedY == MainWindow_y
+                && panelSyncedW == MainWindowWidth && panelSyncedH == MainWindowHeight
+                && panelSyncedScreenW == Screen.width && panelSyncedScreenH == Screen.height
+                && panelSyncedCanvasW == Canvasrt.sizeDelta.x && panelSyncedCanvasH == Canvasrt.sizeDelta.y)
+            {
+                return;
+            }
+
             float CanvaswidthMultiple = Canvasrt.sizeDelta.x * 1.0f / Screen.width;
             float CanvasheightMultiple = Canvasrt.sizeDelta.y * 1.0f / Screen.height;
+
+            //固定以左下角为锚点/轴心，保证拦截图元的矩形和 IMGUI 窗口完全重合。
+            //prefab 的锚点/轴心如果和这里不一致，拦截图元会整体偏半个窗口，点面板就会漏到背后。
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.zero;
+            rt.pivot = Vector2.zero;
             rt.sizeDelta = new Vector2(CanvaswidthMultiple * MainWindowWidth, CanvasheightMultiple * MainWindowHeight);
             rt.localPosition = new Vector2(-Canvasrt.sizeDelta.x / 2 + MainWindow_x * CanvaswidthMultiple, Canvasrt.sizeDelta.y / 2 - MainWindow_y * CanvasheightMultiple - rt.sizeDelta.y);
+
+            panelSynced = true;
+            panelSyncedX = MainWindow_x;
+            panelSyncedY = MainWindow_y;
+            panelSyncedW = MainWindowWidth;
+            panelSyncedH = MainWindowHeight;
+            panelSyncedScreenW = Screen.width;
+            panelSyncedScreenH = Screen.height;
+            panelSyncedCanvasW = Canvasrt.sizeDelta.x;
+            panelSyncedCanvasH = Canvasrt.sizeDelta.y;
+        }
+
+        /// <summary>
+        /// 保证面板上有一块能拦住鼠标的 UI 图元。
+        /// IMGUI 画出来的窗口不会阻止游戏处理鼠标事件，必须有一个 raycastTarget=true 的 UI 元素盖住窗口区域，
+        /// 否则点击面板等于点在背后的世界/建筑上。
+        /// </summary>
+        private void EnsurePanelBlocker()
+        {
+            if (ui_MultiFunctionPanel == null) return;
+
+            var image = ui_MultiFunctionPanel.GetComponent<UnityEngine.UI.Image>();
+            if (image == null)
+            {
+                image = ui_MultiFunctionPanel.AddComponent<UnityEngine.UI.Image>();
+                image.color = new Color(0f, 0f, 0f, 0f);
+            }
+            image.raycastTarget = true;
+
+            var canvasGroup = ui_MultiFunctionPanel.GetComponent<CanvasGroup>();
+            if (canvasGroup != null)
+            {
+                canvasGroup.blocksRaycasts = true;
+                canvasGroup.interactable = true;
+            }
         }
 
         #region 窗口UI
@@ -466,35 +558,23 @@ namespace Multifunction_mod
                 Infinitething.Value = GUILayout.Toggle(Infinitething.Value, "无限物品".getTranslate());
                 InfiniteSand.Value = GUILayout.Toggle(InfiniteSand.Value, "无限沙土".getTranslate());
                 Property9999999 = GUILayout.Toggle(Property9999999, "无限元数据".getTranslate());
+                UnlimitedMetadataPatch.Enable = Property9999999;
                 DroneNoenergy_bool.Value = GUILayout.Toggle(DroneNoenergy_bool.Value, "小飞机不耗能".getTranslate());
                 Infiniteplayerpower.Value = GUILayout.Toggle(Infiniteplayerpower.Value, "无限机甲能量".getTranslate());
                 EnableTp.Value = GUILayout.Toggle(EnableTp.Value, "启用传送".getTranslate());
                 unlockpointtech = GUILayout.Toggle(unlockpointtech, "科技点击解锁".getTranslate());
+                TechClickUnlockPatch.Enable = unlockpointtech;
                 dismantle_but_nobuild.Value = GUILayout.Toggle(dismantle_but_nobuild.Value, "不往背包放东西".getTranslate());
                 MiddleMouseLockGrid.Value = GUILayout.Toggle(MiddleMouseLockGrid.Value, "鼠标中键锁定玩家背包格子Max".getTranslate());
                 if (QuickHandcraft.Value != GUILayout.Toggle(QuickHandcraft.Value, "机甲制造MAX".getTranslate()))
                 {
                     QuickHandcraft.Value = !QuickHandcraft.Value;
-                    if (QuickHandcraft.Value)
-                    {
-                        GameMain.mainPlayer.mecha.replicateSpeed = 100;
-                    }
-                    else
-                    {
-                        GameMain.mainPlayer.mecha.replicateSpeed = Configs.freeMode.mechaMiningSpeed;
-                    }
+                    PlayerModify.SetMechaReplicateSpeed(GameMain.mainPlayer, QuickHandcraft.Value);
                 }
                 if (QuickPlayerMine.Value != GUILayout.Toggle(QuickPlayerMine.Value, "机甲采矿MAX".getTranslate()))
                 {
                     QuickPlayerMine.Value = !QuickPlayerMine.Value;
-                    if (QuickPlayerMine.Value)
-                    {
-                        GameMain.mainPlayer.mecha.miningSpeed = 100;
-                    }
-                    else
-                    {
-                        GameMain.mainPlayer.mecha.miningSpeed = Configs.freeMode.mechaReplicateSpeed;
-                    }
+                    PlayerModify.SetMechaMiningSpeed(GameMain.mainPlayer, QuickPlayerMine.Value);
                 }
 
                 QuickResearch.Value = GUILayout.Toggle(QuickResearch.Value,"研究秒完成".Translate());
@@ -502,24 +582,24 @@ namespace Multifunction_mod
                 noneedwarp.Value = GUILayout.Toggle(noneedwarp.Value, "无需翘曲器曲速飞行".getTranslate());
             }
             {
-                if (GUILayout.Button("清空背包".getTranslate())) MainFunction.Clearpackage();
-                if (GUILayout.Button("初始化玩家".getTranslate())) MainFunction.InitPlayer();
+                if (GUILayout.Button("清空背包".getTranslate())) PlayerModify.ClearPackage(GameMain.mainPlayer);
+                if (GUILayout.Button("初始化玩家".getTranslate())) PlayerModify.InitPlayer(GameMain.mainPlayer);
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Button("背包".getTranslate(), GUILayout.Height(heightdis * 2));
                 GUILayout.BeginVertical();
-                if (GUILayout.Button("加一行".getTranslate(), GUILayout.Height(heightdis))) MainFunction.Operatepackagesize(1, 0);
-                if (GUILayout.Button("加一列".getTranslate(), GUILayout.Height(heightdis))) MainFunction.Operatepackagesize(0, 1);
+                if (GUILayout.Button("加一行".getTranslate(), GUILayout.Height(heightdis))) PlayerModify.OperatePackageSize(GameMain.mainPlayer, 1, 0);
+                if (GUILayout.Button("加一列".getTranslate(), GUILayout.Height(heightdis))) PlayerModify.OperatePackageSize(GameMain.mainPlayer, 0, 1);
                 GUILayout.EndVertical();
                 GUILayout.BeginVertical();
-                if (GUILayout.Button("减一行".getTranslate(), GUILayout.Height(heightdis))) MainFunction.Operatepackagesize(1, 0, false);
-                if (GUILayout.Button("减一列".getTranslate(), GUILayout.Height(heightdis))) MainFunction.Operatepackagesize(0, 1, false);
+                if (GUILayout.Button("减一行".getTranslate(), GUILayout.Height(heightdis))) PlayerModify.OperatePackageSize(GameMain.mainPlayer, 1, 0, false);
+                if (GUILayout.Button("减一列".getTranslate(), GUILayout.Height(heightdis))) PlayerModify.OperatePackageSize(GameMain.mainPlayer, 0, 1, false);
                 GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
 
-                if (GUILayout.Button("解锁全部科技".getTranslate() + "(" + "补充原料".getTranslate() + ")")) MainFunction.UnlockallTech(true);
-                if (GUILayout.Button("解锁全部科技".getTranslate())) MainFunction.UnlockallTech();
-                if (GUILayout.Button("回退无穷科技".getTranslate())) MainFunction.lockTech();
+                if (GUILayout.Button("解锁全部科技".getTranslate() + "(" + "补充原料".getTranslate() + ")")) TechnologyModify.UnlockAllTech(GameMain.mainPlayer, true);
+                if (GUILayout.Button("解锁全部科技".getTranslate())) TechnologyModify.UnlockAllTech(GameMain.mainPlayer);
+                if (GUILayout.Button("回退无穷科技".getTranslate())) TechnologyModify.LockInfiniteTech();
 
             }
 
@@ -724,6 +804,7 @@ namespace Multifunction_mod
                 StationPowerGen.Value = GUILayout.Toggle(StationPowerGen.Value, "内置发电".getTranslate());
                 Station_infiniteWarp_bool.Value = GUILayout.Toggle(Station_infiniteWarp_bool.Value, "无限翘曲".getTranslate());
                 build_station_nocondition.Value = GUILayout.Toggle(build_station_nocondition.Value, "建造无需条件".getTranslate());
+                BuildConditionPatch.Enable = PasteBuildAnyWay || build_station_nocondition.Value;
                 GUILayout.Label("以下功能需改名".getTranslate() + ":", style);
                 StationfullCount_bool.Value = GUILayout.Toggle(StationfullCount_bool.Value, "星球无限供货机".getTranslate());
                 StationTrash.Value = GUILayout.Toggle(StationTrash.Value, "垃圾站".getTranslate());
@@ -812,17 +893,13 @@ namespace Multifunction_mod
                     if (DriftBuildings != GUILayout.Toggle(DriftBuildings, "建筑抬升".getTranslate()))
                     {
                         DriftBuildings = !DriftBuildings;
-                        if (DriftBuildings && !DriftBuildingsPatch.IsPatched)
-                        {
-                            DriftBuildingsPatch.IsPatched = true;
-                            harmony.PatchAll(typeof(DriftBuildingsPatch));
-                        }
+                        DriftBuildingsPatch.Enable = DriftBuildings;
                     }
                     if (DriftBuildings) GUILayout.Label("抬升层数:" + DriftBuildingLevel, style);
                     if (BeltSignalFunction.Value != GUILayout.Toggle(BeltSignalFunction.Value, "传送带信号功能".getTranslate()))
                     {
                         BeltSignalFunction.Value = !BeltSignalFunction.Value;
-                        if (BeltSignalFunction.Value) MainFunction.InitBeltSignalDiction();
+                        if (BeltSignalFunction.Value) BuildModify.InitBeltSignalDiction();
                     }
                     GUILayout.EndVertical();
 
@@ -1046,20 +1123,20 @@ namespace Multifunction_mod
                         case 0: MainFunction.OnSetBase(); break;
                         case 1: veinControlProperty.BuryAllvein(); break;
                         case 2: veinControlProperty.RemoveAllvein(); break;
-                        case 3: MainFunction.SetMaxGasStation(); break;
-                        case 4: MainFunction.RemoveAllBuild(0); break;
-                        case 5: MainFunction.RemoveAllBuild(1); break;
+                        case 3: BuildModify.SetMaxGasStation(GameMain.mainPlayer); break;
+                        case 4: BuildModify.RemoveAllBuild(GameMain.mainPlayer, 0); break;
+                        case 5: BuildModify.RemoveAllBuild(GameMain.mainPlayer, 1); break;
                     }
                 }
             }
-            MainFunction.currentPlanetWaterType = GUILayout.TextField(MainFunction.currentPlanetWaterType, GUILayout.MinWidth(heightdis * 3));
+            PlanetModify.CurrentPlanetWaterType = GUILayout.TextField(PlanetModify.CurrentPlanetWaterType, GUILayout.MinWidth(heightdis * 3));
             if (GUILayout.Button("设置当前星球海洋类型".getTranslate(), GUILayout.Height(heightdis)))
             {
-                MainFunction.SetWaterType();
+                PlanetModify.SetWaterType();
             }
             if (GUILayout.Button("恢复所有星球海洋类型".getTranslate(), GUILayout.Height(heightdis)))
             {
-                MainFunction.RestoreWaterType();
+                PlanetModify.RestoreWaterType();
             }
             GUILayout.EndVertical();
             GUILayout.FlexibleSpace();
@@ -1133,7 +1210,7 @@ namespace Multifunction_mod
                 }
                 if (GUILayout.Button("瞬间完成戴森球(用前存档)".getTranslate(), GUILayout.Height(heightdis)))
                 {
-                    MainFunction.FinishDysonShell();
+                    DysonModify.FinishDysonShell();
                 }
             }
             quickEjector = GUILayout.Toggle(quickEjector, "极速轨道弹射器(慎用)".getTranslate());
@@ -1216,14 +1293,12 @@ namespace Multifunction_mod
                     Maxproliferator.Value = GUILayout.Toggle(Maxproliferator.Value, "增产点数上限10".getTranslate());
                     incAbility = Maxproliferator.Value ? 10 : 4;
                     pasteanyway = GUILayout.Toggle(pasteanyway, "蓝图强制粘贴".getTranslate());
+                    BlueprintPasteIgnoreConditionPatch.Enable = pasteanyway;
                     if (PasteBuildAnyWay != GUILayout.Toggle(PasteBuildAnyWay, "建筑铺设无需条件".getTranslate()))
                     {
                         PasteBuildAnyWay = !PasteBuildAnyWay;
-                        if (PasteBuildAnyWay && !PasteAnywayPatch.IsPatched)
-                        {
-                            PasteAnywayPatch.IsPatched = true;
-                            harmony.PatchAll(typeof(PasteAnywayPatch));
-                        }
+                        PasteAnywayPatch.Enable = PasteBuildAnyWay;
+                        BuildConditionPatch.Enable = PasteBuildAnyWay || build_station_nocondition.Value;
                     }
                     if (closeallcollider != GUILayout.Toggle(closeallcollider, "关闭所有碰撞体".getTranslate()))
                     {
@@ -1247,7 +1322,8 @@ namespace Multifunction_mod
                     stackmultipleStr = multiple.ToString();
                     if (GUILayout.Button("设置".getTranslate()))
                     {
-                        MainFunction.SetmultipleItemStatck(multiple);
+                        StackMultiple.Value = multiple;
+                        RecipeModify.SetItemStackMultiple(multiple);
                     }
                     GUILayout.EndHorizontal();
                     if (GUILayout.Button("取消所有勾选".getTranslate()))

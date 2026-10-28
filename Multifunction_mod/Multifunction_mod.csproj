@@ -91,31 +91,78 @@
     <Compile Include="API\MultifunctionAPI.cs" />
     <Compile Include="Constant.cs" />
     <Compile Include="GUIDraw.cs" />
+    <Compile Include="GameModify\BuildModify.cs" />
+    <Compile Include="GameModify\CombatModify.cs" />
+    <Compile Include="GameModify\DysonModify.cs" />
+    <Compile Include="GameModify\PlayerModify.cs" />
+    <Compile Include="GameModify\PlanetModify.cs" />
+    <Compile Include="GameModify\RecipeModify.cs" />
+    <Compile Include="GameModify\TechnologyModify.cs" />
     <Compile Include="Models\PropertyData.cs" />
     <Compile Include="Models\SeedPlanetWater.cs" />
     <Compile Include="Models\VeinControlProperty.cs" />
     <Compile Include="Multifunction.cs" />
     <Compile Include="Multifunctionpatch.cs" />
     <Compile Include="MultifunctionTranslate.cs" />
-    <Compile Include="Patchs\BuildTool_ClickPatch.cs" />
+    <Compile Include="Patchs\Build\BuildingNoConsumePatch.cs" />
+    <Compile Include="Patchs\Build\BuildConditionPatch.cs" />
+    <Compile Include="Patchs\Build\DismantleNoItemPatch.cs" />
+    <Compile Include="Patchs\Build\DriftBuildingsPatch.cs" />
+    <Compile Include="Patchs\Build\InstantBuildPatch.cs" />
+    <Compile Include="Patchs\Build\PasteAnywayPatch.cs" />
     <Compile Include="Patchs\CargoTrafficPatch.cs" />
-    <Compile Include="Patchs\CombatPatch.cs" />
-    <Compile Include="Patchs\DriftBuildingsPatch.cs" />
-    <Compile Include="Patchs\DysonPatch.cs" />
+    <Compile Include="Patchs\Combat\DarkFogQuickBuildPatch.cs" />
+    <Compile Include="Patchs\Combat\KillEnemyQueuePatch.cs" />
+    <Compile Include="Patchs\Combat\LocalClearThreatPatch.cs" />
+    <Compile Include="Patchs\Combat\LocalMaxThreatPatch.cs" />
+    <Compile Include="Patchs\Combat\LockBuildHpPatch.cs" />
+    <Compile Include="Patchs\Combat\LockEnemyHpPatch.cs" />
+    <Compile Include="Patchs\Combat\LockPlayerHpPatch.cs" />
+    <Compile Include="Patchs\Combat\PlayerFakeDeathPatch.cs" />
+    <Compile Include="Patchs\Combat\PlayerQuickAttackPatch.cs" />
+    <Compile Include="Patchs\Combat\SpaceClearThreatPatch.cs" />
+    <Compile Include="Patchs\Combat\SpaceMaxThreatPatch.cs" />
+    <Compile Include="Patchs\Combat\TurretSupernovaPatch.cs" />
+    <Compile Include="Patchs\Dyson\DysonFrameAbsorbPatch.cs" />
+    <Compile Include="Patchs\Dyson\DysonRadiusPatch.cs" />
+    <Compile Include="Patchs\Dyson\EjectAnywayPatch.cs" />
+    <Compile Include="Patchs\Dyson\SkipAbsorbStagePatch.cs" />
+    <Compile Include="Patchs\Dyson\SkipBulletPatch.cs" />
     <Compile Include="Patchs\FactorySystemPatch.cs" />
-    <Compile Include="Patchs\Multifunction_modGameLogic.cs" />
-    <Compile Include="Patchs\PasteAnywayPatch.cs" />
-    <Compile Include="Patchs\PlanetFactoryPatch.cs" />
+    <Compile Include="Patchs\MechaPatches\BlueprintPasteIgnoreConditionPatch.cs" />
+    <Compile Include="Patchs\MechaPatches\BuildToolDotsPatch.cs" />
+    <Compile Include="Patchs\MechaPatches\DismantleNoDropToPackagePatch.cs" />
+    <Compile Include="Patchs\MechaPatches\InfiniteMechaPowerPatch.cs" />
+    <Compile Include="Patchs\MechaPatches\InspectDistancePatch.cs" />
+    <Compile Include="Patchs\MechaPatches\NoWarperPatch.cs" />
+    <Compile Include="Patchs\MechaPatches\QuickHandcraftPatch.cs" />
+    <Compile Include="Patchs\MechaPatches\QuickMinePatch.cs" />
+    <Compile Include="Patchs\Misc\DispenserFullEnergyPatch.cs" />
+    <Compile Include="Patchs\Misc\TankContentAllPatch.cs" />
+    <Compile Include="Patchs\Misc\UnlimitedMetadataPatch.cs" />
+    <Compile Include="Patchs\Core\GameLifecyclePatch.cs" />
+    <Compile Include="Patchs\PatchToggle.cs" />
+    <Compile Include="Patchs\Planet\InfiniteSandPatch.cs" />
     <Compile Include="Patchs\PlanetTransportPatch.cs" />
-    <Compile Include="Patchs\PlayerPatch.cs" />
-    <Compile Include="Patchs\PowerSystemPatch.cs" />
-    <Compile Include="Patchs\SomePatch.cs" />
-    <Compile Include="Patchs\SpraycoaterComponentPatch.cs" />
+    <Compile Include="Patchs\Power\BuildingNoConsumePowerPatch.cs" />
+    <Compile Include="Patchs\Power\InfiniteStarPowerPatch.cs" />
+    <Compile Include="Patchs\Power\PlanetPowerCoverPatch.cs" />
+    <Compile Include="Patchs\Power\WindTurbineCoverPatch.cs" />
+    <Compile Include="Patchs\Power\WindTurbineUnlimitedEnergyPatch.cs" />
+    <Compile Include="Patchs\Station\AutoStationNamePatch.cs" />
     <Compile Include="Patchs\StationComponentPatch.cs" />
-    <Compile Include="Patchs\StorageComponentPatch.cs" />
-    <Compile Include="Patchs\TankComponentPatch.cs" />
-    <Compile Include="Patchs\UIControlPanelPatch.cs" />
-    <Compile Include="Patchs\UIPatch.cs" />
+    <Compile Include="Patchs\Storage\ArchitectModeItemCountPatch.cs" />
+    <Compile Include="Patchs\Storage\MaxProliferatorPatch.cs" />
+    <Compile Include="Patchs\Storage\StackMultiplePatch.cs" />
+    <Compile Include="Patchs\Storage\TankMaxProliferatorPatch.cs" />
+    <Compile Include="Patchs\UI\CloseAbnormalityTipPatch.cs" />
+    <Compile Include="Patchs\UI\CloseWindowPatch.cs" />
+    <Compile Include="Patchs\UI\InstantItemPatch.cs" />
+    <Compile Include="Patchs\UI\StarmapTeleportPatch.cs" />
+    <Compile Include="Patchs\UI\TechClickUnlockPatch.cs" />
+    <Compile Include="Patchs\UI\UIControlPanelPatch.cs" />
+    <Compile Include="Patchs\UI\UIStationStorageExtraPatch.cs" />
+    <Compile Include="Meta\ModInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils\NumberUtils.cs" />
     <Compile Include="Utils\SplitIncUtil.cs" />
@@ -125,6 +172,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="Meta\README.md" />
+    <None Include="Meta\manifest.json" />
+    <None Include="Meta\icon.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
@@ -132,6 +182,9 @@
 mkdir "E:\Game\Steam\steamapps\common\Dyson Sphere Program\BepInEx\plugins\$(ProjectName)"
 del /q "E:\Game\Steam\steamapps\common\Dyson Sphere Program\BepInEx\plugins\$(ProjectName)\$(TargetFileName)"
 copy "$(TargetPath)" "E:\Game\Steam\steamapps\common\Dyson Sphere Program\BepInEx\plugins\$(ProjectName)\$(TargetFileName)"
+copy /y "$(ProjectDir)Meta\README.md" "E:\Game\Steam\steamapps\common\Dyson Sphere Program\BepInEx\plugins\$(ProjectName)\README.md"
+copy /y "$(ProjectDir)Meta\manifest.json" "E:\Game\Steam\steamapps\common\Dyson Sphere Program\BepInEx\plugins\$(ProjectName)\manifest.json"
+copy /y "$(ProjectDir)Meta\icon.png" "E:\Game\Steam\steamapps\common\Dyson Sphere Program\BepInEx\plugins\$(ProjectName)\icon.png"
 start steam://rungameid/1366540</PostBuildEvent>
   </PropertyGroup>
 </Project>

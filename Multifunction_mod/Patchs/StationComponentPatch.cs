@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -273,8 +273,8 @@ namespace Multifunction_mod.Patchs
             List<int> storageItems = sc.storage.Select(x => x.itemId).ToList();
             storageItems.ForEach(itemId =>
             {
-                if (itemId <= 0 || !smeltRecipes.ContainsKey(itemId)) return;
-                smeltRecipes[itemId].ForEach(rp =>
+                if (itemId <= 0 || !smeltRecipes.TryGetValue(itemId, out List<RecipeProto> recipes)) return;
+                recipes.ForEach(rp =>
                 {
                     int spendtime = rp.TimeSpend / 2;
                     if (spendtime < 2) { }

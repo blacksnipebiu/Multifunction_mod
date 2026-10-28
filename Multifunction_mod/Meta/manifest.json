@@ -1,0 +1,9 @@
+{
+  "name": "Multfuntion_mod",
+  "version_number": "4.0.7",
+  "website_url": "https://github.com/blacksnipebiu/Multifunction_mod",
+  "description": "It provides some functions which I can do,提供一些op功能",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.11"
+  ]
+}
