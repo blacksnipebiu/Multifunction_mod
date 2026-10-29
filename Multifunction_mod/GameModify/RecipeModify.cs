@@ -10,11 +10,22 @@ namespace Multifunction_mod.GameModify
     /// </summary>
     public static class RecipeModify
     {
-        /// <summary>快速生产时所有配方的周期（刻）。游戏 60 刻 = 1 秒，10 刻约 0.17 秒</summary>
+        /// <summary>快速生产时配方周期（刻）。游戏 60 刻 = 1 秒，10 刻约 0.17 秒</summary>
         public const int QuickProduceTimeSpend = 10;
 
+        /// <summary>
+        /// RecipeExecuteData 里时间的缩放系数。游戏 <see cref="RecipeProto.InitRecipeItems"/>
+        /// 用 <c>TimeSpend * 10000</c> 构造缓存，而 <see cref="RecipeProto.TimeSpend"/> 本身是"刻"，
+        /// 两者相差 10000 倍，写缓存时必须乘回这个系数。
+        /// </summary>
+        public const int RecipeExecuteTimeScale = 10000;
+
         private static RecipeProto[] originRecipes;
+        private static int[] originTimeSpends;
         private static int[] originExtraTimeSpends;
+
+        /// <summary>配方是否处于被修改状态（只有改过才需要写回，未勾选时不写任何配方数据）</summary>
+        private static bool recipeModificationsApplied;
 
         private static FieldInfo recipeTimeSpendField;
         private static FieldInfo recipeExtraTimeSpendField;
@@ -37,6 +48,14 @@ namespace Multifunction_mod.GameModify
                 multiple = 1;
             }
 
+            //没启用过（倍率=1）时不写任何数据；只有从 >1 恢复回 1 才需要写回原始值
+            if (multiple == 1 && !itemStackMultipleApplied)
+            {
+                return;
+            }
+
+            itemStackMultipleApplied = multiple > 1;
+
             ItemProto[] items = LDB.items.dataArray;
             for (int i = 0; i < items.Length; i++)
             {
@@ -44,6 +63,9 @@ namespace Multifunction_mod.GameModify
                 StorageComponent.itemStackCount[item.ID] = item.StackSize * multiple;
             }
         }
+
+        /// <summary>堆叠倍率是否处于被修改状态（只有改过才需要恢复）</summary>
+        private static bool itemStackMultipleApplied;
 
         /// <summary>
         /// 重建熔炉配方索引：原料物品 ID → 使用它的熔炼配方列表。
@@ -94,6 +116,7 @@ namespace Multifunction_mod.GameModify
 
             RecipeProto[] recipes = LDB.recipes.dataArray;
             originRecipes = new RecipeProto[recipes.Length];
+            originTimeSpends = new int[recipes.Length];
             originExtraTimeSpends = new int[recipes.Length];
             for (int i = 0; i < recipes.Length; i++)
             {
@@ -104,8 +127,18 @@ namespace Multifunction_mod.GameModify
                     Handcraft = recipe.Handcraft
                 };
 
+                //缓存里的 timeSpend 是 TimeSpend * 10000，必须按原值保存，恢复时才不会写成 1/10000
                 RecipeExecuteData executeData = GetRecipeExecuteData(recipe);
-                originExtraTimeSpends[i] = executeData != null ? executeData.extraTimeSpend : 0;
+                if (executeData != null)
+                {
+                    originTimeSpends[i] = executeData.timeSpend;
+                    originExtraTimeSpends[i] = executeData.extraTimeSpend;
+                }
+                else
+                {
+                    originTimeSpends[i] = recipe.TimeSpend * RecipeExecuteTimeScale;
+                    originExtraTimeSpends[i] = 0;
+                }
             }
         }
 
@@ -116,10 +149,18 @@ namespace Multifunction_mod.GameModify
         /// <param name="quickProduce">快速生产</param>
         public static void ApplyRecipeModifications(bool allHandcraft, bool quickProduce)
         {
-            if (LDB.recipes == null || LDB.recipes.dataArray == null || originRecipes == null)
+            if (LDB.recipes == null || LDB.recipes.dataArray == null || originRecipes == null || originTimeSpends == null)
             {
                 return;
             }
+
+            //两个开关都没开、之前也没改过：直接返回，不写任何配方数据
+            if (!allHandcraft && !quickProduce && !recipeModificationsApplied)
+            {
+                return;
+            }
+
+            recipeModificationsApplied = allHandcraft || quickProduce;
 
             RecipeProto[] recipes = LDB.recipes.dataArray;
             for (int i = 0; i < recipes.Length && i < originRecipes.Length; i++)
@@ -127,17 +168,26 @@ namespace Multifunction_mod.GameModify
                 RecipeProto recipe = recipes[i];
                 recipe.Handcraft = allHandcraft || originRecipes[i].Handcraft;
 
-                //手搓队列（ForgeTask）和界面读的是 RecipeProto.TimeSpend，这里继续同步
-                int timeSpend = quickProduce ? QuickProduceTimeSpend : originRecipes[i].TimeSpend;
-                recipe.TimeSpend = timeSpend;
+                //手搓队列（ForgeTask）和界面读的是 RecipeProto.TimeSpend，单位是"刻"
+                recipe.TimeSpend = quickProduce ? QuickProduceTimeSpend : originRecipes[i].TimeSpend;
 
                 //工厂设备每个 tick 读的是 RecipeProto.recipeExecuteData 里缓存的对象，
-                //只改 RecipeProto.TimeSpend 对产线没有作用，必须同时改缓存里的周期
+                //缓存时间单位是 TimeSpend * 10000（见 RecipeProto.InitRecipeItems）
                 RecipeExecuteData executeData = GetRecipeExecuteData(recipe);
                 if (executeData == null)
                 {
                     continue;
                 }
+
+                int originCacheTimeSpend = originTimeSpends[i];
+                if (originCacheTimeSpend <= 0)
+                {
+                    continue;
+                }
+
+                int newCacheTimeSpend = quickProduce
+                    ? QuickProduceTimeSpend * RecipeExecuteTimeScale
+                    : originCacheTimeSpend;
 
                 int originExtraTimeSpend = originExtraTimeSpends != null && i < originExtraTimeSpends.Length
                     ? originExtraTimeSpends[i]
@@ -146,14 +196,14 @@ namespace Multifunction_mod.GameModify
                 //没有额外产出耗时的配方（原值为 0）不动这个字段，避免误伤
                 if (originExtraTimeSpend > 0)
                 {
-                    int extraTimeSpend = quickProduce
-                        ? ScaleCycleTime(originExtraTimeSpend, originRecipes[i].TimeSpend, timeSpend)
+                    int extraCacheTimeSpend = quickProduce
+                        ? ScaleCycleTime(originExtraTimeSpend, originCacheTimeSpend, newCacheTimeSpend)
                         : originExtraTimeSpend;
-                    SetRecipeExecuteCycleTime(executeData, timeSpend, extraTimeSpend);
+                    SetRecipeExecuteCycleTime(executeData, newCacheTimeSpend, extraCacheTimeSpend);
                 }
                 else
                 {
-                    SetRecipeExecuteCycleTime(executeData, timeSpend);
+                    SetRecipeExecuteCycleTime(executeData, newCacheTimeSpend);
                 }
             }
         }

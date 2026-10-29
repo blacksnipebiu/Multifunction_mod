@@ -13,6 +13,6 @@ namespace Multifunction_mod.Meta
         public const string NAME = "Multfuntion_mod";
 
         /// <summary>版本号，需与 manifest.json 的 version_number 一致</summary>
-        public const string VERSION = "4.0.7";
+        public const string VERSION = "4.0.8";
     }
 }

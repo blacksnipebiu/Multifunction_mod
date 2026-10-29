@@ -15,6 +15,12 @@ namespace Multifunction_mod.GameModify
         /// <summary>机甲速度类开关统一的上限值</summary>
         public const int MaxMechaSpeed = 100;
 
+        /// <summary>无人机不耗能是否已修改（只有改过才恢复，未勾选时不写任何值）</summary>
+        private static bool droneNoConsumeApplied;
+        private static Mecha droneNoConsumeMecha;
+        private static double droneNoConsumeSavedEjectEnergy;
+        private static double droneNoConsumeSavedEnergyPerMeter;
+
         /// <summary>
         /// 设置机甲手搓速度（机甲制造MAX）
         /// </summary>
@@ -54,15 +60,30 @@ namespace Multifunction_mod.GameModify
                 return;
             }
 
-            if (noEnergy && mecha.droneEjectEnergy != 0)
+            //换机甲/换存档后旧的"已修改"记录作废，避免把上一局的值写到新机甲上
+            if (droneNoConsumeApplied && droneNoConsumeMecha != mecha)
             {
+                droneNoConsumeApplied = false;
+            }
+
+            if (noEnergy)
+            {
+                if (!droneNoConsumeApplied)
+                {
+                    droneNoConsumeApplied = true;
+                    droneNoConsumeMecha = mecha;
+                    droneNoConsumeSavedEjectEnergy = mecha.droneEjectEnergy;
+                    droneNoConsumeSavedEnergyPerMeter = mecha.droneEnergyPerMeter;
+                }
                 mecha.droneEjectEnergy = 0;
                 mecha.droneEnergyPerMeter = 0;
             }
-            else if (!noEnergy && mecha.droneEjectEnergy == 0)
+            else if (droneNoConsumeApplied)
             {
-                mecha.droneEjectEnergy = 300000;
-                mecha.droneEnergyPerMeter = 60000;
+                //只有确实修改过才恢复，未勾选时不做任何写入
+                droneNoConsumeApplied = false;
+                mecha.droneEjectEnergy = droneNoConsumeSavedEjectEnergy;
+                mecha.droneEnergyPerMeter = droneNoConsumeSavedEnergyPerMeter;
             }
         }
 

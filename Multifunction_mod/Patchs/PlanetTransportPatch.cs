@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using System;
 using static Multifunction_mod.Multifunction;
 
@@ -226,13 +226,15 @@ namespace Multifunction_mod.Patchs
                     switch (stationComponentName)
                     {
                         case "星球无限供货机":
-                            if (!StationfullCount_bool.Value && remoteTick || StationfullCount)
+                            //未勾选时不改动；勾选后才处理（全局"要啥有啥"已覆盖时跳过）
+                            if (!StationfullCount_bool.Value || StationfullCount)
                                 continue;
                             StationComponentPatch.StationFullItemCount(sc);
                             break;
                         case "垃圾站":
                         case "Station_trash":
-                            if (!StationTrash.Value && remoteTick)
+                            //未勾选"垃圾站"时不做任何处理
+                            if (!StationTrash.Value)
                                 continue;
                             StationComponentPatch.StationTrashMethod(sc, consumeRegister);
                             break;
